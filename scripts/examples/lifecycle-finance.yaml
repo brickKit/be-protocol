@@ -1,0 +1,16 @@
+lifecycle: v1
+tables:
+  finance_journal_entries:
+    class: ledger
+    retention: {min: 30y after fiscal_year_end, basis: "accounting archives", end: review}
+  finance_journal_entry_lines:
+    class: ledger
+    partition: {by: accounting_period, kind: list, opened_by: command}
+    tiers: {seal: on_signal, cold: 10y after fiscal_year_end}
+    retention: {min: 30y after fiscal_year_end, basis: "accounting archives", end: review}
+    checkpoint: account_period_balances
+    guard: {blocked_by: open_receivables}
+  ar_ledger:
+    class: document
+    closed: {column: status, in: [RECONCILED], at: updated_at}
+    retention: {min: 30y after fiscal_year_end, basis: "ledger", end: review}

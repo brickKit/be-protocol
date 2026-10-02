@@ -1,0 +1,484 @@
+openapi: 3.1.0
+info:
+  title: conformance/widget, user plane
+  version: "1.0.0"
+  description: |
+    The user-plane REST surface of the conformance fixture (be-protocol P3). Every operation
+    declares its guard in `x-be-permission`: a permission key, `authenticated` or `public` (P6.2).
+    Deadlines and body limits other than the defaults are declared in `x-be-deadline-seconds`
+    and `x-be-max-body-bytes` (P3.13).
+
+    Not in this file, mounted by the runtime and described in be-protocol `openapi/`:
+    the operations endpoints (`/healthz`, `/readyz`, `/metrics`, `/_be/info`,
+    `/conformance/widget/_ops/jobs`), the resource contract (`/conformance/widget/_authz/*`,
+    `/conformance/widget/_shares/*`) and the lifecycle contract (`/conformance/widget/_lifecycle/*`).
+
+    Instances: an SDK's copy replaces `conformance/widget` in `servers` by its instance ID
+    (fixtures/README.md, "Instances"); nothing else in this file changes.
+  license: { name: Apache-2.0, identifier: Apache-2.0 }
+servers:
+  - url: /conformance/widget
+security:
+  - bearer: []
+tags:
+  - name: widgets
+    description: the widget aggregate
+  - name: reference
+    description: reference and master data the fixture also needs
+
+paths:
+  /kinds:
+    get:
+      operationId: listWidgetKinds
+      tags: [reference]
+      summary: List widget kinds (reference data); the fixture's Public route
+      x-be-permission: public
+      security: []
+      responses:
+        "200":
+          description: every kind
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/WidgetKind" }
+        "429": { $ref: "#/components/responses/Problem" }
+
+  /owners/me:
+    put:
+      operationId: putMyOwnerProfile
+      tags: [reference]
+      summary: Create or replace the caller's own owner profile; the fixture's Authenticated route
+      description: |
+        Writes the caller's row in `widget_owners` (master data with personal data) and logs one
+        INFO line `msg=owner_profile_updated` with the fields `display_name`, `phone`, `email`, so
+        the suite can check that `phone` and `email` are redacted (P18.2, CP-OBS-04).
+      x-be-permission: authenticated
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OwnerProfileInput" }
+      responses:
+        "200":
+          description: the stored profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OwnerProfile" }
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Problem" }
+
+  /widgets:
+    get:
+      operationId: listWidgets
+      tags: [widgets]
+      summary: List widgets the caller may see (canonical scope predicate, shares included)
+      description: |
+        Filtered by the caller's level on `conformance.widget.view` (owner / dept / subtree / all),
+        the `region` dimension values, and direct shares (P6.5). Default order `created_at DESC, id DESC`.
+        Without a time range the hot window (90 days, lifecycle.yaml) applies; a range older than the
+        online data answers 400 `RANGE_COLD` unless `include_cold` is true (P16.3).
+        Each row carries `_access` (row buttons) and `_masked` (fields hidden by the field key).
+      x-be-permission: conformance.widget.view
+      parameters:
+        - { name: page_size, in: query, schema: { type: integer, minimum: 1, default: 50 }, description: "capped at 200" }
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: region, in: query, schema: { type: string }, description: "a dimension value outside the caller's scope answers 403 OUT_OF_SCOPE" }
+        - { name: status, in: query, schema: { $ref: "#/components/schemas/WidgetStatus" } }
+        - { name: created_after, in: query, schema: { type: string, format: date-time } }
+        - { name: created_before, in: query, schema: { type: string, format: date-time } }
+        - { name: include_cold, in: query, schema: { type: boolean, default: false } }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [created_at, name, price, amount], default: created_at }
+          description: "sorting by a field masked for the caller answers 400 SORT_FORBIDDEN"
+      responses:
+        "200":
+          description: one page
+          headers:
+            X-Authz-Consistency: { schema: { type: string, enum: [stale] }, description: "the share projection lags the requested revision" }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/Widget" }
+                  next_cursor: { type: string, description: "empty at the end" }
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "503": { $ref: "#/components/responses/Problem" }
+    post:
+      operationId: createWidget
+      tags: [widgets]
+      summary: Create a widget (a one-step idempotent create); publishes conformance.widget.created.v1
+      description: |
+        The key comes from `Idempotency-Key` or `idempotency_key` (P3.7); the fingerprint fields are
+        every body field except `idempotency_key`. The widget is created as DRAFT in the caller's
+        name (`owner_id` = sub, `dept_path` = the token's), numbered from the gapped series
+        `WIDGET_NO_FORMAT`, dated with the legal entity's business date. A client-generated `id`
+        must be a UUIDv7. Setting `price` needs `conformance.widget.price.edit` (403 `FIELD_FORBIDDEN`).
+      x-be-permission: conformance.widget.create
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WidgetCreate" }
+      responses:
+        "201":
+          description: created (also on replay, with the first result)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Widget" }
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "413": { $ref: "#/components/responses/Problem" }
+
+  /widgets/{id}:
+    parameters: [ { $ref: "#/components/parameters/WidgetId" } ]
+    get:
+      operationId: getWidget
+      tags: [widgets]
+      summary: One widget, with its owner's snapshot
+      description: |
+        404 when the widget does not exist or the caller cannot see it (P6.6). The owner's display
+        name comes from the owner snapshot, read through from conformance/peer `BatchGetOwners`
+        when missing or older than 60 s (P15.3); `X-Data-As-Of` gives the snapshot's age.
+      x-be-permission: conformance.widget.view
+      responses:
+        "200":
+          description: the widget
+          headers:
+            X-Data-As-Of: { schema: { type: string, format: date-time } }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Widget" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+
+  /widgets/{id}/owner:
+    parameters: [ { $ref: "#/components/parameters/WidgetId" } ]
+    get:
+      operationId: getWidgetOwner
+      tags: [widgets]
+      summary: The owner's profile as conformance/peer shows it to this user (a user-plane call)
+      description: |
+        Calls `GET /conformance/peer/owners/{owner_id}` with UserHTTP, forwarding the caller's
+        `Authorization`, `X-Request-Id`, `traceparent` and `X-Authz-Revision` (P8.1, CP-OUT-06).
+        The peer's problem+json is relayed with its status, reason and domain (P8.2).
+      x-be-permission: conformance.widget.view
+      responses:
+        "200":
+          description: the peer's answer
+          content:
+            application/json:
+              schema: { type: object }
+        "401": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "504": { $ref: "#/components/responses/Problem" }
+
+  /widgets/{id}/approve:
+    parameters: [ { $ref: "#/components/parameters/WidgetId" } ]
+    post:
+      operationId: approveWidget
+      tags: [widgets]
+      summary: Approve a DRAFT widget (a two-step idempotent command calling conformance/peer Reserve)
+      description: |
+        Order (P13.5): authorize on the target (404 when invisible, 403 when visible but not
+        allowed) → claim the key (CLAIMED) → state check (`WIDGET_NOT_DRAFT`) → set APPROVING with
+        `deadline_at` = now + `WIDGET_APPROVE_TIMEOUT` and commit → call `Reserve` outside any
+        transaction (key `widget-approve:<id>`) → on success, in one transaction: APPROVED, a ledger
+        row numbered gap-free from `WIDGET_LEDGER_NO_FORMAT`, the event
+        `conformance.widget.approved.v1`, the queued job `widget.notify`, and the key DONE.
+        A definite refusal (`QUOTA_EXCEEDED`) returns the widget to DRAFT, releases the claim and
+        relays the peer's error. An unknown outcome (timeout, UNAVAILABLE after retries) answers
+        202 with the widget APPROVING; the reconciler `widget.approve` finishes it and completes the key.
+      x-be-permission: conformance.widget.approve
+      x-be-deadline-seconds: 15
+      parameters:
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                idempotency_key: { type: string }
+      responses:
+        "200":
+          description: approved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Widget" }
+        "202":
+          description: in flight; the reconciler finishes it
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Widget" }
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "409": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+        "504": { $ref: "#/components/responses/Problem" }
+
+  /widgets/{id}/slow:
+    parameters: [ { $ref: "#/components/parameters/WidgetId" } ]
+    post:
+      operationId: slowWidget
+      tags: [widgets]
+      summary: Take `ms` milliseconds on purpose (deadline and bulkhead cases)
+      description: |
+        `via=sleep` waits in the handler; `via=db` runs `SELECT pg_sleep(ms / 1000.0)` in a
+        transaction (statement_timeout = min(5 s, remaining)); `via=peer` calls conformance/peer
+        `GetReservationStatus` (the suite makes the peer hang). The route deadline is 2 s: past it
+        the answer is 504 `DEADLINE_EXCEEDED` and the downstream call and transaction are cancelled.
+        No write happens.
+      x-be-permission: conformance.widget.view
+      x-be-deadline-seconds: 2
+      parameters:
+        - { name: ms, in: query, required: true, schema: { type: integer, minimum: 0, maximum: 60000 } }
+        - { name: via, in: query, schema: { type: string, enum: [sleep, db, peer], default: sleep } }
+      responses:
+        "200":
+          description: finished in time
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [slept_ms]
+                properties:
+                  slept_ms: { type: integer }
+        "401": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+        "429": { $ref: "#/components/responses/Problem" }
+        "504": { $ref: "#/components/responses/Problem" }
+
+  /widgets/{id}/attachments:
+    parameters: [ { $ref: "#/components/parameters/WidgetId" } ]
+    post:
+      operationId: createWidgetAttachment
+      tags: [widgets]
+      summary: Presign the upload of one attachment (the object never passes through the component)
+      description: |
+        Returns a presigned PUT valid for 5 minutes, limited to `size_bytes` (at most 10 MiB);
+        the object key contains no file name (P17). The attachment is recorded on the widget.
+      x-be-permission: conformance.widget.attach
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [file_name, content_type, size_bytes]
+              properties:
+                file_name: { type: string, maxLength: 200 }
+                content_type: { type: string }
+                size_bytes: { type: integer, minimum: 1, maximum: 10485760 }
+      responses:
+        "201":
+          description: presigned upload
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [attachment_id, upload_url, expires_at, max_bytes]
+                properties:
+                  attachment_id: { type: string }
+                  upload_url: { type: string, format: uri }
+                  expires_at: { type: string, format: date-time }
+                  max_bytes: { type: integer }
+        "400": { $ref: "#/components/responses/Problem" }
+        "401": { $ref: "#/components/responses/Problem" }
+        "403": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+
+  /widgets/{id}/attachments/{attachment_id}:
+    parameters:
+      - { $ref: "#/components/parameters/WidgetId" }
+      - { name: attachment_id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getWidgetAttachment
+      tags: [widgets]
+      summary: Presign the download of one attachment (valid for 5 minutes)
+      x-be-permission: conformance.widget.view
+      responses:
+        "200":
+          description: presigned download
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [download_url, expires_at]
+                properties:
+                  download_url: { type: string, format: uri }
+                  expires_at: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Problem" }
+        "404": { $ref: "#/components/responses/Problem" }
+
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    WidgetId:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string }
+      description: "equivalent to the body field idempotency_key; both present and different answers 400 IDEMPOTENCY_MISMATCH"
+  responses:
+    Problem:
+      description: an error (RFC 9457 problem+json, be-protocol P4)
+      content:
+        application/problem+json:
+          schema: { $ref: "#/components/schemas/Problem" }
+  schemas:
+    Problem:
+      description: "Mirrors be-protocol schemas/problem.schema.json."
+      type: object
+      required: [type, status, code, reason, domain, request_id, trace_id]
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        code: { type: string }
+        reason: { type: string }
+        domain: { type: string }
+        detail: { type: string }
+        metadata: { type: object, additionalProperties: { type: string } }
+        violations:
+          type: array
+          items:
+            type: object
+            required: [field, reason]
+            properties:
+              field: { type: string }
+              reason: { type: string }
+              description: { type: string }
+        instance: { type: string }
+        request_id: { type: string }
+        trace_id: { type: string }
+    WidgetStatus:
+      type: string
+      enum: [DRAFT, APPROVING, APPROVED, SUSPENDED]
+    WidgetKind:
+      type: object
+      required: [code, title, max_lines]
+      properties:
+        code: { type: string }
+        title: { type: string }
+        max_lines: { type: integer }
+    OwnerProfileInput:
+      type: object
+      required: [display_name]
+      properties:
+        display_name: { type: string, minLength: 1, maxLength: 100 }
+        phone: { type: string, maxLength: 32 }
+        email: { type: string, maxLength: 254 }
+    OwnerProfile:
+      allOf:
+        - $ref: "#/components/schemas/OwnerProfileInput"
+        - type: object
+          required: [sub]
+          properties:
+            sub: { type: string }
+    WidgetLineInput:
+      type: object
+      required: [description, quantity]
+      properties:
+        description: { type: string, minLength: 1, maxLength: 200 }
+        quantity: { $ref: "#/components/schemas/Decimal" }
+    WidgetLine:
+      allOf:
+        - $ref: "#/components/schemas/WidgetLineInput"
+        - type: object
+          required: [line_no]
+          properties:
+            line_no: { type: integer }
+    WidgetCreate:
+      type: object
+      required: [legal_entity_id, kind_code, name, region, currency, price, quantity]
+      properties:
+        id: { type: string, format: uuid, description: "optional client-generated UUIDv7" }
+        idempotency_key: { type: string }
+        legal_entity_id: { type: string }
+        kind_code: { type: string }
+        name: { type: string, minLength: 1, maxLength: 100 }
+        region: { type: string, description: "must be within the caller's region values" }
+        currency: { type: string, pattern: "^[A-Z]{3}$" }
+        price: { $ref: "#/components/schemas/Decimal" }
+        quantity: { $ref: "#/components/schemas/Decimal" }
+        lines:
+          type: array
+          maxItems: 100
+          items: { $ref: "#/components/schemas/WidgetLineInput" }
+    Widget:
+      type: object
+      required: [id, legal_entity_id, number, document_date, kind_code, name, region, owner_id, status,
+                 currency, quantity, version, created_at, updated_at, lines, _access, _masked]
+      properties:
+        id: { type: string, format: uuid }
+        legal_entity_id: { type: string }
+        number: { type: string }
+        document_date: { type: string, format: date }
+        kind_code: { type: string }
+        name: { type: string }
+        region: { type: string }
+        owner_id: { type: string }
+        owner_display_name: { type: string, description: "from the owner snapshot; absent when conformance/peer cannot say" }
+        status: { $ref: "#/components/schemas/WidgetStatus" }
+        currency: { type: string }
+        price: { oneOf: [ { $ref: "#/components/schemas/Decimal" }, { type: "null" } ], description: "null when masked" }
+        quantity: { $ref: "#/components/schemas/Decimal" }
+        amount: { oneOf: [ { $ref: "#/components/schemas/Decimal" }, { type: "null" } ], description: "round(quantity x price) at the currency's minor units; null when masked" }
+        reservation_id: { type: string }
+        touch_count: { type: integer }
+        version: { type: integer }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/WidgetLine" }
+        attachments:
+          type: array
+          items:
+            type: object
+            properties:
+              attachment_id: { type: string }
+              file_name: { type: string }
+              content_type: { type: string }
+              size_bytes: { type: integer }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        approved_at: { type: string, format: date-time }
+        _access:
+          type: object
+          description: "row buttons for the caller (P6.9)"
+          properties:
+            approve: { type: boolean }
+            attach: { type: boolean }
+            share: { type: boolean }
+        _masked:
+          type: array
+          description: "fields set to null because the caller lacks their read key (P6.8)"
+          items: { type: string }
+    Decimal:
+      type: string
+      pattern: "^-?[0-9]+(\\.[0-9]+)?$"
+      description: "a decimal string (0301); see be-protocol vectors/money"

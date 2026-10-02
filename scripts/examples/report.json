@@ -1,0 +1,2 @@
+{"suite":"be-acceptance@0.5.0","protocol":"1.0","component":"erp/sales","version":"3.0.0","image":{"ref":"erp-sales:3.0.0","digest":"sha256:0000000000000000000000000000000000000000000000000000000000000000"},"sdk":{"name":"be-sdk-go","version":"0.6.0"},"env":{"postgres":"16.4","nats":"2.10.x"},"started_at":"2026-10-02T10:00:00Z","duration_ms":120000,"result":"pass",
+ "profiles":{"core":{"status":"pass","cases":[{"id":"CP-CORE-01","status":"pass","ms":812}]}},"skipped":[{"case":"CP-OUT-04","reason":"no idempotent outbound method"}]}

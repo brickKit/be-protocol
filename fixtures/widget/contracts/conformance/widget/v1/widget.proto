@@ -1,0 +1,128 @@
+// System plane of the conformance fixture component conformance/widget (be-protocol P7).
+//
+// gRPC is the protocol between components: it never goes through the edge. Every call
+// carries be-caller (MISSING_CALLER otherwise). Methods marked USER-FACING answer
+// UNAUTHENTICATED from the runtime before any widget code runs (P7.3, CP-RPC-03).
+//
+// No language options (go_package, …): each SDK's examples/widget generates its own code.
+syntax = "proto3";
+
+package conformance.widget.v1;
+
+import "be/v1/limits.proto";
+import "google/protobuf/timestamp.proto";
+import "google/type/date.proto";
+
+service WidgetService {
+  // A system read; no data scope (the caller is a system principal).
+  rpc GetWidget(GetWidgetRequest) returns (GetWidgetResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Batch read for callers' snapshots; at most 100 ids (BATCH_TOO_LARGE above, CP-RPC-06).
+  // Unknown ids are listed in missing_ids, never an error.
+  rpc BatchGetWidgets(BatchGetWidgetsRequest) returns (BatchGetWidgetsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // An idempotent system write: increments touch_count once per (caller, idempotency_key).
+  // Replays return the first result; a key reused with another id is IDEMPOTENCY_MISMATCH.
+  rpc TouchWidget(TouchWidgetRequest) returns (TouchWidgetResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+
+  // What became of a TouchWidget call after a timeout (every cross-component write offers it).
+  rpc GetTouchStatus(GetTouchStatusRequest) returns (GetTouchStatusResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // USER-FACING: approving is a user action and is served only over REST
+  // (POST /conformance/widget/widgets/{id}/approve). Over gRPC it always answers
+  // UNAUTHENTICATED; it exists so the suite can check that (CP-RPC-03).
+  rpc ApproveWidget(ApproveWidgetRequest) returns (ApproveWidgetResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+}
+
+enum WidgetStatus {
+  WIDGET_STATUS_UNSPECIFIED = 0;
+  WIDGET_STATUS_DRAFT = 1;
+  WIDGET_STATUS_APPROVING = 2; // in flight: the reservation call is pending; deadline_at is set
+  WIDGET_STATUS_APPROVED = 3;  // closed
+  WIDGET_STATUS_SUSPENDED = 4; // closed: the reconciler gave up; an exception notification was queued
+}
+
+message Widget {
+  string id = 1;                       // UUIDv7, lower case
+  string legal_entity_id = 2;
+  string number = 3;                   // WIDGET_NO_FORMAT, gapped series
+  google.type.Date document_date = 4;  // business date of creation in the legal entity's zone
+  string kind_code = 5;
+  string name = 6;
+  string region = 7;                   // resource dimension "region"
+  string owner_id = 8;                 // platform sub of the creator
+  string dept_path = 9;                // the creator's dept_path; empty when none
+  WidgetStatus status = 10;
+  string currency = 11;                // ISO 4217
+  string price = 12;                   // decimal string, NUMERIC(19,6); field set conformance.widget.price
+  string quantity = 13;                // decimal string, NUMERIC(19,6)
+  string amount = 14;                  // decimal string at the currency's minor units; field set conformance.widget.price
+  string reservation_id = 15;
+  int64 touch_count = 16;
+  int64 version = 17;                  // aggregate version, shared by every widget subject
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp updated_at = 19;
+  google.protobuf.Timestamp approved_at = 20;
+}
+
+message GetWidgetRequest {
+  string id = 1;
+}
+
+message GetWidgetResponse {
+  Widget widget = 1;
+}
+
+message BatchGetWidgetsRequest {
+  repeated string ids = 1 [(be.v1.max_items) = 100];
+}
+
+message BatchGetWidgetsResponse {
+  repeated Widget widgets = 1;
+  repeated string missing_ids = 2;
+}
+
+message TouchWidgetRequest {
+  string id = 1;
+  string idempotency_key = 2;
+  string note = 3;
+}
+
+message TouchWidgetResponse {
+  Widget widget = 1;
+}
+
+message GetTouchStatusRequest {
+  string idempotency_key = 1;
+}
+
+enum TouchStatus {
+  TOUCH_STATUS_UNSPECIFIED = 0;
+  TOUCH_STATUS_NOT_FOUND = 1;   // never seen (or expired after 30 days) for this caller
+  TOUCH_STATUS_IN_PROGRESS = 2;
+  TOUCH_STATUS_DONE = 3;
+}
+
+message GetTouchStatusResponse {
+  TouchStatus status = 1;
+  Widget widget = 2;            // set when DONE
+}
+
+message ApproveWidgetRequest {
+  string id = 1;
+  string idempotency_key = 2;
+}
+
+message ApproveWidgetResponse {
+  Widget widget = 1;
+}

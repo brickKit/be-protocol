@@ -1,0 +1,81 @@
+{
+  "$schema": "https://github.com/brickKit/be-protocol/schemas/events-contract.schema.json",
+  "title": "conformance/widget events",
+  "note": "Additive only. All three subjects share the aggregate type conformance.widget.widget and its one version sequence (the widget row's version). Every instance (widget-go, -py, -ts) publishes these same subjects, like members of one slot family.",
+  "envelope": {
+    "description": "CloudEvents 1.0 binary mode, fixed by be-protocol P12 (schemas/envelope.schema.json); nothing of the envelope is repeated in the payload."
+  },
+  "events": [
+    {
+      "subject": "conformance.widget.created.v1",
+      "x-aggregate-type": "conformance.widget.widget",
+      "x-consumption": "state",
+      "x-transaction-document": true,
+      "grade": "core",
+      "note": "Published by POST /widgets in the creating transaction. No consumer in the fixture; the suite reads it from the stream (CP-EVP-*).",
+      "payload": {
+        "type": "object",
+        "required": ["widget_id", "legal_entity_id", "number", "document_date", "kind_code", "region", "owner_id", "status", "currency", "quantity", "amount", "version"],
+        "properties": {
+          "widget_id": { "type": "string" },
+          "legal_entity_id": { "type": "string" },
+          "number": { "type": "string" },
+          "document_date": { "type": "string", "format": "date" },
+          "kind_code": { "type": "string" },
+          "region": { "type": "string" },
+          "owner_id": { "type": "string" },
+          "status": { "enum": ["DRAFT"] },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "quantity": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+          "amount": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+          "version": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    {
+      "subject": "conformance.widget.approved.v1",
+      "x-aggregate-type": "conformance.widget.widget",
+      "x-consumption": "state",
+      "x-transaction-document": true,
+      "grade": "core",
+      "note": "Published when an approval completes, by the request or by the reconciler widget.approve (then causation is empty and hop 0). Carries the ledger entry's posting date and number.",
+      "payload": {
+        "type": "object",
+        "required": ["widget_id", "legal_entity_id", "number", "status", "reservation_id", "posting_date", "ledger_entry_no", "currency", "amount", "approved_at", "version"],
+        "properties": {
+          "widget_id": { "type": "string" },
+          "legal_entity_id": { "type": "string" },
+          "number": { "type": "string" },
+          "status": { "enum": ["APPROVED"] },
+          "reservation_id": { "type": "string" },
+          "posting_date": { "type": "string", "format": "date" },
+          "ledger_entry_no": { "type": "string" },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "amount": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+          "approved_at": { "type": "string", "format": "date-time" },
+          "version": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    {
+      "subject": "conformance.widget.reverted.v1",
+      "x-aggregate-type": "conformance.widget.widget",
+      "x-consumption": "state",
+      "x-transaction-document": true,
+      "grade": "core",
+      "note": "Published by the handler of conformance.reservation.expired.v1 when an APPROVED widget loses its reservation and returns to DRAFT: ce-causationid is the handled event's ce-id and ce-hopcount its hop + 1 (CP-EVS-06).",
+      "payload": {
+        "type": "object",
+        "required": ["widget_id", "legal_entity_id", "number", "status", "reason", "version"],
+        "properties": {
+          "widget_id": { "type": "string" },
+          "legal_entity_id": { "type": "string" },
+          "number": { "type": "string" },
+          "status": { "enum": ["DRAFT"] },
+          "reason": { "enum": ["RESERVATION_EXPIRED"] },
+          "version": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  ]
+}

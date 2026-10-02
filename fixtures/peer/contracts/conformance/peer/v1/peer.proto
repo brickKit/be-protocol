@@ -1,0 +1,105 @@
+// System plane of conformance/peer, the dependency of the widget fixture.
+//
+// No implementation exists: the component conformance suite's fake peer answers these
+// methods from this descriptor, with the canned responses in the widget's fixtures.yaml,
+// and can hang, slow down or fail them on demand.
+syntax = "proto3";
+
+package conformance.peer.v1;
+
+import "be/v1/limits.proto";
+import "google/protobuf/timestamp.proto";
+
+service PeerService {
+  // Reserve quota for a widget. Retried by the caller on UNAVAILABLE (IDEMPOTENT).
+  // FAILED_PRECONDITION / QUOTA_EXCEEDED when the quota is short.
+  rpc Reserve(ReserveRequest) returns (ReserveResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+
+  // What became of a Reserve call, by its idempotency key.
+  rpc GetReservationStatus(GetReservationStatusRequest) returns (GetReservationStatusResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Owners for the widget's owner snapshot (read-through).
+  rpc BatchGetOwners(BatchGetOwnersRequest) returns (BatchGetOwnersResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Owners page by page, for a backfill.
+  rpc ListOwners(ListOwnersRequest) returns (ListOwnersResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  // Deliver a notification (the widget's queued job widget.notify).
+  rpc Notify(NotifyRequest) returns (NotifyResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+}
+
+message ReserveRequest {
+  string widget_id = 1;
+  string legal_entity_id = 2;
+  string quantity = 3;          // decimal string
+  int32 hold_seconds = 4;       // the hold expires unless confirmed (foundations 11, holds with expiry)
+  string idempotency_key = 5;
+}
+
+enum ReservationStatus {
+  RESERVATION_STATUS_UNSPECIFIED = 0;
+  RESERVATION_STATUS_NOT_FOUND = 1;
+  RESERVATION_STATUS_RESERVED = 2;
+  RESERVATION_STATUS_REJECTED = 3;
+}
+
+message ReserveResponse {
+  string reservation_id = 1;
+  ReservationStatus status = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+message GetReservationStatusRequest {
+  string idempotency_key = 1;
+}
+
+message GetReservationStatusResponse {
+  ReservationStatus status = 1;
+  string reservation_id = 2;
+}
+
+message Owner {
+  string owner_id = 1;
+  string display_name = 2;
+  string credit_limit = 3;      // decimal string
+  string currency = 4;
+  int64 version = 5;
+}
+
+message BatchGetOwnersRequest {
+  repeated string ids = 1 [(be.v1.max_items) = 500];
+}
+
+message BatchGetOwnersResponse {
+  repeated Owner owners = 1;
+}
+
+message ListOwnersRequest {
+  int32 page_size = 1;
+  string cursor = 2;
+}
+
+message ListOwnersResponse {
+  repeated Owner owners = 1;
+  string next_cursor = 2;
+}
+
+message NotifyRequest {
+  string kind = 1;              // approved | exception
+  string widget_id = 2;
+  string idempotency_key = 3;   // the queued job's unique key
+}
+
+message NotifyResponse {
+  string notification_id = 1;
+}

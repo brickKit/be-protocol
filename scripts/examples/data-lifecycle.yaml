@@ -1,0 +1,7 @@
+mode: "on"
+cold_store: s3-parquet
+cold_query: scan
+publisher: none
+pii: plain
+tables:
+  sales_orders: { retention: { min: 15y after closed } }

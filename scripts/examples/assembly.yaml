@@ -1,0 +1,26 @@
+protocol: "1.0"
+data_scopes: [owner, org]
+permissions: []
+conformance:
+  fixtures: conformance/fixtures.yaml
+  skip:
+    - { case: CP-OUT-04, reason: "no idempotent outbound method" }
+resources:
+  - type: erp.sales.order
+    table: sales_orders
+    view_key: erp.sales.view
+    keys: [erp.sales.view, erp.sales.confirm, erp.sales.cancel, erp.sales.ship]
+    dimensions: [owner, org, legal_entity]
+    relations:
+      viewer: { grants: [erp.sales.view] }
+      editor: { includes: [viewer], grants: [erp.sales.ship] }
+      member: { owned_by: component, grants: [erp.sales.view] }
+    share:
+      key: erp.sales.share
+      relations: [viewer, editor]
+      subjects: [user, role, dept, dept_tree]
+    fields:
+      - { set: erp.sales.pricing, columns: [unit_price, discount, total_amount], read: erp.sales.pricing.read, edit: erp.sales.pricing.edit }
+    inherits: []
+    derivation: direct
+requires_capabilities: [sharing]

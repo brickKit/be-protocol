@@ -1,0 +1,1 @@
+{"be.cleanup":{"cron":"*/1 * * * *"},"widget.daily":{"enabled":false},"be.outbox":{"interval":"200ms"}}

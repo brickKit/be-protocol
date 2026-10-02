@@ -1,0 +1,27 @@
+# buf workspace of the protocol's protos and the fixture components' contracts (make lint-proto).
+# third_party/ holds the one Google API file the widget imports (google/type/date.proto, Apache 2.0,
+# unchanged), so the build needs no network; it is not linted.
+version: v2
+modules:
+  - path: proto
+    lint:
+      use: [STANDARD]
+      except:
+        # be.lifecycle.v1.Lifecycle keeps the name P16.4 gives it, and its rpcs return the
+        # resource itself (AIP-131/133 style: GetExport returns Export), as every component
+        # mounts the same service.
+        - SERVICE_SUFFIX
+        - RPC_RESPONSE_STANDARD_NAME
+        - RPC_REQUEST_RESPONSE_UNIQUE
+  - path: fixtures/widget/contracts
+    excludes: [fixtures/widget/contracts/events]
+  - path: fixtures/peer/contracts
+    excludes: [fixtures/peer/contracts/events]
+  - path: third_party
+    lint:
+      use: [MINIMAL]
+      ignore: [third_party/google]
+lint:
+  use: [STANDARD]
+breaking:
+  use: [FILE]

@@ -1,0 +1,12 @@
+# Reason catalogue of conformance/peer (be-protocol P4.4). The widget relays QUOTA_EXCEEDED with
+# this domain unchanged (foundations 15, "Relaying a dependency's error").
+domain: conformance/peer
+reasons:
+  - reason: QUOTA_EXCEEDED
+    code: FAILED_PRECONDITION
+    http: 400
+    params: [requested, available]
+    title:   { en: "Quota exceeded", zh: "额度不足" }
+    message: { en: "Only {available} available, {requested} requested", zh: "只有 {available}，需要 {requested}" }
+    since: 1.0.0
+    deprecated: false

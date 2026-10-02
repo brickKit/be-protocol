@@ -1,0 +1,61 @@
+# Project keys of conformance/widget. The protocol keys (protocol, conformance, resources,
+# requires_capabilities) follow be-protocol schemas/assembly-protocol.schema.json; the others
+# follow the project conventions every component uses, so be-ops and the gates can read the
+# fixture like a real component. An instance (widget-go, -py, -ts) changes only `id` and the
+# edge_routes paths (fixtures/README.md, "Instances").
+id: conformance/widget
+
+protocol: "1.0"
+
+conformance:
+  fixtures: conformance/fixtures.yaml
+  skip: []                     # the fixture skips nothing: it is the sample every case runs against
+
+domain: conformance
+tier: backend
+
+edge_routes:
+  - { path: /conformance/widget/kinds/**, auth: none }
+  - { path: /conformance/widget/**, auth: required, timeout: 20 }
+
+data:
+  schema: conformance_widget   # the suite replaces it with a random schema on every run
+  role: conformance_widget_rw
+
+data_scopes:
+  - { dimension: owner,  column: owner_id,  mode: equals, tables: [widgets] }
+  - { dimension: org,    column: dept_path, mode: prefix, tables: [widgets] }
+  - { dimension: region, column: region,    mode: in,     tables: [widgets] }
+
+permissions:
+  - { key: conformance.widget.view,       title: 查看部件,     type: page }
+  - { key: conformance.widget.create,     title: 新建部件,     type: action }
+  - { key: conformance.widget.approve,    title: 审批部件,     type: action }
+  - { key: conformance.widget.attach,     title: 上传部件附件, type: action }
+  - { key: conformance.widget.share,      title: 共享部件,     type: action, delegable: false }
+  - { key: conformance.widget.price.read, title: 查看部件价格, type: field }
+  - { key: conformance.widget.price.edit, title: 修改部件价格, type: field }
+
+menus:
+  - { key: conformance.widget, title: 部件（一致性夹具）, permission: conformance.widget.view }
+
+resources:
+  - type: conformance.widget.widget
+    table: widgets
+    view_key: conformance.widget.view
+    keys: [conformance.widget.view, conformance.widget.approve, conformance.widget.attach]
+    dimensions: [owner, org, region]
+    relations:
+      viewer: { grants: [conformance.widget.view] }
+      editor: { includes: [viewer], grants: [conformance.widget.approve, conformance.widget.attach] }
+    share:
+      key: conformance.widget.share
+      relations: [viewer, editor]
+      subjects: [user, role, dept, dept_tree]
+    fields:
+      - { set: conformance.widget.price, columns: [price, amount],
+          read: conformance.widget.price.read, edit: conformance.widget.price.edit }
+    inherits: []
+    derivation: direct
+
+requires_capabilities: []      # sharing is optional: without it _shares answers 501 (CP-SCOPE-14)

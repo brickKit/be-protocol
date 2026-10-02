@@ -1,0 +1,4 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","title":"erp-sales events","events":[
+ {"subject":"sales.order.created.v1","x-aggregate-type":"erp.sales.order","x-consumption":"state","x-transaction-document":true,"grade":"core","note":"…",
+  "payload":{"type":"object","required":["order_id","legal_entity_id","currency","total_amount","document_date","version"],"properties":{"order_id":{"type":"string"},"legal_entity_id":{"type":"string"},"currency":{"type":"string"},"total_amount":{"type":"string"},"document_date":{"type":"string","format":"date"},"version":{"type":"integer"}}}},
+ {"subject":"sales.order.cancelled.v1","x-aggregate-type":"erp.sales.order","payload":{"type":"object","required":["order_id"],"properties":{"order_id":{"type":"string"}}}}]}

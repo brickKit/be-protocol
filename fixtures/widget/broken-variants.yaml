@@ -1,0 +1,42 @@
+# Deliberately broken variants of the widget (be-protocol, "red before green"). Every official
+# SDK builds each one from its examples/widget with the build argument BROKEN=<name>; each
+# breaks exactly one rule. `make compconf-selftest` asserts that the variant fails the cases in
+# must_fail and passes every other MUST case it runs. A variant whose break is inherently seen
+# by more than one case lists them all; also_fails lists cases allowed (not required) to fail.
+# BROKEN unset or empty = the correct widget. An unknown name stops the image at start (exit 78).
+variants:
+  - name: accept-refresh
+    breaks: P5.3
+    behaviour: the token check accepts typ=refresh as an access token
+    must_fail: [CP-AUTH-03]
+  - name: healthz-db
+    breaks: P1.3
+    behaviour: /healthz runs SELECT 1 on PostgreSQL and answers 503 when it fails
+    must_fail: [CP-CORE-04]
+  - name: no-ce-id
+    breaks: P12 (envelope)
+    behaviour: the outbox pump publishes without ce-id and without Nats-Msg-Id
+    must_fail: [CP-EVP-01]
+    also_fails: [CP-EVP-02, CP-EVP-03]
+  - name: select-claim
+    breaks: P10.9, P12.1
+    behaviour: the outbox pump reads PENDING rows with a plain SELECT, then updates them (no FOR UPDATE SKIP LOCKED)
+    must_fail: [CP-EVP-03]
+  - name: no-set-role
+    breaks: P10.2
+    behaviour: transactions run without SET LOCAL ROLE / SET LOCAL search_path, as the login role with the session search_path
+    must_fail: [CP-DB-01]
+    also_fails: [CP-SHELL-07]
+  - name: unbounded-pool
+    breaks: P10.5
+    behaviour: the connection pool ignores PG_POOL_MAX and opens a connection per concurrent request
+    must_fail: [CP-DB-03]
+  - name: no-deadline
+    breaks: P3.4, P7.7
+    behaviour: no route deadline and no outbound deadline; calls wait for the peer for ever
+    must_fail: [CP-OUT-07]
+    also_fails: [CP-OUT-02, CP-OUT-05]
+  - name: leak-internal
+    breaks: P4.3
+    behaviour: an INTERNAL error's body carries the raw error text (SQL error, SQLSTATE) in detail
+    must_fail: [CP-ERR-03]

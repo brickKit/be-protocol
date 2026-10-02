@@ -1,0 +1,39 @@
+# conformance/peer: the widget fixture's dependency. Contracts only: no image exists. The
+# component conformance suite serves it with its fake peer (gRPC from the proto descriptor,
+# HTTP from the OpenAPI file) and publishes its events from the widget's samples.
+apiVersion: brickkit/v1
+kind: Component
+
+metadata:
+  id: conformance/peer
+  name: Peer (conformance fixture dependency)
+  version: 1.0.0
+  description: Contract-only dependency of the widget fixture, answered by the conformance suite's fake peer.
+  repository: https://github.com/brickKit/be-protocol
+  license: Apache-2.0
+  vendor: brickKit
+
+tags: [conformance, fixture]
+
+artifacts:
+  - type: api-contract
+    format: protobuf
+    files: [contracts/conformance/peer/v1/peer.proto, contracts/events/peer.events.json]
+  - type: api-contract
+    format: openapi
+    files: [contracts/peer.openapi.yaml]
+
+configSchema:
+  type: object
+  properties: {}
+
+deployment:
+  type: container
+  image: be-acceptance-fake-peer:latest   # placeholder: the suite starts its own fake, never this image
+  port: 8080
+  extraPorts:
+    - {name: grpc, port: 9090}
+
+healthCheck:
+  type: http
+  path: /healthz

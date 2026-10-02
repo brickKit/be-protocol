@@ -1,0 +1,48 @@
+openapi: 3.1.0
+info:
+  title: conformance/peer, user plane
+  version: "1.0.0"
+  description: |
+    The one user-plane operation the widget fixture calls with UserHTTP (be-protocol P8.1).
+    Served by the component conformance suite's fake peer, which records the request headers
+    (Authorization, X-Request-Id, traceparent, X-Authz-Revision, and that no be-* header arrives)
+    and answers with the canned body in the widget's fixtures.yaml.
+  license: { name: Apache-2.0, identifier: Apache-2.0 }
+servers:
+  - url: /conformance/peer
+security:
+  - bearer: []
+paths:
+  /owners/{owner_id}:
+    get:
+      operationId: getOwner
+      summary: An owner's profile as the calling user may see it
+      x-be-permission: conformance.peer.view
+      parameters:
+        - { name: owner_id, in: path, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: the owner
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [owner_id, display_name]
+                properties:
+                  owner_id: { type: string }
+                  display_name: { type: string }
+                  credit_limit: { type: string, pattern: "^-?[0-9]+(\\.[0-9]+)?$" }
+                  currency: { type: string }
+        "401":
+          description: no or invalid token
+          content:
+            application/problem+json:
+              schema: { type: object }
+        "404":
+          description: not visible to the caller
+          content:
+            application/problem+json:
+              schema: { type: object }
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT }

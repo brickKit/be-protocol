@@ -1,0 +1,1 @@
+{"component_id":"erp/sales","component_version":"3.0.0","protocol":"1.0","sdk":{"name":"be-sdk-go","version":"0.6.0"},"language":{"name":"go","version":"1.25.11"},"profiles":["core","auth","scope","grpc","outbound","events-pub","events-sub","idempotency","db","jobs","lifecycle"],"ports":{"http":8085,"grpc":9095},"migrations":{"component":"0001","platform":1},"members":null}

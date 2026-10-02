@@ -1,0 +1,11 @@
+# Redocly lint of the OpenAPI fragments (make lint-openapi).
+extends:
+  - recommended
+rules:
+  # The fragments are mounted under each component's own prefix and base URL, so they state none.
+  no-empty-servers: off
+  # Every operation answers its errors through `default` (problem+json, P4.1); 4xx are not
+  # listed one by one.
+  operation-4xx-response: off
+  # The protocol states its licence in the repository, not in each fragment.
+  info-license: off

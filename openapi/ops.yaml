@@ -1,0 +1,113 @@
+openapi: 3.1.0
+info:
+  title: be-protocol operations endpoints
+  version: "1.0"
+  description: |
+    Endpoints every component serves (be-protocol P1, P14.4, P18.3, P20). /healthz, /readyz,
+    /metrics and /_be/info are on the main port, never routed by the edge, never authenticated.
+    /{domain}/{name}/_ops/jobs is routed by the edge and guarded by <domain>.<name>.ops.
+  license: { name: Apache-2.0, identifier: Apache-2.0 }
+paths:
+  /healthz:
+    get:
+      operationId: healthz
+      summary: The process is alive (touches no dependency)
+      security: []
+      responses:
+        "200": { description: alive }
+    head:
+      operationId: healthzHead
+      summary: As GET, no body
+      security: []
+      responses:
+        "200": { description: alive }
+  /readyz:
+    get:
+      operationId: readyz
+      summary: Ready to serve (SHOULD, P1.4)
+      security: []
+      responses:
+        "200": { description: ready }
+        "503":
+          description: not ready; reason NOT_READY, metadata.waiting lists bundle, db_identity, migrations
+          content:
+            application/problem+json:
+              schema: { $ref: "../schemas/problem.schema.json" }
+  /metrics:
+    get:
+      operationId: metrics
+      summary: Prometheus text format (P18.3)
+      security: []
+      responses:
+        "200":
+          description: metrics
+          content:
+            text/plain:
+              schema: { type: string }
+  /_be/info:
+    get:
+      operationId: beInfo
+      summary: Self-description (P20.4)
+      security: []
+      responses:
+        "200":
+          description: self-description
+          content:
+            application/json:
+              schema: { $ref: "../schemas/info.schema.json" }
+  /{domain}/{name}/_ops/jobs:
+    parameters:
+      - { $ref: "#/components/parameters/domain" }
+      - { $ref: "#/components/parameters/name" }
+    get:
+      operationId: listJobs
+      summary: Jobs, last success, last error, queue depth (SHOULD, P14.4); key <domain>.<name>.ops
+      security: [ { bearer: [] } ]
+      x-be-permission: "<domain>.<name>.ops"
+      responses:
+        "200":
+          description: jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [jobs]
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      type: object
+                      required: [name, kind]
+                      properties:
+                        name: { type: string }
+                        kind: { enum: [every, singleton, cron, queue, reconciler] }
+                        interval: { type: string }
+                        cron: { type: string }
+                        enabled: { type: boolean }
+                        last_success_at: { type: [string, "null"], format: date-time }
+                        last_error: { type: string }
+                        last_error_at: { type: [string, "null"], format: date-time }
+                  queues:
+                    type: array
+                    items:
+                      type: object
+                      required: [kind, ready, running, dead]
+                      properties:
+                        kind: { type: string }
+                        ready: { type: integer }
+                        running: { type: integer }
+                        dead: { type: integer }
+                        oldest_age_seconds: { type: number }
+        default: { $ref: "#/components/responses/problem" }
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    domain: { name: domain, in: path, required: true, schema: { type: string, pattern: "^[a-z][a-z0-9-]*$" } }
+    name: { name: name, in: path, required: true, schema: { type: string, pattern: "^[a-z][a-z0-9-]*$" } }
+  responses:
+    problem:
+      description: error (P4)
+      content:
+        application/problem+json:
+          schema: { $ref: "../schemas/problem.schema.json" }

@@ -1,0 +1,64 @@
+[English](12-events.md) · [中文](12-events.zh.md)
+
+# P12 Events
+
+What an event is on the wire and how it travels: the CloudEvents envelope, the outbox, streams, durable consumers, the aggregate-stream cursor, the two kinds of handler, dead letters, loop protection, best-effort signals, replay and the bus adapters. Schemas: [`envelope.schema.json`](../schemas/envelope.schema.json), [`events-contract.schema.json`](../schemas/events-contract.schema.json); tables: `besdk_outbox`, `besdk_event_cursor` ([ddl/](../ddl/)).
+
+## Requirements
+
+| ID | Level | Requirement | Cases |
+|---|---|---|---|
+| P12.1 | MUST | Publishing goes only through the outbox: the `besdk_outbox` row is written in the **same transaction** as the business change. A pump publishes outside any transaction and marks a row `PUBLISHED` only after the bus confirmed it stored the message (JetStream `PubAck`). While the bus is unavailable rows stay `PENDING`, retried at `next_attempt_at` with backoff from 1 s to 1 min; a row is **never dropped**, and the backlog is visible in `be_outbox_pending` / `be_outbox_oldest_age_seconds`. Rows are claimed with `FOR UPDATE SKIP LOCKED` (the claim statement is in [ddl/](../ddl/)); a row whose claim expired is published again and the duplicate window drops the copy. Polling adapts from every 200 ms while busy to every 2 s while idle. At most 256 acknowledgements are in flight | CP-EVP-01, CP-EVP-02, CP-EVP-03, CP-EVP-04 |
+| P12.2 | MUST | A payload is a JSON object validated against the component's contract `contracts/events/*.events.json` ([schema](../schemas/events-contract.schema.json)); each event entry declares `x-aggregate-type` and `x-consumption` (`state` or `sequence`). A payload stays under 64 KiB: content that would take it above goes to the producer's own bucket and the event carries a **claim check** `{key, sha256, size}` (the object key, the content's SHA-256 in lowercase hex, its size in bytes; shape `$defs/claim_check` of the events-contract schema); a consumer obtains a short-lived URL for it from an rpc of the producer's contract, never from the bucket directly ([P17.3](17-object-storage.md)). The hard limit is 1 MiB, enforced at publish with a clear error. A payload never carries secrets or tokens, and as little personal data as its consumers need; it is never shown to a person as it is | CP-EVP-05 |
+| P12.3 | MUST | Subjects are `<domain>.<name>.<event…>.v<n>`: at least four segments, the first a domain (it selects the stream), the second the component's or aggregate's name, the last `v<n>` with n ≥ 1. Every segment matches `[a-z][a-z0-9]*(_[a-z0-9]+)*`: lowercase, starting with a letter, single underscores between words, no leading, trailing or double underscore, no hyphen ([`envelope.schema.json`](../schemas/envelope.schema.json), vectors `envelope`). The older first segments `sales` and `finance` are kept. A subject is published by one component, or by every member of one slot family; the one exception is `infra.authz.relation.sync.v1`, published by every component that owns a relation ([P6.13](06-authorization.md)). All subjects of one aggregate type, from one producer, share one strictly increasing aggregate version | CP-EVP-01 |
+| P12.4 | MUST | Streams: one per first subject segment, named `BE_<FIRST SEGMENT IN CAPITALS>`, subjects `<first segment>.>`. Defaults: `max_age` 7 days, `max_bytes` 1 GiB, `discard: old`, `duplicate_window` 10 min, file storage, 1 replica. Dead letters: stream `BE_DLQ`, subjects `dlq.>`, 30 days. "Create if missing, never change if present", at the platform migration and again at start; a component that finds no stream and may not create one fails its migration naming the stream | CP-EVP-04 |
+| P12.5 | MUST | Durables: one pull consumer per (component, subject), named `<component ID with / as _>__<subject with every . as __>` (`erp_finance__sales__order__created__v1`), the same standalone, in a shell and on every replica. The derivation is injective: a component ID contains no `_`, and by P12.3 no subject segment contains `__` or starts or ends with `_`, so the name splits back uniquely at every `__` (`crm.lead.stage_changed.v1` and `crm.lead_stage.changed.v1` keep distinct names; vectors `envelope`). Server-side configuration: `ack_wait` 30 s (the real value, never inflated to cover a backoff); `max_ack_pending` 256; `max_deliver` −1 (unlimited) and **no** server `backoff`, because the runtime counts deliveries and applies the delays itself (P12.7): `EVENTS_MAX_DELIVER` / `EVENTS_BACKOFF` when set, else the subscription's own, else 8 and `1s,10s,1m,5m,15m,30m,1h`; first creation `DeliverAll`; `inactive_threshold` 30 days. A durable is created only when it does not exist and is **never updated**: the runtime looks it up and creates it if missing; it never issues a create-or-update that would change an existing durable (an operator's change stays) | CP-EVS-01, CP-EVS-08 |
+| P12.6 | MUST | Deduplication by **aggregate-stream cursor**: `besdk_event_cursor`, primary key `(consumer, aggregate_type, aggregate_id)`. The cursor advances with the upsert in [ddl/](../ddl/) in the same transaction as the handler's write; no row returned means a duplicate or an older version, and the event is skipped and acknowledged. State mode: a handler brings its projection to the aggregate's state at version v. Shuffled and duplicated deliveries end in the same state as one in-order delivery | CP-EVS-02, CP-EVS-03 |
+| P12.7 | MUST | Two kinds of handler. **Apply** runs inside the cursor's transaction and writes locally only. **Run** runs outside any transaction, may call the network, is idempotent on a business key, and advances the cursor in a short transaction after success. A handler error is a negative acknowledgement with delay `EVENTS_BACKOFF[n − 1]` (the last value repeating), n being the broker's delivery count of the message. On receipt, before any handler runs, a message whose delivery count is above `EVENTS_MAX_DELIVER` goes to the dead letters; so does a permanent error (unparsable payload, contract violation, missing `ce-id`) at once. Dead-lettering publishes to `dlq.<durable>.<original subject>` with message ID `dlq:<durable>:<stream sequence>` (a crash between this publish and the next step never duplicates it), the original `ce-*` headers plus `be-dlq-reason`, `be-dlq-consumer`, `be-dlq-delivery`; then the original is terminated (`Term`) | CP-EVS-04, CP-EVS-05, CP-EVS-08 |
+| P12.8 | MUST | An inbound event with `ce-hopcount` above **10** goes to the dead letters (loop protection). An event published while handling an event or running a job gets `ce-causationid` = the handled event's `ce-id` and `ce-hopcount` = its hop count + 1, derived by the runtime; from a user request the hop count is 0 and `ce-causationid` is absent | CP-EVS-06 |
+| P12.9 | MUST | A slow handler reports progress (JetStream `InProgress`) every `ack_wait / 3` (10 s). Up to 4 messages are handled at once per subscription, also bounded by the member's connection budget. A handler's deadline is `ack_wait − 5 s`, with `ack_wait` the real 30 s of P12.5. Correctness never depends on the broker's order | CP-EVS-01 |
+| P12.10 | MUST | Best-effort signals (pokes), such as `infra.authz.changed.v1`: core publish on NATS, `NOTIFY` on the PostgreSQL queue; not stored, not redelivered, may be lost; every user of one also polls. In a shell every member subscribes separately | — |
+| P12.11 | MUST (producers keep the outbox 14 days) | Replay in three tiers: within stream retention (7 days), a temporary consumer from a point in time; beyond it and within outbox retention (14 days after publication), republish from the producer's outbox with a suffixed message ID to pass the duplicate window, consumers deduplicating through their cursor; older history is not replayed as events: a new consumer backfills from the producer's `List` ([P15.3](15-snapshots.md)), and from its published datasets where the range answers `RANGE_COLD` | — |
+| P12.12 | MUST | The bus adapter is chosen by the scheme of `EVENT_BUS_URL` (falling back to `NATS_URL`): `nats://` JetStream (default); `postgres://…?schema=be_bus` the PostgreSQL queue (tables in [ddl/be_bus.sql](../ddl/be_bus.sql), created by the project's database initialisation); `kafka://` reserved. Every component of a project uses the same adapter. Each adapter keeps the delivery semantics of P12.5 and P12.7 (delivery count, runtime-side delays, dead-lettering above `EVENTS_MAX_DELIVER`, create-if-absent durables) and passes the bus suite `conformance/bus/` of `brickKit/be-acceptance` | — |
+| P12.13 | MUST | Bus client: reconnect forever, every 2 s with jitter; keep retrying when the bus is not up at start; the connection is named after the member's component ID; disconnects, reconnects and asynchronous errors are logged with the member's logger. In a shell there is one bus connection per process | CP-CORE-03 |
+| P12.14 | MUST | No older envelope is read: a message with only `X-` headers, or without `ce-id`, is a contract violation and goes to the dead letters | CP-EVS-04 |
+| P12.15 | MUST | The outbox keeps rows 14 days after publication, then the lifecycle engine drops whole partitions whose rows are all `PUBLISHED`. Cursor rows unseen for 30 days are deleted | — |
+
+## Envelope
+
+CloudEvents 1.0 in binary mode: the envelope is in message headers, the payload is the business JSON object and nothing else. NATS and Kafka carry these as headers; the PostgreSQL queue stores them in `be_bus.message.headers`. Header names are lowercase; extension names are lowercase letters and digits only.
+
+| Header | Value | Filled by | Required |
+|---|---|---|---|
+| `ce-specversion` | `1.0` | runtime | yes |
+| `ce-id` | the event ID, a UUIDv7 = `besdk_outbox.id`; also the broker message ID (`Nats-Msg-Id`) | runtime | yes |
+| `ce-source` | the producing component's ID; in a shell the member's | runtime | yes |
+| `ce-type` | the subject, `erp.sales.order.confirmed.v1` | producer | yes |
+| `ce-time` | `occurred_at`, RFC 3339 UTC | runtime | yes |
+| `ce-subject` | the aggregate ID | producer | yes |
+| `content-type` | `application/json` (the binary-mode `datacontenttype`) | runtime | yes |
+| `ce-dataschema` | `<component ID>@<version>/contracts/events/<file>#<subject>`, a reference, not a URL to fetch | runtime | yes |
+| `ce-aggregatetype` | the contract's `x-aggregate-type` (`erp.sales.order`) | runtime, from the contract | yes |
+| `ce-aggregateversion` | the aggregate's version after this change, decimal integer | producer | yes |
+| `ce-causationid` | the `ce-id` of the event being handled | runtime | when the event was caused by another (absent from a request) |
+| `ce-hopcount` | causing event's hop count + 1; 0 from a request | runtime | yes |
+| `ce-legalentity` | the legal entity of a transaction document | runtime, from the payload | on transaction-document events |
+| `traceparent`, `tracestate` | W3C trace context of the producing span | runtime | `traceparent` whenever the outbox row carries one (always for an official SDK, [P18.1](18-observability.md)); a consumer accepts its absence |
+| `ce-sequence` | reserved for sequence mode | not set | — |
+| `ce-tenantid` | reserved; one deployment is one tenant | not set | — |
+| `Nats-Msg-Id` | equal to `ce-id` (JetStream duplicate suppression) | runtime | on NATS |
+
+Dead-letter messages add `be-dlq-reason`, `be-dlq-consumer` (the durable name) and `be-dlq-delivery` (delivery count).
+
+## Consumption modes
+
+| Mode | The consumer receives | Status |
+|---|---|---|
+| `state` | possibly not every version, possibly late, never older than what it has applied | default |
+| `sequence` | every version, in order; gaps are waited for | reserved; not built in 1.0 |
+
+## Notes
+
+- Delivery is at least once; effects are effectively once because the cursor advances in the same transaction as the write. Exactly-once is not promised.
+- The cursor is keyed by aggregate stream, not by subject, so events of one aggregate on different subjects can never be applied out of order: `cancelled` (v3) arriving before `created` (v2) leaves the state "cancelled", and `created` is then skipped.
+- Every first creation of a durable delivers what is still in the stream, so a newly installed consumer catches up on up to 7 days.

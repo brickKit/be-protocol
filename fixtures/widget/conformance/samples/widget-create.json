@@ -1,0 +1,13 @@
+{
+  "legal_entity_id": "LE01",
+  "kind_code": "STD",
+  "name": "Widget A",
+  "region": "east",
+  "currency": "CNY",
+  "price": "12.500000",
+  "quantity": "2",
+  "lines": [
+    { "description": "first line", "quantity": "1" },
+    { "description": "second line", "quantity": "1" }
+  ]
+}

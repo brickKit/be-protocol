@@ -1,0 +1,296 @@
+openapi: 3.1.0
+info:
+  title: be-protocol resource contract (data lifecycle)
+  version: "1.0"
+  description: |
+    Mounted in full by the runtime in every component with a database (be-protocol P16.4);
+    the same operations exist on the system plane as be.lifecycle.v1.Lifecycle. An operation
+    the installed adapters cannot serve answers 501 CAPABILITY_UNAVAILABLE with
+    metadata.capability. Keys: <domain>.<name>.lifecycle.read (units, verify, exports),
+    .lifecycle.thaw (thaw), .lifecycle.admin (holds, erasures, destructions) (P16.8).
+  license: { name: Apache-2.0, identifier: Apache-2.0 }
+security: [ { bearer: [] } ]
+paths:
+  /{domain}/{name}/_lifecycle/units:
+    parameters: [ { $ref: "#/components/parameters/domain" }, { $ref: "#/components/parameters/name" } ]
+    get:
+      operationId: listUnits
+      summary: The lifecycle units of one table and their states
+      x-be-permission: "<domain>.<name>.lifecycle.read"
+      parameters:
+        - { name: table, in: query, required: true, schema: { type: string } }
+        - { name: page_size, in: query, schema: { type: integer, minimum: 1, maximum: 500 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: units of the table
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [units, next_cursor]
+                properties:
+                  units: { type: array, items: { $ref: "#/components/schemas/unit" } }
+                  next_cursor: { type: string }
+        default: { $ref: "#/components/responses/problem" }
+  /{domain}/{name}/_lifecycle/units/{table}/{unit}:thaw:
+    parameters:
+      - { $ref: "#/components/parameters/domain" }
+      - { $ref: "#/components/parameters/name" }
+      - { name: table, in: path, required: true, schema: { type: string } }
+      - { name: unit, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: thawUnit
+      summary: Re-attach a cold unit read-only for a while (P16.2)
+      x-be-permission: "<domain>.<name>.lifecycle.thaw"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [days]
+              properties:
+                days: { type: integer, minimum: 1 }
+                idempotency_key: { type: string }
+      responses:
+        "200": { description: thawed or thawing, content: { application/json: { schema: { $ref: "#/components/schemas/unit" } } } }
+        default: { $ref: "#/components/responses/problem" }
+  /{domain}/{name}/_lifecycle/verify:
+    parameters: [ { $ref: "#/components/parameters/domain" }, { $ref: "#/components/parameters/name" } ]
+    get:
+      operationId: verify
+      summary: Check the digest chain of sealed units (G6)
+      x-be-permission: "<domain>.<name>.lifecycle.read"
+      parameters:
+        - { name: table, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok, units_checked, mismatched_units]
+                properties:
+                  ok: { type: boolean }
+                  units_checked: { type: integer }
+                  mismatched_units: { type: array, items: { type: string } }
+        default: { $ref: "#/components/responses/problem" }
+  /{domain}/{name}/_lifecycle/exports:
+    parameters: [ { $ref: "#/components/parameters/domain" }, { $ref: "#/components/parameters/name" } ]
+    post:
+      operationId: createExport
+      summary: Asynchronous export across hot, warm and cold tiers; the caller's data scope applies
+      x-be-permission: "<domain>.<name>.lifecycle.read"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [table, from, to, format]
+              properties:
+                table: { type: string }
+                from: { type: string, format: date-time }
+                to: { type: string, format: date-time }
+                filter: { type: object }
+                format: { enum: [parquet, csv] }
+                idempotency_key: { type: string }
+      responses:
+        "202": { description: accepted, content: { application/json: { schema: { $ref: "#/components/schemas/export" } } } }
+        default: { $ref: "#/components/responses/problem" }
+  /{domain}/{name}/_lifecycle/exports/{job_id}:
+    parameters:
+      - { $ref: "#/components/parameters/domain" }
+      - { $ref: "#/components/parameters/name" }
+      - { name: job_id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getExport
+      summary: State and result of an export job
+      x-be-permission: "<domain>.<name>.lifecycle.read"
+      responses:
+        "200": { description: export job, content: { application/json: { schema: { $ref: "#/components/schemas/export" } } } }
+        default: { $ref: "#/components/responses/problem" }
+  /{domain}/{name}/_lifecycle/holds:
+    parameters: [ { $ref: "#/components/parameters/domain" }, { $ref: "#/components/parameters/name" } ]
+    get:
+      operationId: listHolds
+      summary: Legal holds in force
+      x-be-permission: "<domain>.<name>.lifecycle.admin"
+      responses:
+        "200":
+          description: holds
+          content:
+            application/json:
+              schema: { type: object, required: [holds], properties: { holds: { type: array, items: { $ref: "#/components/schemas/hold" } } } }
+        default: { $ref: "#/components/responses/problem" }
+    post:
+      operationId: placeHold
+      summary: Place a legal hold (data under it is never destroyed or erased, G9)
+      x-be-permission: "<domain>.<name>.lifecycle.admin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scope, reason]
+              properties:
+                scope: { type: object }
+                reason: { type: string }
+                idempotency_key: { type: string }
+      responses:
+        "200": { description: placed, content: { application/json: { schema: { $ref: "#/components/schemas/hold" } } } }
+        default: { $ref: "#/components/responses/problem" }
+  /{domain}/{name}/_lifecycle/holds/{hold_id}:
+    parameters:
+      - { $ref: "#/components/parameters/domain" }
+      - { $ref: "#/components/parameters/name" }
+      - { name: hold_id, in: path, required: true, schema: { type: string } }
+    delete:
+      operationId: releaseHold
+      summary: Release a legal hold
+      x-be-permission: "<domain>.<name>.lifecycle.admin"
+      responses:
+        "200": { description: released, content: { application/json: { schema: { $ref: "#/components/schemas/hold" } } } }
+        default: { $ref: "#/components/responses/problem" }
+  /{domain}/{name}/_lifecycle/erasures:
+    parameters: [ { $ref: "#/components/parameters/domain" }, { $ref: "#/components/parameters/name" } ]
+    post:
+      operationId: requestErasure
+      summary: Erase one data subject across every tier (G10); a receipt is kept
+      x-be-permission: "<domain>.<name>.lifecycle.admin"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [request_id, subject, subject_id]
+              properties:
+                request_id: { type: string }
+                subject: { type: string }
+                subject_id: { type: string }
+      responses:
+        "202": { description: accepted, content: { application/json: { schema: { $ref: "#/components/schemas/erasure" } } } }
+        default: { $ref: "#/components/responses/problem" }
+  /{domain}/{name}/_lifecycle/erasures/{request_id}:
+    parameters:
+      - { $ref: "#/components/parameters/domain" }
+      - { $ref: "#/components/parameters/name" }
+      - { name: request_id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getErasure
+      summary: State and receipt of an erasure
+      x-be-permission: "<domain>.<name>.lifecycle.admin"
+      responses:
+        "200": { description: erasure and receipt, content: { application/json: { schema: { $ref: "#/components/schemas/erasure" } } } }
+        default: { $ref: "#/components/responses/problem" }
+  /{domain}/{name}/_lifecycle/destructions:
+    parameters: [ { $ref: "#/components/parameters/domain" }, { $ref: "#/components/parameters/name" } ]
+    get:
+      operationId: listDestructions
+      summary: Units due for destruction, awaiting approval
+      x-be-permission: "<domain>.<name>.lifecycle.admin"
+      parameters:
+        - { name: state, in: query, schema: { enum: [PROPOSED, APPROVED, DONE] } }
+      responses:
+        "200":
+          description: destruction list
+          content:
+            application/json:
+              schema: { type: object, required: [destructions], properties: { destructions: { type: array, items: { $ref: "#/components/schemas/destruction" } } } }
+        default: { $ref: "#/components/responses/problem" }
+  /{domain}/{name}/_lifecycle/destructions/{destruction_id}:approve:
+    parameters:
+      - { $ref: "#/components/parameters/domain" }
+      - { $ref: "#/components/parameters/name" }
+      - { name: destruction_id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: approveDestruction
+      summary: Approve the destruction of due units
+      x-be-permission: "<domain>.<name>.lifecycle.admin"
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { idempotency_key: { type: string } } }
+      responses:
+        "200": { description: approved, content: { application/json: { schema: { $ref: "#/components/schemas/destruction" } } } }
+        default: { $ref: "#/components/responses/problem" }
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    domain: { name: domain, in: path, required: true, schema: { type: string, pattern: "^[a-z][a-z0-9-]*$" } }
+    name: { name: name, in: path, required: true, schema: { type: string, pattern: "^[a-z][a-z0-9-]*$" } }
+  schemas:
+    unit:
+      type: object
+      required: [table, unit_key, state]
+      properties:
+        table: { type: string }
+        unit_key: { type: string }
+        range_from: { type: [string, "null"], format: date-time }
+        range_to: { type: [string, "null"], format: date-time }
+        list_value: { type: [string, "null"] }
+        state: { enum: [ACTIVE, BLOCKED, SEALED, EXPORTING, EXPORTED, VERIFIED, COLD_PENDING_DROP, COLD, THAWED, DESTROYED] }
+        rows: { type: [integer, "null"] }
+        blocked_reason: { type: [string, "null"] }
+        sealed_at: { type: [string, "null"], format: date-time }
+        cold_at: { type: [string, "null"], format: date-time }
+        thawed_until: { type: [string, "null"], format: date-time }
+    export:
+      type: object
+      required: [job_id, state]
+      properties:
+        job_id: { type: string }
+        state: { enum: [PENDING, RUNNING, DONE, FAILED] }
+        result_url: { description: "presigned, valid at most 300 s", type: [string, "null"] }
+        expires_at: { type: [string, "null"], format: date-time }
+    hold:
+      type: object
+      required: [hold_id, scope, reason, placed_by, placed_at]
+      properties:
+        hold_id: { type: string }
+        scope: { type: object }
+        reason: { type: string }
+        placed_by: { type: string }
+        placed_at: { type: string, format: date-time }
+        released_at: { type: [string, "null"], format: date-time }
+    erasure:
+      type: object
+      required: [request_id, subject, subject_id, received_at]
+      properties:
+        request_id: { type: string }
+        subject: { type: string }
+        subject_id: { type: string }
+        received_at: { type: string, format: date-time }
+        applied_at: { type: [string, "null"], format: date-time }
+        result:
+          type: [array, "null"]
+          items:
+            type: object
+            required: [table, action, rows]
+            properties:
+              table: { type: string }
+              action: { enum: [delete, anonymize, restrict] }
+              rows: { type: integer }
+              basis: { type: string }
+    destruction:
+      type: object
+      required: [destruction_id, table, unit_key, state]
+      properties:
+        destruction_id: { type: string }
+        table: { type: string }
+        unit_key: { type: string }
+        rows: { type: integer }
+        unit_digest: { description: hex, type: string }
+        basis: { type: string }
+        state: { enum: [PROPOSED, APPROVED, DONE] }
+  responses:
+    problem:
+      description: error (P4); 501 CAPABILITY_UNAVAILABLE for an operation the adapters cannot serve
+      content:
+        application/problem+json:
+          schema: { $ref: "../schemas/problem.schema.json" }

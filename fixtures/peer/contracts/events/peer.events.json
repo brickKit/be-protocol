@@ -1,0 +1,47 @@
+{
+  "$schema": "https://github.com/brickKit/be-protocol/schemas/events-contract.schema.json",
+  "title": "conformance/peer events",
+  "note": "Published by the component conformance suite on the peer's behalf from the samples in the widget's conformance/samples; the suite varies ce-aggregateversion to create duplicates and reordering.",
+  "envelope": {
+    "description": "CloudEvents 1.0 binary mode, fixed by be-protocol P12."
+  },
+  "events": [
+    {
+      "subject": "conformance.owner.updated.v1",
+      "x-aggregate-type": "conformance.peer.owner",
+      "x-consumption": "state",
+      "grade": "core",
+      "note": "Master data: the owner's full state at this version. conformance/widget keeps owner_snapshots with it (P15).",
+      "payload": {
+        "type": "object",
+        "required": ["owner_id", "display_name", "credit_limit", "currency", "version"],
+        "properties": {
+          "owner_id": { "type": "string" },
+          "display_name": { "type": "string" },
+          "credit_limit": { "type": "string", "pattern": "^-?[0-9]+(\\.[0-9]+)?$" },
+          "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+          "version": { "type": "integer", "minimum": 1 }
+        }
+      }
+    },
+    {
+      "subject": "conformance.reservation.expired.v1",
+      "x-aggregate-type": "conformance.peer.reservation",
+      "x-consumption": "state",
+      "x-transaction-document": true,
+      "grade": "core",
+      "note": "A reservation's hold expired. conformance/widget reverts the APPROVED widget holding it to DRAFT and publishes conformance.widget.reverted.v1.",
+      "payload": {
+        "type": "object",
+        "required": ["reservation_id", "widget_id", "legal_entity_id", "expired_at", "version"],
+        "properties": {
+          "reservation_id": { "type": "string" },
+          "widget_id": { "type": "string" },
+          "legal_entity_id": { "type": "string" },
+          "expired_at": { "type": "string", "format": "date-time" },
+          "version": { "type": "integer", "minimum": 1 }
+        }
+      }
+    }
+  ]
+}

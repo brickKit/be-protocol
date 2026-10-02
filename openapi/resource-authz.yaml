@@ -1,0 +1,182 @@
+openapi: 3.1.0
+info:
+  title: be-protocol resource contract (authorization)
+  version: "1.0"
+  description: |
+    Mounted by the runtime in every component that declares `resources` in assembly.yaml
+    (be-protocol P6.10). Decisions follow contract-infra-authz EVALUATION.md E10 and E12.
+    A capability the installed provider lacks answers 501 CAPABILITY_UNAVAILABLE with
+    metadata.capability. For a record the caller cannot see, every endpoint answers 404 and
+    explain reveals only the caller's own side of the facts.
+  license: { name: Apache-2.0, identifier: Apache-2.0 }
+security: [ { bearer: [] } ]
+paths:
+  /{domain}/{name}/_authz/check:
+    parameters: [ { $ref: "#/components/parameters/domain" }, { $ref: "#/components/parameters/name" } ]
+    post:
+      operationId: authzCheck
+      summary: Decide up to 500 (key, type, id) checks for the caller
+      x-be-permission: authenticated
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [checks]
+              properties:
+                checks:
+                  type: array
+                  maxItems: 500
+                  items:
+                    type: object
+                    required: [key, type, id]
+                    properties:
+                      key: { type: string }
+                      type: { type: string }
+                      id: { type: string }
+      responses:
+        "200":
+          description: one result per check, in order
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [results]
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      required: [visible, allowed, reason]
+                      properties:
+                        visible: { type: boolean }
+                        allowed: { type: boolean }
+                        reason: { description: "empty when allowed; NOT_FOUND, OUT_OF_SCOPE or MISSING_PERMISSION otherwise", type: string }
+        default: { $ref: "#/components/responses/problem" }
+  /{domain}/{name}/_authz/explain:
+    parameters: [ { $ref: "#/components/parameters/domain" }, { $ref: "#/components/parameters/name" } ]
+    get:
+      operationId: authzExplain
+      summary: Why the caller can or cannot act on one record (E12); full answer with infra.authz.audit
+      x-be-permission: authenticated
+      parameters:
+        - { name: key, in: query, required: true, schema: { type: string } }
+        - { name: type, in: query, required: true, schema: { type: string } }
+        - { name: id, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: decision and facts
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [decision, reasons, missing]
+                properties:
+                  decision: { enum: [allowed, visible, not_visible] }
+                  reasons: { type: array, items: { $ref: "#/components/schemas/fact" } }
+                  missing: { type: array, items: { $ref: "#/components/schemas/fact" } }
+        default: { $ref: "#/components/responses/problem" }
+  /{domain}/{name}/_shares/{type}/{id}:
+    parameters:
+      - { $ref: "#/components/parameters/domain" }
+      - { $ref: "#/components/parameters/name" }
+      - { name: type, in: path, required: true, schema: { type: string } }
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: listShares
+      summary: The record's shares; 404 when not visible
+      x-be-permission: authenticated
+      responses:
+        "200":
+          description: shares
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [shares]
+                properties:
+                  shares: { type: array, items: { $ref: "#/components/schemas/share" } }
+        default: { $ref: "#/components/responses/problem" }
+    post:
+      operationId: createShare
+      summary: Share the record; answers after the component's projection reached the returned revision
+      x-be-permission: "<the type's share key>"
+      parameters:
+        - { name: Idempotency-Key, in: header, required: false, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subject, relation]
+              properties:
+                subject: { type: string, pattern: "^(user|role|dept|dept_tree):.+$" }
+                relation: { type: string }
+                expires_at: { type: string, format: date-time }
+                idempotency_key: { type: string }
+      responses:
+        "200":
+          description: created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [share, revision]
+                properties:
+                  share: { $ref: "#/components/schemas/share" }
+                  revision: { type: string, pattern: "^[0-9]+$" }
+        default: { $ref: "#/components/responses/problem" }
+  /{domain}/{name}/_shares/{type}/{id}/{share_id}:
+    parameters:
+      - { $ref: "#/components/parameters/domain" }
+      - { $ref: "#/components/parameters/name" }
+      - { name: type, in: path, required: true, schema: { type: string } }
+      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: share_id, in: path, required: true, schema: { type: string } }
+    delete:
+      operationId: deleteShare
+      summary: Revoke one share
+      x-be-permission: "<the type's share key>"
+      responses:
+        "200":
+          description: revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [revision]
+                properties:
+                  revision: { type: string, pattern: "^[0-9]+$" }
+        default: { $ref: "#/components/responses/problem" }
+components:
+  securitySchemes:
+    bearer: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    domain: { name: domain, in: path, required: true, schema: { type: string, pattern: "^[a-z][a-z0-9-]*$" } }
+    name: { name: name, in: path, required: true, schema: { type: string, pattern: "^[a-z][a-z0-9-]*$" } }
+  schemas:
+    fact:
+      type: object
+      required: [kind, source, detail]
+      properties:
+        kind: { enum: [role_key, level, dimension, delegation, ceiling, relation, share, capability] }
+        source: { type: string }
+        detail: { type: string }
+    share:
+      type: object
+      required: [share_id, subject, relation]
+      properties:
+        share_id: { type: string }
+        subject: { type: string }
+        relation: { type: string }
+        expires_at: { type: [string, "null"], format: date-time }
+        created_by: { type: string }
+        created_at: { type: string, format: date-time }
+  responses:
+    problem:
+      description: error (P4); 404 when not visible, 403 SHARE_NOT_ALLOWED, 501 CAPABILITY_UNAVAILABLE, 400 BATCH_TOO_LARGE
+      content:
+        application/problem+json:
+          schema: { $ref: "../schemas/problem.schema.json" }

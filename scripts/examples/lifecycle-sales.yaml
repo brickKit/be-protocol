@@ -1,0 +1,26 @@
+lifecycle: v1
+tenant_key: none
+tables:
+  sales_orders:
+    class: document
+    partition: {by: created_at, grain: month, ahead: 3}
+    closed: {column: status, in: [COMPLETED, CANCELLED, CLOSED], at: updated_at}
+    tiers:
+      hot: 90d
+      seal: 18mo after closed
+      cold: 5y after closed
+    retention:
+      min: 10y after closed
+      basis: "tax archive rule"
+      end: review
+    erasure:
+      subject: customer
+      key: customer_id
+      columns: {customer_name: restrict}
+    dataset: {publish: true, exclude: [suspended_reason]}
+  sales_order_items:
+    follows: sales_orders
+  customer_snapshots:
+    class: snapshot
+    erasure: {subject: customer, key: customer_id, action: delete}
+  pricelists: {class: reference}

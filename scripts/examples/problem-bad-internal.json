@@ -1,0 +1,1 @@
+{"type":"urn:be:erp/inventory:DB_DOWN","title":"x","status":500,"code":"INTERNAL","reason":"DB_DOWN","domain":"erp/inventory","detail":"pq: relation does not exist","metadata":{},"instance":"/x","request_id":"r","trace_id":"4bf92f3577b34da6a3ce929d0e0e4736"}

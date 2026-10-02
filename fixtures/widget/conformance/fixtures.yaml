@@ -1,0 +1,169 @@
+# Conformance fixtures of conformance/widget: the gold sample every component's fixtures file
+# follows (format: be-protocol schemas/fixtures.schema.json). Data, not code.
+# Placeholders the suite substitutes: {id} = the created record's ID, {sub:<persona>} = that
+# persona's sub, {ms} = the delay the suite chooses. Paths are on the main port; an instance
+# (widget-go, -py, -ts) replaces conformance/widget by its own ID (fixtures/README.md).
+# The only fact kept outside this file is where route guards come from (x-be-permission in the
+# OpenAPI file, ../README.md, "What the suite needs to know").
+
+users:
+  alice:   { roles: [widget_editor],  dept_path: /1/3/,   legal_entity: LE01 }   # creates; owns her widgets
+  bob:     { roles: [widget_editor],  dept_path: /1/7/,   legal_entity: LE01 }   # same role, another department
+  carol:   { roles: [widget_viewer],  dept_path: /1/3/5/ }                       # dept level, region east, no price key
+  dave:    { roles: [widget_manager], dept_path: /1/ }                           # subtree level, may share
+  erin:    { roles: [widget_auditor], dept_path: /9/ }                           # all level, read only
+  nodept:  { roles: [widget_editor],  dept_path: "" }                            # R60: sees only her own
+  nobody:  { roles: [],               dept_path: /1/3/ }                         # no key at all: 403
+
+grants:
+  widget_editor:
+    keys: [conformance.widget.view, conformance.widget.create, conformance.widget.approve, conformance.widget.attach,
+           conformance.widget.price.read, conformance.widget.price.edit]
+    levels: { conformance.widget.view: own, conformance.widget.approve: own, conformance.widget.attach: own }
+    values: { region: ["*"] }
+  widget_viewer:
+    keys: [conformance.widget.view]
+    levels: { conformance.widget.view: dept }
+    values: { region: [east] }
+  widget_manager:
+    keys: [conformance.widget.view, conformance.widget.approve, conformance.widget.share, conformance.widget.price.read]
+    levels: { conformance.widget.view: subtree, conformance.widget.approve: subtree }
+    values: { region: [east, west] }
+  widget_auditor:
+    keys: [conformance.widget.view, conformance.widget.price.read]
+    default_level: all
+    values: { region: ["*"] }
+
+resources:
+  conformance.widget.widget:
+    create:
+      method: POST
+      path: /conformance/widget/widgets
+      as: alice
+      key: conformance.widget.create
+      body_file: samples/widget-create.json
+      id: $.id
+      idempotent: true
+      fingerprint: [legal_entity_id, kind_code, name, region, currency, price, quantity, lines]
+      triggers: { event: conformance.widget.created.v1 }
+      expect: { status: 201 }
+    get:
+      method: GET
+      path: /conformance/widget/widgets/{id}
+      key: conformance.widget.view
+      triggers: { grpc: conformance.peer.v1.PeerService/BatchGetOwners }
+    list:
+      method: GET
+      path: /conformance/widget/widgets
+      key: conformance.widget.view
+      filters: { region: { dimension: region } }
+      sort: { param: sort, masked: [price, amount] }
+      range: { after: created_after, before: created_before, include_cold: include_cold }
+    approve:
+      method: POST
+      path: /conformance/widget/widgets/{id}/approve
+      key: conformance.widget.approve
+      idempotent: true
+      two_phase: true
+      fingerprint: []
+      triggers: { grpc: conformance.peer.v1.PeerService/Reserve, event: conformance.widget.approved.v1, job: widget.notify }
+      expect: { status: 200 }
+    owner:
+      method: GET
+      path: /conformance/widget/widgets/{id}/owner
+      key: conformance.widget.view
+      triggers: { http: "GET /conformance/peer/owners/{sub:alice}" }
+    attach:
+      method: POST
+      path: /conformance/widget/widgets/{id}/attachments
+      key: conformance.widget.attach
+      body_file: samples/attachment.json
+      expect: { status: 201 }
+    touch:
+      grpc: conformance.widget.v1.WidgetService/TouchWidget
+      body: { id: "{id}", note: conformance }
+      idempotent: true
+    batch_get:
+      grpc: conformance.widget.v1.WidgetService/BatchGetWidgets
+      body: { ids: ["{id}"] }
+    approve_over_grpc:
+      grpc: conformance.widget.v1.WidgetService/ApproveWidget
+      body: { id: "{id}" }
+      user_facing: true
+    download:
+      method: GET
+      path: /conformance/widget/widgets/{id}/attachments/{attachment_id}
+      key: conformance.widget.view
+  kinds:
+    list:
+      method: GET
+      path: /conformance/widget/kinds
+      expect: { status: 200 }
+  owners:
+    put_me:
+      method: PUT
+      path: /conformance/widget/owners/me
+      as: alice
+      body_file: samples/owner-me.json
+      expect: { status: 200 }
+
+dependencies:
+  conformance/peer:
+    conformance.peer.v1.PeerService/Reserve: { response_file: samples/reserve-ok.json }
+    conformance.peer.v1.PeerService/GetReservationStatus: { response_file: samples/reservation-status-reserved.json }
+    conformance.peer.v1.PeerService/BatchGetOwners: { response_file: samples/owners-batch.json }
+    conformance.peer.v1.PeerService/ListOwners: { response_file: samples/owners-list.json }
+    conformance.peer.v1.PeerService/Notify: { response_file: samples/notify-ok.json }
+    "GET /conformance/peer/owners/{owner_id}": { response_file: samples/peer-owner.json }
+
+events:
+  produces:
+    - { via: resources.conformance.widget.widget.create, subject: conformance.widget.created.v1 }
+    - { via: resources.conformance.widget.widget.approve, subject: conformance.widget.approved.v1 }
+  consumes:
+    - subject: conformance.owner.updated.v1
+      sample_file: samples/owner-updated.json
+      aggregate_id: $.owner_id
+      observe: { sql: "SELECT version, credit_limit, display_name FROM owner_snapshots WHERE owner_id = $1" }
+    - subject: conformance.reservation.expired.v1
+      sample_file: samples/reservation-expired.json
+      aggregate_id: $.reservation_id
+      setup: resources.conformance.widget.widget.approve     # the canned Reserve answer holds rsv-0001, the sample's reservation
+      produces: conformance.widget.reverted.v1
+      observe: { sql: "SELECT status, version FROM widgets WHERE reservation_id = $1" }
+
+jobs:
+  enqueues:
+    - via: resources.conformance.widget.widget.approve
+      kind: widget.notify
+      observe: { sql: "SELECT state, attempts FROM widget_jobs WHERE widget_id = $1 AND kind = 'approved'" }
+  cron:
+    - name: widget.daily
+      override: { cron: "@every 2s" }
+      observe: { sql: "SELECT count(*) FROM widget_audit WHERE action = 'daily_summary'" }
+  reconcilers:
+    - name: widget.approve
+      via: resources.conformance.widget.widget.approve
+      stall: conformance/peer conformance.peer.v1.PeerService/Reserve      # hangs past the 15 s route deadline
+      expect_while_stalled: { status: 202, field: { $.status: APPROVING } }
+      resolve: { call: conformance/peer conformance.peer.v1.PeerService/GetReservationStatus, response_file: samples/reservation-status-reserved.json }
+      observe: { sql: "SELECT status FROM widgets WHERE id = $1" }
+
+lock:
+  sql: "SELECT 1 FROM widgets WHERE id = $1 FOR UPDATE"
+  while: resources.conformance.widget.widget.approve           # answers 409 LOCK_TIMEOUT within lock_timeout
+
+pii_log:
+  via: resources.owners.put_me
+  msg: owner_profile_updated
+  fields: [phone, email]
+
+blob:
+  upload: { via: resources.conformance.widget.widget.attach, url: $.upload_url, max_bytes: $.max_bytes }
+  download: { via: resources.conformance.widget.widget.download, url: $.download_url }
+
+slow:
+  method: POST
+  path: /conformance/widget/widgets/{id}/slow
+  key: conformance.widget.view
+  query: { ms: "{ms}", via: sleep }

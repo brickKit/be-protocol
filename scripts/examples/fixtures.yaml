@@ -1,0 +1,22 @@
+users:
+  rep_east:  { roles: [dev_sales_rep], dept_path: /1/3/, legal_entity: LE01 }
+  rep_west:  { roles: [dev_sales_rep], dept_path: /1/7/ }
+  no_dept:   { roles: [dev_sales_rep], dept_path: "" }
+grants:
+  dev_sales_rep: { keys: [erp.sales.view, erp.sales.create, erp.sales.confirm], levels: { erp.sales.view: subtree } }
+resources:
+  erp.sales.order:
+    create:  { method: POST, path: /erp/sales/orders, as: rep_east, body_file: order-create.json, id: $.id }
+    get:     { method: GET,  path: "/erp/sales/orders/{id}" }
+    list:    { method: GET,  path: /erp/sales/orders }
+    command: { method: POST, path: "/erp/sales/orders/{id}/confirm", key: erp.sales.confirm, idempotent: true,
+               two_phase: true, triggers: { grpc: "erp.inventory.v1.InventoryService/Reserve" } }
+dependencies:
+  erp/inventory:
+    "erp.inventory.v1.InventoryService/Reserve": { response_file: reserve-ok.json }
+events:
+  produces:  { via: resources.erp.sales.order.command, subject: sales.order.created.v1 }
+  consumes:
+    - subject: mdm.customer.updated.v1
+      sample_file: customer-updated.json
+      observe:  { sql: "SELECT version, credit_limit FROM customer_snapshots WHERE customer_id = $1" }

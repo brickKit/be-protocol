@@ -1,0 +1,5 @@
+lifecycle: v1
+tables:
+  jobs:
+    class: queue
+    tiers: {cold: 1y after created}

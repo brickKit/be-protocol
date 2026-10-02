@@ -1,0 +1,52 @@
+# Reason catalogue of conformance/widget (be-protocol P4.4; format schemas/errors-yaml.schema.json).
+# Append-only. An instance (widget-go, -py, -ts) changes only `domain` to its own ID.
+domain: conformance/widget
+reasons:
+  - reason: WIDGET_INVALID
+    code: INVALID_ARGUMENT
+    http: 400
+    params: []
+    title:   { en: "Invalid widget", zh: "部件数据不合法" }
+    message: { en: "The widget has invalid fields; see the field errors", zh: "部件有字段不合法，见字段错误" }
+    since: 1.0.0
+    deprecated: false
+  - reason: WIDGET_ID_INVALID
+    code: INVALID_ARGUMENT
+    http: 400
+    params: [id]
+    title:   { en: "Invalid widget ID", zh: "部件 ID 不合法" }
+    message: { en: "{id} is not a UUIDv7", zh: "{id} 不是 UUIDv7" }
+    since: 1.0.0
+    deprecated: false
+  - reason: WIDGET_KIND_UNKNOWN
+    code: INVALID_ARGUMENT
+    http: 400
+    params: [kind_code]
+    title:   { en: "Unknown widget kind", zh: "未知的部件类型" }
+    message: { en: "There is no widget kind {kind_code}", zh: "没有部件类型 {kind_code}" }
+    since: 1.0.0
+    deprecated: false
+  - reason: WIDGET_TOO_MANY_LINES
+    code: INVALID_ARGUMENT
+    http: 400
+    params: [kind_code, max]
+    title:   { en: "Too many lines", zh: "明细行过多" }
+    message: { en: "A {kind_code} widget has at most {max} lines", zh: "{kind_code} 类部件最多 {max} 行" }
+    since: 1.0.0
+    deprecated: false
+  - reason: WIDGET_ALREADY_EXISTS
+    code: ALREADY_EXISTS
+    http: 409
+    params: [id]
+    title:   { en: "Widget already exists", zh: "部件已存在" }
+    message: { en: "A widget with ID {id} already exists", zh: "ID 为 {id} 的部件已存在" }
+    since: 1.0.0
+    deprecated: false
+  - reason: WIDGET_NOT_DRAFT
+    code: FAILED_PRECONDITION
+    http: 400
+    params: [status]
+    title:   { en: "Widget is not a draft", zh: "部件不是草稿" }
+    message: { en: "Only a draft can be approved; this widget is {status}", zh: "只有草稿能审批；这个部件是 {status}" }
+    since: 1.0.0
+    deprecated: false
