@@ -19,7 +19,7 @@ Every request has a deadline, and it only shrinks as it travels: each hop gives 
 | Inbound HTTP | `HTTP_DEFAULT_TIMEOUT` (10 s); 15 s for declared orchestrations | [P3.4](03-http-surface.md) |
 | HTTP server | read headers 5 s, read 30 s, write = route deadline + 5 s, idle 120 s | [P3.5](03-http-surface.md) |
 | Inbound gRPC | the caller's `grpc-timeout`; 10 s when absent | [P7.4](07-system-rpc.md) |
-| Outbound gRPC and user-plane HTTP | `min(3 s, remaining − 50 ms)`; under 50 ms not sent | [P7.7](07-system-rpc.md), [P8.2](08-outbound-http.md) |
+| Outbound gRPC and user-plane HTTP | `min(3 s, remaining − 50 ms)`; with 50 ms or less left not sent | [P7.7](07-system-rpc.md), [P8.2](08-outbound-http.md) |
 | Third-party HTTP | 10 s, per client | [P8.3](08-outbound-http.md) |
 | SQL statement | `min(5 s, remaining)` | [P10.3](10-database.md) |
 | Lock wait | 2 s | [P10.3](10-database.md) |

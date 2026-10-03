@@ -8,7 +8,7 @@
 
 | 文件 | 用例数 | 操作 |
 |---|---|---|
-| `values.json` | 104 | `parse_value`、`read_undeclared`、`secret_text` |
+| `values.json` | 106 | `parse_value`、`read_undeclared`、`secret_text` |
 | `endpoints.json` | 31 | `endpoint_name`、`endpoint_value`、`family_address` |
 | `keys.json` | 29 | `key_name`、`key_declaration` |
 | `forms.json` | 32 | `value_form` |
@@ -29,7 +29,7 @@
 
 ## 规则
 
-- **有没有**：变量不存在时取 `default`；必填则 `CONFIG_MISSING`；否则为未设置。除 `string` 外，空值一律算未设置（对应 brickKit 的 `${NAME:-}`）。值存在却解析不了是 `CONFIG_INVALID`，永不回退到默认值；默认值本身解析不了也是错误。
+- **有没有**：变量不存在时取 `default`；必填则 `CONFIG_MISSING`；否则为未设置。空值一律算未设置，`string` 也不例外（对应 brickKit 的 `${NAME:-}`；rc.2）。值存在却解析不了是 `CONFIG_INVALID`，永不回退到默认值；默认值本身解析不了也是错误。
 - **integer**：`^-?[0-9]+$`（前导零按十进制），范围 ±(2^53−1)，保证每门语言都能精确表示；不接受 `+`、空格、分隔符、十六进制、指数、非 ASCII 数字。
 - **boolean**：恰好 `true`、`false`、`1`、`0`。
 - **duration**：Go `time.ParseDuration` 的语法（`5s`、`1h30m`、`1.5h`、`200ms`、`10us` / `10µs` / `10μs`、`7ns`、`.5s`、`+5s`、单独的 `0`）；没有"天"单位，不接受大写、空格、ISO 8601；负时长拒收。值以纳秒计，写成十进制字符串。
@@ -57,7 +57,7 @@
 
 ## 本处补定的口径
 
-请评审：类型化的键空值算未设置；整数限定在 ±(2^53−1)；布尔只认 `true` / `false` / `1` / `0`（不是 Go `ParseBool` 那一大套）；负时长拒收；时长列表不许空格；地址变量不是 `http://host:port[/]` 就拒收；密钥写成模板或带明文默认值都拒收；密钥文件只去掉一个末尾换行；`_FILE` 后缀留给以文件交付的密钥。
+请评审：空值（包括 `string`）算未设置；整数限定在 ±(2^53−1)；布尔只认 `true` / `false` / `1` / `0`（不是 Go `ParseBool` 那一大套）；负时长拒收；时长列表不许空格；地址变量不是 `http://host:port[/]` 就拒收；密钥写成模板或带明文默认值都拒收；密钥文件只去掉一个末尾换行；`_FILE` 后缀留给以文件交付的密钥。
 
 ## 重新生成
 

@@ -94,7 +94,7 @@ var intRe = regexp.MustCompile(`^-?[0-9]+$`)
 func parseValue(in map[string]any) any {
 	t, _ := s(in, "type")
 	v, has := s(in, "value")
-	if has && v == "" && t != "string" {
+	if has && v == "" {
 		has = false
 	}
 	if !has {

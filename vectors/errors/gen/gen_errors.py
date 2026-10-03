@@ -45,6 +45,7 @@ BE_REASONS = {
     "RANGE_COLD": "FAILED_PRECONDITION", "UNIT_SEALED": "FAILED_PRECONDITION",
     "RATE_LIMITED": "RESOURCE_EXHAUSTED", "UPSTREAM_UNAVAILABLE": "UNAVAILABLE", "UPSTREAM_TIMEOUT": "DEADLINE_EXCEEDED",
     "NETWORK_IN_TX": "INTERNAL", "DB_TOO_MANY_CONNECTIONS": "UNAVAILABLE", "NESTED_TX": "INTERNAL",
+    "REQUEST_INVALID": "INVALID_ARGUMENT", "DEPENDENCY_UNAVAILABLE": "UNAVAILABLE", "REQUEST_CANCELLED": "CANCELLED",
 }
 REASON_RE = re.compile(r"[A-Z][A-Z0-9]*(_[A-Z0-9]+)*")
 
@@ -86,10 +87,14 @@ def sqlstate(inp):
         return {"action": "fail", "code": "ABORTED", "reason": "LOCK_TIMEOUT", "domain": "be", "http": 409}
     if s == "57014":
         if ctx == "cancelled":
-            return {"action": "fail", "code": "CANCELLED", "reason": None, "domain": None, "http": 499}
+            return {"action": "fail", "code": "CANCELLED", "reason": "REQUEST_CANCELLED", "domain": "be", "http": 499}
         return {"action": "fail", "code": "DEADLINE_EXCEEDED", "reason": "STATEMENT_TIMEOUT", "domain": "be", "http": 504}
     if s == "25P04":
         return {"action": "fail", "code": "DEADLINE_EXCEEDED", "reason": "STATEMENT_TIMEOUT", "domain": "be", "http": 504}
+    if s[:2] == "08" or s in ("57P01", "57P02", "57P03"):
+        # the connection could not be made or was lost: DEPENDENCY_UNAVAILABLE naming the database (P4)
+        return {"action": "fail", "code": "UNAVAILABLE", "reason": "DEPENDENCY_UNAVAILABLE", "domain": "be", "http": 503,
+                "metadata": {"dependency": "db"}}
     if s == "53300":
         return {"action": "fail", "code": "UNAVAILABLE", "reason": "DB_TOO_MANY_CONNECTIONS", "domain": "be", "http": 503}
     if s == "23505" and inp.get("component_mapping"):
@@ -107,6 +112,15 @@ def level(code, ctx="none"):
         return "none"
     if code == "OK":
         return "none"
+    return "info"
+
+
+def access_level(code):
+    # P4.6: the access-log line's level, by the response's code
+    if code in HIDDEN:
+        return "error"
+    if code in ("UNAVAILABLE", "DEADLINE_EXCEEDED"):
+        return "warn"
     return "info"
 
 
@@ -209,6 +223,12 @@ def gen_sqlstate():
         ("transaction-timeout", {"sqlstate": "25P04"}, "transaction_timeout (PostgreSQL 17+)"),
         ("idle-in-transaction", {"sqlstate": "25P03"}, "idle_in_transaction_session_timeout: a component bug"),
         ("too-many-connections", {"sqlstate": "53300"}, "the server refused a connection"),
+        ("connection-failure", {"sqlstate": "08006"}, "the connection was lost: DEPENDENCY_UNAVAILABLE, dependency db"),
+        ("cannot-connect", {"sqlstate": "08001"}, "the client could not establish a connection"),
+        ("connection-exception", {"sqlstate": "08000"}, "any other connection exception"),
+        ("admin-shutdown", {"sqlstate": "57P01"}, "the server is shutting down (a restart or failover)"),
+        ("crash-shutdown", {"sqlstate": "57P02"}, "the server crashed"),
+        ("cannot-connect-now", {"sqlstate": "57P03"}, "the server is starting up or in recovery"),
         ("unique-unmapped", {"sqlstate": "23505"}, "a unique violation the component did not map"),
         ("unique-mapped", {"sqlstate": "23505", "component_mapping": {"code": "ALREADY_EXISTS", "reason": "WIDGET_ALREADY_EXISTS",
                                                                       "domain": "conformance/widget"}},
@@ -226,6 +246,9 @@ def gen_levels():
     for code in CODES:
         add(c, code.lower().replace("_", "-"), f"log level of {code}", "log_level", {"code": code},
             lambda inp: {"level": level(inp["code"])}, ["P4.6"])
+    for code in CODES:
+        add(c, "access-" + code.lower().replace("_", "-"), f"access-log line level of a response with code {code}",
+            "access_log_level", {"code": code}, lambda inp: {"level": access_level(inp["code"])}, ["P4.6", "P3.10"])
     return c
 
 
@@ -256,7 +279,15 @@ def gen_problem():
         ("network-in-tx-hidden", {"code": "INTERNAL", "reason": "NETWORK_IN_TX", "domain": "be",
                                   "internal_message": "outbound call conformance.peer.v1.PeerService/Reserve inside a transaction"},
          "NETWORK_IN_TX is a reason of code INTERNAL: the caller sees only the generic INTERNAL body"),
-        ("unclassified", {"internal_message": "dial tcp 10.0.0.7:5432: connect: connection refused"},
+        ("request-invalid", {"code": "INVALID_ARGUMENT", "reason": "REQUEST_INVALID", "domain": "be",
+                             "violations": [{"field": "lines[0].quantity", "reason": "DECIMAL_INVALID", "description": "not a decimal string"}]},
+         "the request does not match the operation's schema"),
+        ("dependency-unavailable", {"code": "UNAVAILABLE", "reason": "DEPENDENCY_UNAVAILABLE", "domain": "be",
+                                    "metadata": {"dependency": "db"}}, "PostgreSQL could not be reached"),
+        ("dependency-unavailable-peer", {"code": "UNAVAILABLE", "reason": "DEPENDENCY_UNAVAILABLE", "domain": "be",
+                                         "metadata": {"dependency": "conformance/peer"}}, "a dependency refused the connection"),
+        ("request-cancelled", {"code": "CANCELLED", "reason": "REQUEST_CANCELLED", "domain": "be"}, "the caller went away: 499"),
+        ("unclassified", {"internal_message": "unexpected end of input"},
          "an error with no code and no reason becomes INTERNAL"),
         ("reason-without-domain", {"code": "NOT_FOUND", "reason": "WIDGET_GONE", "internal_message": "row missing"},
          "a reason without a domain is not trusted: INTERNAL"),

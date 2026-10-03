@@ -4,7 +4,7 @@
 
 BrickEnterprise 的**组件协议**：一个组件不论用什么语言写，要成为 BrickEnterprise 项目里合格的一员，在线上、表和配置这几层必须做到的全部事情。本仓库放规范正文、机器可读的 schema、运行时自有表的参考 DDL、语义向量和夹具组件契约。这里不放任何实现。
 
-**协议版本：1.0。发布：`v1.0.0-rc.1`**（候选版本；试点组件通过后冻结为 `v1.0.0`）。依赖 **brickKit ≥ v1.3.1**（`readinessCheck`、`stopGracePeriodSeconds`、端口 `protocol`、`events`、`mount: file`、`$endpoint:`）。
+**协议版本：1.0。发布：`v1.0.0-rc.2`**（候选版本；试点组件通过后冻结为 `v1.0.0`）。依赖 **brickKit ≥ v1.4.0**（`readinessCheck`、`stopGracePeriodSeconds`、端口 `protocol`、`events`、`mount: file`、`$endpoint:`、`release.checks`）。
 
 ## 谁来实现
 
@@ -92,20 +92,22 @@ BrickEnterprise 的**组件协议**：一个组件不论用什么语言写，要
 | `core` | 总是 |
 | `obs` | 总是 |
 | `err` | 总是 |
-| `auth` | 组件有任何一个不是 Public 的路由 |
+| `auth` | 组件有任何一个不是 Public 的路由；没写 `x-be-permission` 的 OpenAPI operation 算作不是 Public（失败即关闭，[P3.16](spec/03-http-surface.zh.md)） |
 | `scope` | `data_scopes` 不是 `none`，或声明了 `resources` |
 | `grpc` | 有一个 extra port 名为 `grpc` |
 | `outbound` | `dependencies.components` 非空 |
 | `events-pub` | `component.yaml` 的 `events.publishes` 不为空（它事件契约里的 subject） |
 | `events-sub` | `component.yaml` 的 `events.subscribes` 不为空（它 fixtures 里 `events.consumes` 的 subject） |
 | `idempotency` | 任何一个写操作接受 `idempotency_key` 或 `Idempotency-Key` |
-| `db` | `configSchema` 声明了 `PG_SCHEMA` |
+| `db` | `configSchema` 声明了 `PG_SCHEMA` 或 `PG_HOST`（触发键，[P2.8](spec/02-configuration.zh.md)） |
 | `jobs` | 组件有数据库（平台任务总是存在） |
 | `lifecycle` | 组件有数据库 |
-| `blob` | `configSchema` 声明了 `S3_BUCKET` |
+| `blob` | `configSchema` 声明了 `S3_BUCKET` 或 `S3_URL` |
 | `shell` | `component.yaml` 有 `shell.members` |
 
-MUST 用例失败，整次运行就失败；SHOULD 用例失败只是警告。只有可选用例可以跳过，每个都要写原因，放在 `assembly.yaml` 的 `conformance.skip` 下。用例清单见 [`schemas/conformance-cases.yaml`](schemas/conformance-cases.yaml)。
+MUST 用例失败，整次运行就失败；SHOULD 用例失败只是警告。只有可选用例可以跳过，每个都要写原因，放在 `assembly.yaml` 的 `conformance.skip` 下。组件不满足某个用例的 `applies_when` 时（没有 `grpc` 端口的 CP-ERR-02、没有数据库的 CP-ERR-03），报告记为不适用：既不算跳过也不算失败。用例清单见 [`schemas/conformance-cases.yaml`](schemas/conformance-cases.yaml)。
+
+套件在组件发版时运行：`component.yaml` 声明 `release: {checks: [[make, conformance]]}`（[P20.5](spec/20-self-description-and-versioning.zh.md)），brickKit（≥ v1.4.0）遇到套件失败的版本就拒绝打 tag 或发布。项目只为没声明这项检查的组件或外壳保存套件报告（门禁 `compconf-record-scan`）。
 
 黑盒观察不到的规则标为 **INTERNAL**：官方 SDK 用自己的测试守住它们；其它语言的组件在自己的 `AGENTS.md` 里写明每一条怎么守住，评审时核对。
 

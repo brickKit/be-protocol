@@ -10,16 +10,16 @@
 |---|---|---|---|---|
 | [money](money/README.zh.md) | 十进制字符串、列容量、ISO 4217 小数位、舍入模式、现金舍入、分摊、按行 / 按单计税、金额与币种成对、换算、行金额 | P11.6 | 8 + `iso4217.json` | 240 |
 | [idempotency](idempotency/README.zh.md) | 请求指纹（RFC 8785 + SHA-256）、重放 / 不一致 / 进行中的判定、键的来源、caller 命名空间、过期 | P3.7、P13 | 3 | 101 |
-| [envelope](envelope/README.zh.md) | UUIDv7、由 outbox 行得出的 CloudEvents 头、causation 与 hop、入站接收与死信、状态模式游标、重投、流 / durable / 死信的命名 | P11.5、P12 | 6 | 118 |
+| [envelope](envelope/README.zh.md) | UUIDv7、由 outbox 行得出的 CloudEvents 头、causation 与 hop、入站接收与死信、状态模式游标、重投、流 / durable / 死信的命名 | P11.5、P12 | 6 | 121 |
 | [calendar](calendar/README.zh.md) | 瞬时在法人时区里的业务日期（夏令时、非整点时区、被跳过的日子）、一天与一段日期的瞬时边界、任意起始月的会计期间与会计年度 | P11.7、P11.9 | 3 | 93 |
 | [numbering](numbering/README.zh.md) | 单据号格式、格式按什么期间重置、无缺号与允许缺号两种分配模型 | P11.10 | 3 | 46 |
-| [errors](errors/README.zh.md) | gRPC 码 ↔ HTTP 状态码、平台 reason、还原依赖返回的 REST 错误、SQLSTATE 归类、日志级别、problem+json 错误体、`Retry-After`、reason 命名 | P4、P10.4 | 4 | 123 |
-| [config](config/README.zh.md) | 配置值的类型化解析、默认值与"有没有"、时长、布尔、密钥文件、依赖地址变量、槽位族地址、键名与密钥声明、`config/*.yaml` 里的取值写法（含 `$endpoint:`） | P2 | 4 | 196 |
+| [errors](errors/README.zh.md) | gRPC 码 ↔ HTTP 状态码、平台 reason、还原依赖返回的 REST 错误、SQLSTATE 归类、日志级别、problem+json 错误体、`Retry-After`、reason 命名 | P4、P10.4 | 4 | 153 |
+| [config](config/README.zh.md) | 配置值的类型化解析、默认值与"有没有"、时长、布尔、密钥文件、依赖地址变量、槽位族地址、键名与密钥声明、`config/*.yaml` 里的取值写法（含 `$endpoint:`） | P2 | 4 | 198 |
 | [redaction](redaction/README.zh.md) | 哪些日志字段名算个人信息、怎么脱敏 | P18.2 | 1 | 29 |
 | authz | bundle 求值、档位、维度、主体集合 | P6 | — | 在 `contract-infra-authz`（lane K1）；发版后拷到这里 |
 | lifecycle、search | 生命周期 Planner、搜索规范化 | P16、data-platform §7.4 | — | 以后 |
 
-合计：32 个用例文件，946 条用例。
+合计：32 个用例文件，981 条用例。
 
 ## 用例文件格式
 
@@ -76,7 +76,7 @@ make xcheck    # 在一次性的 golang:1.22-alpine / node:22-alpine 容器里�
 make sums      # 重写 SHA256SUMS
 ```
 
-最近一次（2026-10-03）：946 条用例，0 处不一致；两边都是 tz 数据库 2026c；ISO 4217 List One 发布于 2026-09-17。首轮发现并已修正的不一致：1 处（上面结尾换行那条）。
+最近一次（2026-10-03，rc.2）：981 条用例，0 处不一致；两边都是 tz 数据库 2026c；ISO 4217 List One 发布于 2026-09-17。首轮发现并已修正的不一致：1 处（上面结尾换行那条）。
 
 ## 版本
 

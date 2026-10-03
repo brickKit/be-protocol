@@ -17,6 +17,7 @@
 | P16.7 | MUST | 引擎的每个动作都向 `besdk_lifecycle_log` 追加一行（追加型，永久保留），并通过 outbox 发布 `<domain>.<name>.lifecycle.<action>.v1`，`<action>` 是 `sealed`、`frozen`、`thawed`、`destroyed`、`erasure_completed` 之一 | — |
 | P16.8 | MUST | 每个组件有三个权限键保护资源契约，由项目的工具登记：`<domain>.<name>.lifecycle.read`（单元、导出）、`<domain>.<name>.lifecycle.thaw`、`<domain>.<name>.lifecycle.admin`（保全、擦除、销毁审批） | CP-LIFE-03 |
 | P16.9 | MUST | `DATA_LIFECYCLE` 选择模式（`on`、`dry-run`、`off`）和适配器；运行时没有的适配器会让启动失败，并点名是哪一个（[P1.8](01-process-and-lifecycle.zh.md)）。逐表覆盖只能延长 `retention.min`；低于声明下限的覆盖会让启动失败。YAML 值按 YAML 1.2 core schema 读取，其中 `on` 和 `off` 是字符串；写的一方要给它们加引号（`mode: "on"`），因为 YAML 1.1 的解析器会把它们读成布尔值 | — |
+| P16.10 | MUST | 运行时建的范围分区（平台的，以及 `lifecycle.yaml` 用 `grain` 声明的）按下界命名：`grain` 为 `week` 时是 `<parent>_<ISO 周年>w<WW>`（`besdk_outbox_2026w40`，ISO 8601 周，从周一 00:00 UTC 开始），`month` 是 `<parent>_<YYYY>m<MM>`，`year` 是 `<parent>_<YYYY>`；边界为 UTC 的 `[start, end)`。这个名字就是 `besdk_lifecycle_units` 里的单元键，所以每个运行时规划出的单元相同（G12） | CP-LIFE-01 |
 
 ## 表的类别
 
@@ -29,7 +30,7 @@
 | `audit` | 谁在何时做了什么 | 按时间 | `immediate` | 可选 | ≥ 6 个月，默认 3 年 |
 | `queue` | 有未结束状态的工作项 | 按时间 | 否 | 从不 | 没有未结束行时删除 |
 | `snapshot` | 本地副本，可重建 | 任意 | 否 | 从不 | 随时 |
-| `platform` | 运行时自有（`besdk_*`） | 运行时 | — | 从不 | 运行时（outbox 14 天，游标和幂等 30 天） |
+| `platform` | 运行时自有（`besdk_*`） | 运行时 | — | 从不 | 运行时（outbox 发布后 14 天；游标和幂等 30 天；队列里 `done` 的行 7 天；作业时间槽 30 天） |
 
 ## 单元状态
 

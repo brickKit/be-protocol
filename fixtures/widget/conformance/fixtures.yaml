@@ -6,6 +6,9 @@
 # The only fact kept outside this file is where route guards come from (x-be-permission in the
 # OpenAPI file, ../README.md, "What the suite needs to know").
 
+# The widget's own keys all have defaults, so it needs no `config:` entry (values for a component's own
+# required keys, fixtures.schema.json).
+
 users:
   alice:   { roles: [widget_editor],  dept_path: /1/3/,   legal_entity: LE01 }   # creates; owns her widgets
   bob:     { roles: [widget_editor],  dept_path: /1/7/,   legal_entity: LE01 }   # same role, another department
@@ -86,6 +89,7 @@ resources:
     batch_get:
       grpc: conformance.widget.v1.WidgetService/BatchGetWidgets
       body: { ids: ["{id}"] }
+      paired_with: resources.conformance.widget.widget.get   # the same record over REST (CP-ERR-02)
     approve_over_grpc:
       grpc: conformance.widget.v1.WidgetService/ApproveWidget
       body: { id: "{id}" }

@@ -17,6 +17,7 @@ How every table a component owns is classified, partitioned, sealed, frozen, ret
 | P16.7 | MUST | Every engine action appends a row to `besdk_lifecycle_log` (append-only, kept forever) and publishes `<domain>.<name>.lifecycle.<action>.v1` through the outbox, `<action>` one of `sealed`, `frozen`, `thawed`, `destroyed`, `erasure_completed` | — |
 | P16.8 | MUST | Three permission keys per component guard the resource contract, registered by the project's tooling: `<domain>.<name>.lifecycle.read` (units, exports), `<domain>.<name>.lifecycle.thaw`, `<domain>.<name>.lifecycle.admin` (holds, erasures, destruction approval) | CP-LIFE-03 |
 | P16.9 | MUST | `DATA_LIFECYCLE` selects the mode (`on`, `dry-run`, `off`) and the adapters; an adapter the runtime does not have fails the start naming it ([P1.8](01-process-and-lifecycle.md)). A per-table override may only lengthen `retention.min`; an override below the declared minimum fails the start. A YAML value is read with the YAML 1.2 core schema, where `on` and `off` are strings; writers quote them (`mode: "on"`) because YAML 1.1 parsers read them as booleans | — |
+| P16.10 | MUST | Range partitions the runtime creates (the platform's and those `lifecycle.yaml` declares with a `grain`) are named from their lower bound: `<parent>_<ISO week-year>w<WW>` for grain `week` (`besdk_outbox_2026w40`, the ISO 8601 week starting Monday 00:00 UTC), `<parent>_<YYYY>m<MM>` for `month`, `<parent>_<YYYY>` for `year`; bounds are `[start, end)` in UTC. The name is the unit key in `besdk_lifecycle_units`, so every runtime plans the same units (G12) | CP-LIFE-01 |
 
 ## Table classes
 
@@ -29,7 +30,7 @@ How every table a component owns is classified, partitioned, sealed, frozen, ret
 | `audit` | who did what when | by time | `immediate` | optional | ≥ 6 months, default 3 years |
 | `queue` | work items with open states | by time | no | never | dropped once no open rows remain |
 | `snapshot` | local copies, rebuildable | any | no | never | any time |
-| `platform` | runtime-owned (`besdk_*`) | runtime | — | never | runtime (outbox 14 days, cursor and idempotency 30 days) |
+| `platform` | runtime-owned (`besdk_*`) | runtime | — | never | runtime (outbox 14 days after publication; cursor and idempotency 30 days; queue rows `done` 7 days; job slots 30 days) |
 
 ## Unit states
 

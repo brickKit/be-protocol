@@ -93,6 +93,15 @@ def durable_of(component, subject):
     return component.replace("/", "_") + "__" + subject.replace(".", "__")
 
 
+MAX_PAYLOAD = 65536  # bytes of the serialised payload (P12.2)
+
+
+def sized_payload(n):
+    # a JSON object of exactly n bytes
+    head, tail = '{"widget_id":"x","note":"', '"}'
+    return head + "a" * (n - len(head) - len(tail)) + tail
+
+
 def envelope(inp):
     p, row = inp["producer"], inp["row"]
     if not subject_ok(row["subject"]):
@@ -102,6 +111,8 @@ def envelope(inp):
         raise EnvError("ENVELOPE_INVALID")
     if not row["aggregate_id"]:
         raise EnvError("ENVELOPE_INVALID")
+    if len(row["payload_json"].encode("utf-8")) > MAX_PAYLOAD:
+        raise EnvError("PAYLOAD_TOO_LARGE")  # P12.2: above 64 KiB a claim check, never a bigger event
     payload = json.loads(row["payload_json"])
     le = payload.get("legal_entity_id") if isinstance(payload, dict) else None
     if inp.get("contract", {}).get("transaction_document") and not (isinstance(le, str) and le):
@@ -126,6 +137,8 @@ def envelope(inp):
         h["ce-legalentity"] = le
     if row["traceparent"]:
         h["traceparent"] = row["traceparent"]
+    if row.get("tracestate"):
+        h["tracestate"] = row["tracestate"]
     return {"headers": dict(sorted(h.items()))}
 
 
@@ -309,6 +322,12 @@ def gen_headers():
         "row": row(subject="sales.order.created.v1", aggregate_type="erp.sales.order")})
     add("shell-member", "in a shell ce-source is the member's ID", {"producer": dict(PRODUCER, component_id="conformance/widget-go"),
                                                                     "row": row()})
+    add("tracestate", "the outbox row's tracestate travels next to traceparent", {"producer": PRODUCER, "row": row(
+        tracestate="vendor1=opaque1,vendor2=opaque2")})
+    add("payload-at-limit", "a payload of exactly 64 KiB is published", {"producer": PRODUCER, "row": row(
+        payload_json=sized_payload(MAX_PAYLOAD))})
+    add("payload-above-limit", "a payload above 64 KiB is refused at publish: use a claim check", {"producer": PRODUCER, "row": row(
+        payload_json=sized_payload(MAX_PAYLOAD + 1))})
     add("bad-subject", "a subject that breaks the naming rule", {"producer": PRODUCER, "row": row(subject="Widget.Created")})
     add("bad-id", "the outbox id must be a UUIDv7", {"producer": PRODUCER, "row": row(id="0192f0c4-7b1e-4cc3-9a52-3f1d2e4b5a60")})
     add("version-zero", "aggregate versions start at 1", {"producer": PRODUCER, "row": row(aggregate_version=0)})

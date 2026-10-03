@@ -8,10 +8,10 @@
 
 | ID | 等级 | 要求 | 用例 |
 |---|---|---|---|
-| P11.1 | MUST | 迁移以属主角色 `PG_OWNER_USER`（口令来自文件 `PG_OWNER_PASSWORD_FILE`）登录，直连 PostgreSQL：设置了 `PG_MIGRATION_HOST` / `PG_MIGRATION_PORT` 时连它们，各自没有时退回 `PG_HOST` / `PG_PORT`（组件自己的键，正是 brickKit 推荐的做法：迁移容器的环境与服务完全相同）。会话参数：`lock_timeout = 5s`、`statement_timeout = 15min`。拿锁超时会退避重试，最多 3 次；最终失败时记录阻塞者后端的 pid 和它们 SQL 的前 200 个字符。迁移连接是一个专用会话：允许迁移工具在它上面设置会话级的 `search_path`、获取会话级 advisory 锁（这是 [P10.2](10-database.zh.md) 和 [P10.8](10-database.zh.md) 的例外）。迁移锁按 schema 区分：两个组件同时迁移同一个数据库，都会成功 | CP-CORE-01 |
+| P11.1 | MUST | 迁移以属主角色 `PG_OWNER_USER`（口令来自文件 `PG_OWNER_PASSWORD_FILE`）登录，直连 PostgreSQL：设置了 `PG_MIGRATION_HOST` / `PG_MIGRATION_PORT` 时连它们，各自没有时退回 `PG_HOST` / `PG_PORT`（组件自己的键，正是 brickKit 推荐的做法：迁移容器的环境与服务完全相同）。会话参数：`lock_timeout = 5s`、`statement_timeout = 15min`。拿锁超时会退避重试，最多 3 次；最终失败时记录阻塞者后端的 pid 和等待事件；它们 SQL 的前 200 个字符只在 `pg_stat_activity` 显示得出时才记（它对别的角色隐藏查询文本，而属主角色不授予 `pg_read_all_stats`）。迁移连接是一个专用会话：允许迁移工具在它上面设置会话级的 `search_path`、获取会话级 advisory 锁（这是 [P10.2](10-database.zh.md) 和 [P10.8](10-database.zh.md) 的例外）。迁移锁按 schema 区分：两个组件同时迁移同一个数据库，都会成功 | CP-CORE-01 |
 | P11.2 | MUST | 迁移文件里不出现 `OWNER TO`、`GRANT`、`REVOKE`、`CREATE SCHEMA`、`CREATE ROLE`、`ALTER ROLE`、`SET`，不出现带 schema 限定的名字，不出现角色或 schema 字面量，也不出现以日期字面量为边界的分区。名字都不带限定，靠 `search_path` 解析 | CP-DB-01（门禁 `migration-identity-scan`） |
-| P11.3 | MUST | 迁移状态表放在本组件自己的 schema 里；官方 SDK 使用[下表](#迁移状态表)里的表名，这些表不受 P11.11 约束。组件的迁移之后，在同一个迁移步骤里、以属主角色，运行时运行**平台迁移**，顺序为：建或升级 `besdk_*` 表和平台函数（[ddl/](../ddl/)），把版本记在 `besdk_platform_version`；按 `lifecycle.yaml` 为每张分区表建出当前分区窗口（[P16.6](16-data-lifecycle.zh.md)）；确保事件流和本组件的 durable 存在（[P12.4](12-events.zh.md)、[P12.5](12-events.zh.md)）。三者都幂等。`besdk_*` 表与参考 DDL 逐列一致 | CP-DB-04, CP-LIFE-01 |
-| P11.4 | MUST | schema 演进遵守 expand / contract。contract 类迁移以文件头行 `-- be:contract after=<version>` 开头；`CREATE INDEX CONCURRENTLY` 单独一个文件，文件以 `-- be:no-transaction` 开头。生产只前滚 | —（门禁） |
+| P11.3 | MUST | 迁移状态表放在本组件自己的 schema 里；官方 SDK 使用[下表](#迁移状态表)里的表名，这些表不受 P11.11 约束。组件的迁移之后，在同一个迁移步骤里、以属主角色，运行时运行**平台迁移**，顺序为：建或升级 `besdk_*` 表和平台函数（[ddl/](../ddl/)），把版本记在 `besdk_platform_version`；按 `lifecycle.yaml` 为每张分区表建出当前分区窗口（[P16.6](16-data-lifecycle.zh.md)）；确保事件流和本组件的 durable 存在（[P12.4](12-events.zh.md)、[P12.5](12-events.zh.md)）。三者都幂等。`besdk_*` 表与参考 DDL 逐列一致；授权投影（[ddl/07-authz-projection.sql](../ddl/07-authz-projection.sql)）只在 `assembly.yaml` 声明了 `resources` 的组件的 schema 里建（[P6.12](06-authorization.zh.md)） | CP-DB-04, CP-LIFE-01 |
+| P11.4 | MUST | schema 演进遵守 expand / contract。contract 类迁移以文件头行 `-- be:contract after=<version>` 开头，`<version>` 是本组件仍在使用这一步所删内容的最后一个版本。执行这样的文件之前，迁移器读 `pg_stat_activity`（它的 `application_name` 每个角色都看得见）：只要还有别的会话名为 `<同一组件 ID>@<v>` 且 `v` ≤ `<version>`（按语义化版本比较）连着（[P10.2](10-database.zh.md)、[P10.5](10-database.zh.md)），就停在这个文件之前：它前面的文件保留已执行，记一行 ERROR 点名这个文件、挡路的版本和会话数，迁移步骤以 **1** 退出；旧进程退出后再跑一次即可；`CREATE INDEX CONCURRENTLY` 单独一个文件，文件以 `-- be:no-transaction` 开头。生产只前滚 | —（门禁） |
 | P11.5 | MUST | 每个自有主键都是 UUIDv7（RFC 9562），列类型 `uuid`，由应用在插入前生成，从不由列默认值生成。分区表的主键是 `(id, created_at)`，`created_at` 等于 id 里内嵌的时间戳。对另一个组件记录的引用是 `TEXT`，不加外键。线上 id 是不透明字符串，采用 36 字符小写的规范形式。例外：严格单调的计数器用 `BIGINT GENERATED ALWAYS AS IDENTITY`；以标准代码为键的参考表（币种、单位）用该代码作键，类型 `TEXT` | CP-DB-01（门禁 `id-type-scan`） |
 | P11.6 | MUST | 列形状：金额 `NUMERIC(19,4)`；单价、成本和数量 `NUMERIC(19,6)`；汇率 `NUMERIC(19,10)`；比率（折扣、税率）`NUMERIC(9,6)`；单位换算系数 `NUMERIC(24,12)`；币种 `CHAR(3)`（ISO 4217 字母代码，大写）。金额在其单据上总是与币种成对出现。舍入只在运行时的 money 实现里做，按币种的 ISO 4217 小数位，默认 `HALF_AWAY_FROM_ZERO`（可要求 `HALF_EVEN`）；分摊用最大余数法。线上的金额、价格、数量、汇率和比率都是十进制字符串：可选的 `-`、数字、可选的 `.` 和数字；没有指数、没有 `+`、没有分隔符、没有 `NaN`；其它任何形式都是 `INVALID_ARGUMENT` | —（向量 `money`） |
 | P11.7 | MUST | 瞬时用 `timestamptz`，以带 `Z` 的 RFC 3339 UTC 发送。业务日期用 `DATE`，以 `YYYY-MM-DD` 发送，按**法人**的业务时区计算。SQL 里从不使用 `CURRENT_DATE`、`now()::date`、`date_trunc(…, now())`，也不对 `timestamptz` 用 `::date`："今天"和每一个日期边界都由运行时算出，作为参数传入。`DATE` 只和 `DATE` 比较。事件带上其单据的业务日期。运行时自带 IANA 时区数据库（Go `time/tzdata`、Python 的 `tzdata` 包、带完整 ICU 的 Node），从不依赖镜像里的 `/usr/share/zoneinfo`；它在 `/_be/info`（`tzdata`）里报告版本，这个版本一变就重跑日历向量 | —（门禁 `business-date-scan`，向量 `calendar`） |
@@ -41,7 +41,7 @@
 | 文件头（第一行） | 含义 |
 |---|---|
 | `-- be:no-transaction` | 文件在事务外运行（只用于单独一个的 `CREATE INDEX CONCURRENTLY`） |
-| `-- be:contract after=<version>` | contract 步骤；只在每个正在运行的版本都至少是 `<version>` 时才运行 |
+| `-- be:contract after=<version>` | contract 步骤；`<version>` 是仍在使用它所删内容的最后一个版本；只在没有这个版本或更旧版本的会话连着时才运行（P11.4） |
 
 ## 迁移状态表
 

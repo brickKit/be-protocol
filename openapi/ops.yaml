@@ -11,12 +11,14 @@ paths:
   /healthz:
     get:
       operationId: healthz
+      x-be-internal: true
       summary: The process is alive (touches no dependency)
       security: []
       responses:
         "200": { description: alive }
     head:
       operationId: healthzHead
+      x-be-internal: true
       summary: As GET, no body
       security: []
       responses:
@@ -24,6 +26,7 @@ paths:
   /readyz:
     get:
       operationId: readyz
+      x-be-internal: true
       summary: Ready to serve (P1.4); probed through readinessCheck (P1.11); once ready, stays ready
       security: []
       responses:
@@ -36,6 +39,7 @@ paths:
   /metrics:
     get:
       operationId: metrics
+      x-be-internal: true
       summary: Prometheus text format (P18.3)
       security: []
       responses:
@@ -47,6 +51,7 @@ paths:
   /_be/info:
     get:
       operationId: beInfo
+      x-be-internal: true
       summary: Self-description (P20.4)
       security: []
       responses:

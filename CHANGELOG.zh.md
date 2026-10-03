@@ -4,6 +4,24 @@
 
 发版 tag 写成 `vMAJOR.MINOR.PATCH`；组件声明的协议版本是 `MAJOR.MINOR`（见 README 的“版本规则”）。
 
+## v1.0.0-rc.2
+
+第一批 SDK、套件和 be-ops 通道（阶段 B 第一波）的裁决，在试点组件之前落地。要求 brickKit ≥ v1.4.0。
+
+- **`be` 域的 reason**：36 个（原 33 个）。新增 `REQUEST_INVALID`（`INVALID_ARGUMENT`，400：请求解不开或不符合 schema）、`DEPENDENCY_UNAVAILABLE`（`UNAVAILABLE`，503，`metadata.dependency` = `db`、`bus`、`blob` 或组件 / 族 ID；SQLSTATE `08` 类、`57P01`–`57P03`）、`REQUEST_CANCELLED`（`CANCELLED`，499：运行时回答的每个错误现在都带 reason）。访问日志行的级别按响应的 code 定（P4.6）。
+- **路由判定顺序**：验 token（401）→ 还没有 bundle → 每个非 Public 路由答 `503`（含 Authenticated）→ token 过期或授权被撤销（`TOKEN_STALE`）→ 沿 `act` 链检查代理能力，含 `impersonation`（`UNSUPPORTED_DELEGATION`）→ Authenticated → 键。`413` 可以先于守卫。
+- **配置**：空值对所有类型都算没设；布尔为 `true`、`false`、`1`、`0`；`one_of` = 至少设一个；`EVENTS_MAX_DELIVER` / `EVENTS_BACKOFF` 目录里没有默认值（用订阅自己的值）；删除 `PG_POOL_MIN_IDLE`；新增 `DEPLOY_ENV`；`DEFAULT_LOCALE` 不是 `zh` / `en` 时退回 `en`；没有 `COMPONENT_ID` 以 64 退出；profile 触发键（`db`：`PG_SCHEMA` 或 `PG_HOST`；`blob`：`S3_BUCKET` 或 `S3_URL`）；目录字段 `shell: process | member`。
+- **OpenAPI 标记**：每个 operation 声明 `x-be-permission`；没写的一律失败即关闭，除非标了 `x-be-internal: true`（provider 面、运维端点；从不路由，不受边缘覆盖检查）。`openapi/ops.yaml` 的运维端点带上了它；widget 的 OpenAPI 带上 be-ops 生成的资源契约区段。
+- **数据库与迁移**：`PG_SCHEMA` ≤ 40 个字符；会话级 `application_name` `<component ID>@<version>`，每个成员始终保留一个会话（外壳里是在场会话）；`-- be:contract after=<version>` 在还有该版本或更旧版本的会话连着时让迁移以 1 退出；能力探测只看 `server_version_num`；记录阻塞者时查询文本看得见才记；`be_tx_retries_total{sqlstate}`；授权投影只建在声明了 `resources` 的 schema 里。
+- **事件**：payload 超过 64 KiB 在发布时拒收；最后一次允许的投递失败照常 nak，消息在下一次到达时进死信；订阅的聚合类型可选，缺省用 `ce-aggregatetype`；事件契约里用 `x-signal: true` 标 poke；outbox 加列 `tracestate`；分区命名 `<parent>_<ISO 周年>w<WW>` / `m<MM>` / `<YYYY>`（P16.10）；PostgreSQL 队列适配器用组件的 `PG_USER`，分区经 `be_bus_owner` 所有的 `SECURITY DEFINER` 函数维护，并有 DEFAULT 分区；没有适配器的总线 scheme 让启动失败。
+- **可观测性**：`service.namespace` = 领域，`deployment.environment.name` = `DEPLOY_ENV`；不采样的 `traceparent` 照常传播、不记录；日志行 ≤ 2048 字节（含换行），列出信封字段；访问日志只管用户面和资源契约。
+- **默认保留期**：队列里 `done` 的行 7 天，作业时间槽 30 天（outbox 14 天，游标和幂等 30 天）。
+- **系统面**：面向用户的 rpc 答 `TOKEN_INVALID`；被身份检查或批量上限拒绝的调用也被追踪和计数（拦截器顺序变了）；剩余 ≤ 50 ms 不发出；`map` 字段不算批量。
+- **自描述与发版**：`/_be/info` 的 `profiles` 必须等于选出的那一组；`release: {checks: [[make, conformance]]}`（P20.5）；`compconf-record-scan` 只管没声明这项检查的组件；用例可以带 `applies_when`（CP-ERR-02、CP-ERR-03），报告可以写 `not_applicable`；夹具新增 `config` 和 `paired_with`。Docker Engine 29 上 Traefik ≥ 3.6。
+  - 改动的要求：P1.2、P1.5、P2.3、P2.8、P3.6、P3.10、P4.1、P4.6、P5.4、P5.5、P5.6、P6.2、P7.3、P7.4、P7.7、P7.10、P10.1、P10.2、P10.4、P10.5、P10.7、P11.1、P11.3、P11.4、P12.2、P12.6、P12.7、P12.10、P12.12、P12.16、P14.7、P18.1、P18.2、P18.4、P19.3、P20.4。新增：P3.16、P16.10、P20.5。
+  - 向量（共 981 条）：`errors`（三个 reason、连接丢失的 SQLSTATE、`REQUEST_CANCELLED`、操作 `access_log_level`），`config`（`empty-string-is-value` 换成 `empty-string-is-absent`，另加 `empty-string-required`、`empty-string-optional`），`envelope`（`tracestate`、`PAYLOAD_TOO_LARGE`）。
+  - Schema：`errors-be`、`config-keys`（`shell`、`DEPLOY_ENV`、退役 `PG_POOL_MIN_IDLE`）、`events-contract`（`x-signal`）、`conformance-cases`（`applies_when`）、`compconf-report`（`not_applicable`）、`fixtures`（`config`、`paired_with`）。DDL：outbox 的 `tracestate`，`be_bus` 的属主角色、DEFAULT 分区和分区函数。
+
 ## v1.0.0-rc.1
 
 协议 1.0 的第一个候选版。尚未冻结：pilot 组件在 `v1.0.0` 之前仍可能改动它。

@@ -19,7 +19,7 @@
 | profile | 一组有名字的一致性用例，按组件的清单文件选择（README 的 *一致性测试* 一节） |
 | 套件（suite） | `brickKit/be-acceptance` 的黑盒一致性套件 `conformance/component/` |
 | 截止时间（deadline） | 当前这单位工作必须完成的时间点；工作往下传递时它只会缩短（[P9](09-deadlines-and-retries.zh.md)） |
-| 平台（the platform） | brickKit（≥ v1.3.1）：它对配置求值（`$var:`、`$endpoint:`、`${VAR}`、`file://`），注入配置和 `*_ENDPOINT` 变量，挂载密钥文件，生成部署文件，启动容器 |
+| 平台（the platform） | brickKit（≥ v1.4.0）：它对配置求值（`$var:`、`$endpoint:`、`${VAR}`、`file://`），注入配置和 `*_ENDPOINT` 变量，挂载密钥文件，生成部署文件，启动容器 |
 
 时长用 Go duration 语法（`200ms`、`5s`、`15m`、`1h`）；大小用二进制单位（1 MiB = 1,048,576 字节）；时间点用 UTC 的 RFC 3339；业务日期用 `YYYY-MM-DD`。
 

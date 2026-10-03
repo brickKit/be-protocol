@@ -4,7 +4,7 @@
 
 The BrickEnterprise **component protocol**: everything a component must do, at the wire, table and configuration level, to be a correct member of a BrickEnterprise project, whatever language it is written in. This repository holds the normative text, the machine-readable schemas, the reference DDL of the tables the runtime owns, the semantic vectors and the fixture-component contract. It holds no implementation.
 
-**Protocol version: 1.0. Release: `v1.0.0-rc.1`** (release candidate; frozen as `v1.0.0` after the pilot components pass). It relies on **brickKit ≥ v1.3.1** (`readinessCheck`, `stopGracePeriodSeconds`, port `protocol`, `events`, `mount: file`, `$endpoint:`).
+**Protocol version: 1.0. Release: `v1.0.0-rc.2`** (release candidate; frozen as `v1.0.0` after the pilot components pass). It relies on **brickKit ≥ v1.4.0** (`readinessCheck`, `stopGracePeriodSeconds`, port `protocol`, `events`, `mount: file`, `$endpoint:`, `release.checks`).
 
 ## Who implements it
 
@@ -92,20 +92,22 @@ The black-box suite is `conformance/component/` of `brickKit/be-acceptance` (in 
 | `core` | always |
 | `obs` | always |
 | `err` | always |
-| `auth` | the component has any route that is not Public |
+| `auth` | the component has any route that is not Public; an OpenAPI operation without `x-be-permission` counts as not Public (fail closed, [P3.16](spec/03-http-surface.md)) |
 | `scope` | `data_scopes` is not `none`, or `resources` is declared |
 | `grpc` | an extra port is named `grpc` |
 | `outbound` | `dependencies.components` is not empty |
 | `events-pub` | `component.yaml` `events.publishes` is not empty (the subjects of its event contract) |
 | `events-sub` | `component.yaml` `events.subscribes` is not empty (the subjects of its fixtures' `events.consumes`) |
 | `idempotency` | any write accepts `idempotency_key` or `Idempotency-Key` |
-| `db` | `configSchema` declares `PG_SCHEMA` |
+| `db` | `configSchema` declares `PG_SCHEMA` or `PG_HOST` (the trigger key, [P2.8](spec/02-configuration.md)) |
 | `jobs` | the component has a database (platform jobs always exist) |
 | `lifecycle` | the component has a database |
-| `blob` | `configSchema` declares `S3_BUCKET` |
+| `blob` | `configSchema` declares `S3_BUCKET` or `S3_URL` |
 | `shell` | `component.yaml` has `shell.members` |
 
-A MUST case that fails fails the run; a SHOULD case that fails is a warning. Only optional cases may be skipped, each with a reason, in `assembly.yaml` under `conformance.skip`. The case list is [`schemas/conformance-cases.yaml`](schemas/conformance-cases.yaml).
+A MUST case that fails fails the run; a SHOULD case that fails is a warning. Only optional cases may be skipped, each with a reason, in `assembly.yaml` under `conformance.skip`. A case whose `applies_when` the component does not meet (CP-ERR-02 without a `grpc` port, CP-ERR-03 without a database) is reported as not applicable: neither skipped nor failed. The case list is [`schemas/conformance-cases.yaml`](schemas/conformance-cases.yaml).
+
+The suite runs when a component is released: `component.yaml` declares `release: {checks: [[make, conformance]]}` ([P20.5](spec/20-self-description-and-versioning.md)), and brickKit (≥ v1.4.0) refuses to tag or publish a version whose suite fails. A project keeps a suite report only for a component or shell that does not declare that check (gate `compconf-record-scan`).
 
 Rules a black box cannot observe are marked **INTERNAL**: official SDKs keep them with their own tests; a component in another language states in its `AGENTS.md` how it keeps each one, and review checks it.
 

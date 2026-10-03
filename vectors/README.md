@@ -10,16 +10,16 @@ Language-neutral test vectors for the parts of the component protocol that are p
 |---|---|---|---|---|
 | [money](money/README.md) | decimal strings, column capacity, ISO 4217 minor units, rounding modes, cash rounding, allocation, tax per line / per document, currency pairing, conversion, line amounts | P11.6 | 8 + `iso4217.json` | 240 |
 | [idempotency](idempotency/README.md) | the request fingerprint (RFC 8785 + SHA-256), the replay / mismatch / in-progress decision, key sources, caller namespaces, expiry | P3.7, P13 | 3 | 101 |
-| [envelope](envelope/README.md) | UUIDv7 ids, CloudEvents headers from an outbox row, causation and hop count, inbound acceptance and dead letters, the state-mode cursor, redelivery, stream / durable / dead-letter names | P11.5, P12 | 6 | 118 |
+| [envelope](envelope/README.md) | UUIDv7 ids, CloudEvents headers from an outbox row, causation and hop count, inbound acceptance and dead letters, the state-mode cursor, redelivery, stream / durable / dead-letter names | P11.5, P12 | 6 | 121 |
 | [calendar](calendar/README.md) | business date of an instant in a legal entity's zone (DST, unusual offsets, skipped days), day and range bounds, fiscal periods and years with any start month | P11.7, P11.9 | 3 | 93 |
 | [numbering](numbering/README.md) | document number formats, the period a format resets on, the gap-free and gapped allocation models | P11.10 | 3 | 46 |
-| [errors](errors/README.md) | gRPC code ↔ HTTP status, platform reasons, restoring a dependency's REST error, SQLSTATE classification, log levels, the problem+json body, `Retry-After`, reason names | P4, P10.4 | 4 | 123 |
-| [config](config/README.md) | typed parsing of configuration values, defaults and presence, durations, booleans, secret files, dependency address variables, slot-family addresses, key names and secret declarations, value forms in `config/*.yaml` (including `$endpoint:`) | P2 | 4 | 196 |
+| [errors](errors/README.md) | gRPC code ↔ HTTP status, platform reasons, restoring a dependency's REST error, SQLSTATE classification, log levels, the problem+json body, `Retry-After`, reason names | P4, P10.4 | 4 | 153 |
+| [config](config/README.md) | typed parsing of configuration values, defaults and presence, durations, booleans, secret files, dependency address variables, slot-family addresses, key names and secret declarations, value forms in `config/*.yaml` (including `$endpoint:`) | P2 | 4 | 198 |
 | [redaction](redaction/README.md) | which log field keys are personal data and how they are redacted | P18.2 | 1 | 29 |
 | authz | bundle evaluation, levels, dimensions, subject sets | P6 | — | in `contract-infra-authz` (lane K1); copied here when it is released |
 | lifecycle, search | lifecycle planner, search normalisation | P16, data-platform §7.4 | — | later |
 
-Total: 946 cases in 32 case files.
+Total: 981 cases in 32 case files.
 
 ## Case file format
 
@@ -76,7 +76,7 @@ make xcheck    # cross-check in throwaway golang:1.22-alpine / node:22-alpine co
 make sums      # rewrite SHA256SUMS
 ```
 
-Last run (2026-10-03): 946 cases, 0 disagreements; tz database 2026c on both sides; ISO 4217 List One published 2026-09-17. Disagreements found and fixed during the first run: one (the trailing-newline case above).
+Last run (2026-10-03, rc.2): 981 cases, 0 disagreements; tz database 2026c on both sides; ISO 4217 List One published 2026-09-17. Disagreements found and fixed during the first run: one (the trailing-newline case above).
 
 ## Versioning
 

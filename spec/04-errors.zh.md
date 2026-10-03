@@ -8,12 +8,12 @@ REST、gRPC 和 GraphQL 共用一个错误对象：RFC 9457 problem details，�
 
 | ID | 等级 | 要求 | 用例 |
 |---|---|---|---|
-| P4.1 | MUST | 组件的每个 `4xx` 和 `5xx` REST 响应都带 `Content-Type: application/problem+json`，body 是下面的形状。`reason` 是 `UPPER_SNAKE`。`domain` 是原样不变的组件 ID（`erp/inventory`），保留 reason 则是 `be`；槽位族的成员用族的 ID 代替自己的 ID（每个授权成员都答 `domain: infra/authz`），这样前端每个族只需一张表。`type` 是 `urn:be:<domain>:<reason>`。没有 `error` 字段，也没有 `retry_after_ms` 字段：重试延迟只经 `Retry-After` 响应头传递 | CP-ERR-01 |
+| P4.1 | MUST | 组件的每个 `4xx` 和 `5xx` REST 响应都带 `Content-Type: application/problem+json`，body 是下面的形状；运行时产生的每一个都带 reason，没有哪个错误离开时缺 `reason` 和 `domain`。`reason` 是 `UPPER_SNAKE`。`domain` 是原样不变的组件 ID（`erp/inventory`），保留 reason 则是 `be`；槽位族的成员用族的 ID 代替自己的 ID（每个授权成员都答 `domain: infra/authz`），这样前端每个族只需一张表。`type` 是 `urn:be:<domain>:<reason>`。没有 `error` 字段，也没有 `retry_after_ms` 字段：重试延迟只经 `Retry-After` 响应头传递 | CP-ERR-01 |
 | P4.2 | MUST | 在 gRPC 上，错误是一个标准状态码，以默认语言的 `detail` 作为它的 message，总是附带 `google.rpc.ErrorInfo{reason, domain, metadata}`，适用时再附 `BadRequest`、`PreconditionFailure`、`RetryInfo`、`ResourceInfo`。REST 与 gRPC 按下表双向映射，所以一个经 gRPC 调别的组件、经 REST 回答自己用户的组件不会丢任何信息。不使用 `LocalizedMessage` | CP-ERR-02 |
 | P4.3 | MUST | `INTERNAL`、`UNKNOWN` 和 `DATA_LOSS` 一律回答 `reason: INTERNAL`、`domain: be`、一句通用的 `detail` 和 `trace_id`。原始错误（SQL 文本、栈、token 解析器的报错）只进日志。组件代码无法选择不这样做 | CP-ERR-03 |
 | P4.4 | MUST | 每个组件在 `contracts/errors.yaml` 里列出自己的 reason（[格式](../schemas/errors-yaml.schema.json)）：`{reason, code, http, params[], title{zh,en}, message{zh,en}, since, deprecated}`。条目只增不改：永不改名、删除或复用；用 `deprecated: true` 退役。组件在自己 domain 里抛的每个 reason 都列在这里（槽位族成员的 reason 列在它族契约的 `errors.yaml` 里）；domain `be` 的 reason 列在 `errors-be.yaml`；从依赖转发来的 reason 保留该依赖的 `domain`，列在该依赖的目录里（P4.9）。前端按目录翻译；服务端不翻译 | CP-ERR-04 |
 | P4.5 | MUST | GraphQL（移动端 BFF）：`errors[].extensions = {code, reason, domain, metadata, request_id, trace_id}`，从下游错误复制而来 | CP-ERR-01 |
-| P4.6 | MUST | 运行时按错误的 code 决定日志级别：`INTERNAL`、`UNKNOWN`、`DATA_LOSS` → ERROR；`UNAVAILABLE`、`DEADLINE_EXCEEDED` → WARN；`CANCELLED`，包括停机时的取消 → 不记；所有调用方错误（`INVALID_ARGUMENT`、`NOT_FOUND`、`PERMISSION_DENIED`、`FAILED_PRECONDITION`、`UNAUTHENTICATED`……）→ INFO | CP-OBS-02 |
+| P4.6 | MUST | 运行时按错误的 code 决定日志级别：`INTERNAL`、`UNKNOWN`、`DATA_LOSS` → ERROR；`UNAVAILABLE`、`DEADLINE_EXCEEDED` → WARN；`CANCELLED`，包括停机时的取消 → 不按错误记；所有调用方错误（`INVALID_ARGUMENT`、`NOT_FOUND`、`PERMISSION_DENIED`、`FAILED_PRECONDITION`、`UNAUTHENTICATED`……）→ INFO。请求的访问日志行（[P3.10](03-http-surface.zh.md)）按同一个 code 定级别：`500` 为 ERROR，`503`、`504` 为 WARN，其余（含 `2xx`、`4xx`、`499`、`501`）为 INFO（向量 `errors` 的 `access_log_level`） | CP-OBS-02 |
 | P4.7 | MUST | 组件永不在自己的 domain 里抛保留的 reason 名，也永不抛不在 `errors-be.yaml` 里的 domain `be` 的 reason | CP-ERR-04 |
 | P4.8 | MUST | `metadata` 的值只能是字符串（数字和日期由产生方格式化）；永不放密钥，除调用方自己发来的内容之外永不放个人数据 | CP-ERR-01 |
 | P4.9 | SHOULD | 转发依赖的错误：当它的 `reason` 和 `domain` 对用户有意义时（库存不足），保留它们；只有映射成自己的 reason 能增加含义时才映射 | — |
@@ -40,7 +40,7 @@ REST、gRPC 和 GraphQL 共用一个错误对象：RFC 9457 problem details，�
 | 字段 | 必填 | 规则 |
 |---|---|---|
 | `type` | 是 | `urn:be:<domain>:<reason>` |
-| `title` | 是 | 该 reason 在部署默认语言（`DEFAULT_LOCALE`）下的简短标题，取自目录 |
+| `title` | 是 | 该 reason 在部署默认语言下的简短标题，取自目录：`DEFAULT_LOCALE` 按主语言子标签选 `zh` 或 `en`，其它值一律退回 `en`（[P2](02-configuration.zh.md#协议配置键)） |
 | `status` | 是 | HTTP 状态码 |
 | `code` | 是 | gRPC 规范 code 名 |
 | `reason`、`domain` | 是 | 错误的身份；前端按 `domain` + `reason` 查找 |
@@ -102,8 +102,13 @@ REST、gRPC 和 GraphQL 共用一个错误对象：RFC 9457 problem details，�
 | `NETWORK_IN_TX` | `INTERNAL` | 工作单元持有未结束的事务时发起了出站调用（gRPC、用户面或第三方 HTTP、直接发布，[P8.4](08-outbound-http.zh.md)）；编程错误 |
 | `DB_TOO_MANY_CONNECTIONS` | `UNAVAILABLE` | PostgreSQL 拒绝新连接，SQLSTATE `53300`（[P10.4](10-database.zh.md)）；HTTP 503 |
 | `NESTED_TX` | `INTERNAL` | 同一个工作单元已经持有一个事务时又打开了一个（[P10.6](10-database.zh.md)）；编程错误 |
+| `REQUEST_INVALID` | `INVALID_ARGUMENT` | 请求解不开，或不符合该操作的 schema：JSON 写错、类型不对、缺必填字段、未知的枚举值、路径或查询参数的形式不对、十进制字符串格式不对（[P11.6](11-migrations-and-data-shapes.zh.md)）；字段错误放在 `violations` |
+| `DEPENDENCY_UNAVAILABLE` | `UNAVAILABLE` | 请求需要的东西连不上；`metadata.dependency` 说明是哪个：`db`、`bus`、`blob`，或者没有应答的那个组件或槽位族的 ID；HTTP 503 |
+| `REQUEST_CANCELLED` | `CANCELLED` | 调用方在请求完成前取消了它（断开连接、取消 gRPC 调用、因此被取消的语句）；HTTP 499，从不按错误记日志（P4.6） |
 
 `RATE_LIMITED`、`UPSTREAM_UNAVAILABLE`、`UPSTREAM_TIMEOUT` 由边缘抛出，组件永不抛出：边缘自己产生的回答（404、413、429、502、503、504）带这个错误体，`domain: be`。
+
+`DEPENDENCY_UNAVAILABLE` 是运行时自己连不上某样东西时的回答：PostgreSQL 拒绝或断开连接（SQLSTATE `08` 类、`57P01`、`57P02`、`57P03`；`53300` 是 `DB_TOO_MANY_CONNECTIONS`）、直接发布时的总线、对象存储，或者一个拒绝连接、重置连接、或者答了 `UNAVAILABLE` 却没带自己 `ErrorInfo` 的依赖。依赖带着自己的 `ErrorInfo` 回答时，原样转发其 `reason` 和 `domain`（P4.9）。组件从不抛 `UPSTREAM_UNAVAILABLE`。
 
 黑盒永远看不到的内部守卫失败（嵌套事务，`NESTED_TX`，[P10.6](10-database.zh.md)；事务内的网络调用，`NETWORK_IN_TX`，[P8.4](08-outbound-http.zh.md)）属于编程错误。它们以通用的 `INTERNAL` 错误体离开进程（P4.3）：code 为 `INTERNAL` 的 reason 永远不给调用方看，只出现在日志行的 `error.reason` 里；测试构建里它直接让测试中止，好让错误在开发期就暴露。
 

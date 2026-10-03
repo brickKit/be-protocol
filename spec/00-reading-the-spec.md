@@ -19,7 +19,7 @@ Terms, requirement levels and identifiers used by every chapter. Read this once 
 | profile | a named group of conformance cases, selected from the component's manifests (README, *Conformance*) |
 | suite | the black-box conformance suite `conformance/component/` of `brickKit/be-acceptance` |
 | deadline | the time by which the current unit of work must finish; it only shrinks as work travels ([P9](09-deadlines-and-retries.md)) |
-| the platform | brickKit (≥ v1.3.1): it evaluates configuration (`$var:`, `$endpoint:`, `${VAR}`, `file://`), injects it and the `*_ENDPOINT` variables, mounts secret files, generates deployment files and starts containers |
+| the platform | brickKit (≥ v1.4.0): it evaluates configuration (`$var:`, `$endpoint:`, `${VAR}`, `file://`), injects it and the `*_ENDPOINT` variables, mounts secret files, generates deployment files and starts containers |
 
 Durations use Go duration syntax (`200ms`, `5s`, `15m`, `1h`); sizes are binary (1 MiB = 1,048,576 bytes); instants are RFC 3339 in UTC; business dates are `YYYY-MM-DD`.
 

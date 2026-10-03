@@ -69,8 +69,8 @@ def duration_ns(s):
 def parse_value(inp):
     t = inp["type"]
     v = inp.get("value")
-    if v == "" and t != "string":
-        v = None  # an empty value for a typed key counts as not set (brickKit's ${NAME:-})
+    if v == "":
+        v = None  # an empty value counts as not set, for every type (P2.3; brickKit's ${NAME:-})
     if v is None:
         if "default" in inp:
             v = inp["default"]
@@ -328,7 +328,9 @@ def gen_values():
         ("absent-optional", P("string", None), "absent, optional, no default: not set"),
         ("empty-typed-is-absent", P("integer", "", default="10"), "an empty value for a typed key counts as not set"),
         ("empty-typed-required", P("duration", "", required=True), "empty and required"),
-        ("empty-string-is-value", P("string", "", default="x"), "an empty string is a value"),
+        ("empty-string-is-absent", P("string", "", default="x"), "an empty string counts as not set too: the default applies"),
+        ("empty-string-required", P("string", "", required=True), "an empty required string is missing (a missing PG_SCHEMA is never an empty schema name)"),
+        ("empty-string-optional", P("string", ""), "an empty optional string without a default: not set"),
         ("invalid-not-default", P("integer", "ten", default="10"), "present but invalid never falls back to the default"),
         ("invalid-default", P("integer", None, default="ten"), "a broken default is a configuration error too"),
         # integers

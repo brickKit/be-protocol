@@ -19,7 +19,7 @@
 | 入站 HTTP | `HTTP_DEFAULT_TIMEOUT`（10 s）；声明为编排的路由 15 s | [P3.4](03-http-surface.zh.md) |
 | HTTP 服务端 | 读请求头 5 s，读 30 s，写 = 路由截止时间 + 5 s，空闲 120 s | [P3.5](03-http-surface.zh.md) |
 | 入站 gRPC | 调用方的 `grpc-timeout`；没带时 10 s | [P7.4](07-system-rpc.zh.md) |
-| 出站 gRPC 和用户面 HTTP | `min(3 s, remaining − 50 ms)`；不足 50 ms 时不发出 | [P7.7](07-system-rpc.zh.md), [P8.2](08-outbound-http.zh.md) |
+| 出站 gRPC 和用户面 HTTP | `min(3 s, remaining − 50 ms)`；剩 50 ms 或更少时不发出 | [P7.7](07-system-rpc.zh.md), [P8.2](08-outbound-http.zh.md) |
 | 第三方 HTTP | 10 s，按客户端 | [P8.3](08-outbound-http.zh.md) |
 | SQL 语句 | `min(5 s, remaining)` | [P10.3](10-database.zh.md) |
 | 锁等待 | 2 s | [P10.3](10-database.zh.md) |

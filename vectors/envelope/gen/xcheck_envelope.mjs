@@ -52,6 +52,7 @@ function envelope({ producer: p, row: r, contract }) {
   if (!subjectOk(r.subject)) throw new E("SUBJECT_INVALID");
   const id = uuid7(r.id).canonical;
   if (!Number.isInteger(r.aggregate_version) || r.aggregate_version < 1 || !r.aggregate_id) throw new E("ENVELOPE_INVALID");
+  if (Buffer.byteLength(r.payload_json, "utf8") > 65536) throw new E("PAYLOAD_TOO_LARGE");
   const pl = JSON.parse(r.payload_json);
   const le = pl && typeof pl === "object" && !Array.isArray(pl) ? pl.legal_entity_id : undefined;
   const hasLe = typeof le === "string" && le.length > 0;
@@ -66,6 +67,7 @@ function envelope({ producer: p, row: r, contract }) {
   if (r.causation_id) h["ce-causationid"] = r.causation_id;
   if (hasLe) h["ce-legalentity"] = le;
   if (r.traceparent) h["traceparent"] = r.traceparent;
+  if (r.tracestate) h["tracestate"] = r.tracestate;
   return { headers: Object.fromEntries(Object.entries(h).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) };
 }
 function derive(c) {

@@ -8,10 +8,10 @@
 
 | ID | 等级 | 要求 | 用例 |
 |---|---|---|---|
-| P18.1 | MUST | **Trace。** W3C Trace Context 和 Baggage。HTTP 和 gRPC 入站提取、出站注入（`traceparent`、`tracestate`、`baggage`）。事件在信封里携带生产方 span 的 `traceparent`；消费方开启一个**新的 trace，用 span link** 指向生产方的 span，而不是作为它的子 span。每个成员的 resource 属性：`service.name` = 组件 ID，`service.version` = 组件版本，`service.namespace` = 项目，`service.instance.id` = 容器或 pod，`deployment.environment`。导出用 OTLP/HTTP，发往 `OTEL_BASE_URL`；为空表示不导出，也不报错。每个请求、事件 handler 和作业运行都有一个带有效 trace ID 的 span，不导出时也一样，所以日志和 problem 响应体里总有 `trace_id`。在外壳里，每个成员有自己的 tracer provider 和 meter provider；导出器和传播器是共享的，并且只有外壳在所有成员都停止之后才关闭导出器。每个埋点（HTTP 服务端、gRPC 服务端和客户端、出站 HTTP、消费者）都显式拿到成员的 tracer provider、meter provider 和传播器，从不用进程级的全局对象；全局 tracer provider 只作兜底，带 `service.name` = 外壳自己的 ID，所以出现这个名字的 span，就说明有一个埋点漏掉了 | CP-OBS-01, CP-SHELL-04, CP-SHELL-09, CP-SHELL-10 |
-| P18.2 | MUST | **日志。** 只写 stdout，一行一个 JSON 对象，每行最多 2 KiB。更长的行被缩短，并且**仍是一个合法的 JSON 对象**：信封字段以外的字符串值从最长的开始、在字符边界处截短，每个都以 `…[TRUNCATED]` 结尾，并加上字段 `truncated: true`；信封字段从不截短。字段见[下表](#日志字段)。`LOG_LEVEL` 按成员设定最低级别。个人数据的键由运行时自动脱敏，从不靠业务代码，语义以一致性向量 `redaction` 为准（它是规范性的）：键被切成单词（snake_case、camelCase，`-` 和 `.` 也是分隔符，不分大小写）；某个受保护名字的单词在其中连续出现时就算受保护（最后一个单词允许带复数 `s`），所以 `contact_phone`、`phone_number`、`accessToken` 命中，`telephone`、`tokenizer` 不命中；整个值不论类型都变成字符串 `[REDACTED]`；值和信封字段从不扫描。受保护的名字：`phone`、`mobile`、`id_card`、`password`、`bank_card`、`email`、`token`、`secret`、`authorization`、`cookie`、`set_cookie`、`api_key` | CP-OBS-02, CP-OBS-04, CP-OBS-05 |
+| P18.1 | MUST | **Trace。** W3C Trace Context 和 Baggage。HTTP 和 gRPC 入站提取、出站注入（`traceparent`、`tracestate`、`baggage`）。事件在信封里携带生产方 span 的 `traceparent`；消费方开启一个**新的 trace，用 span link** 指向生产方的 span，而不是作为它的子 span。每个成员的 resource 属性：`service.name` = 组件 ID，`service.version` = 组件版本，`service.namespace` = 组件的领域（组件 ID 的第一段，`erp`），`service.instance.id` = 容器或 pod，`deployment.environment.name` = `DEPLOY_ENV`（默认 `dev`；这是 OpenTelemetry 语义约定 1.27 起的名字，以前叫 `deployment.environment`）。入站 `traceparent` 的采样标志为 0 时照样传播：保留它的 trace ID，请求的 span 以不采样的方式创建，既不记录也不导出，出站调用带同样的标志。导出用 OTLP/HTTP，发往 `OTEL_BASE_URL`；为空表示不导出，也不报错。每个请求、事件 handler 和作业运行都有一个带有效 trace ID 的 span，不导出时也一样，所以日志和 problem 响应体里总有 `trace_id`。在外壳里，每个成员有自己的 tracer provider 和 meter provider；导出器和传播器是共享的，并且只有外壳在所有成员都停止之后才关闭导出器。每个埋点（HTTP 服务端、gRPC 服务端和客户端、出站 HTTP、消费者）都显式拿到成员的 tracer provider、meter provider 和传播器，从不用进程级的全局对象；全局 tracer provider 只作兜底，带 `service.name` = 外壳自己的 ID，所以出现这个名字的 span，就说明有一个埋点漏掉了 | CP-OBS-01, CP-SHELL-04, CP-SHELL-09, CP-SHELL-10 |
+| P18.2 | MUST | **日志。** 只写 stdout，一行一个 JSON 对象，每行**每行最多 2048 字节，含行尾换行符**。更长的行被缩短，并且**仍是一个合法的 JSON 对象**：信封字段以外的字符串值从最长的开始、在字符边界处截短，每个都以 `…[TRUNCATED]` 结尾，并加上字段 `truncated: true`；信封字段 `time`、`level`、`msg`、`component_id`、`component_version`、`trace_id`、`span_id`、`request_id` 和 `truncated` 从不截短。字段见[下表](#日志字段)。`LOG_LEVEL` 按成员设定最低级别。个人数据的键由运行时自动脱敏，从不靠业务代码，语义以一致性向量 `redaction` 为准（它是规范性的）：键被切成单词（snake_case、camelCase，`-` 和 `.` 也是分隔符，不分大小写）；某个受保护名字的单词在其中连续出现时就算受保护（最后一个单词允许带复数 `s`），所以 `contact_phone`、`phone_number`、`accessToken` 命中，`telephone`、`tokenizer` 不命中；整个值不论类型都变成字符串 `[REDACTED]`；值和信封字段从不扫描。受保护的名字：`phone`、`mobile`、`id_card`、`password`、`bank_card`、`email`、`token`、`secret`、`authorization`、`cookie`、`set_cookie`、`api_key` | CP-OBS-02, CP-OBS-04, CP-OBS-05 |
 | P18.3 | MUST | **指标。** Prometheus 文本格式，在主端口的 `/metrics` 上。每个序列都带标签 `component=<component ID>`，独立运行时也一样。HTTP 的 `route` 是路由模板，从不是原始路径；状态码是数字。协议指标名以 `be_` 开头（见下表）；组件自己的指标以它的 domain 和 name 开头（`erp_sales_…`）。在外壳里，每个成员的 registry 汇总在外壳自己的 `/metrics` 上，各自带着 `component` 标签 | CP-OBS-03, CP-SHELL-04 |
-| P18.4 | MUST | 受保护路由的访问日志行带 `sub` 和 `perm`，这样一个被拒的请求可以追到某个人和某个键。原始 token 从不出现在任何日志行里 | CP-OBS-02 |
+| P18.4 | MUST | 受保护路由的访问日志行带 `sub` 和 `perm`，这样一个被拒的请求可以追到某个人和某个键；在守卫运行之前就回答的请求（`413`，[P3.6](03-http-surface.zh.md)；或 token 没验过的 `401`）只带那时已知的字段。原始 token 从不出现在任何日志行里 | CP-OBS-02 |
 
 ## 日志字段
 
@@ -50,7 +50,7 @@
 | `be_outbound_inflight` | gauge | `target` |
 | `be_db_pool_in_use` | gauge | — |
 | `be_db_pool_wait_seconds` | histogram | — |
-| `be_tx_retries_total` | counter | `reason` |
+| `be_tx_retries_total` | counter | `sqlstate` |
 | `be_db_identity_ok` | gauge | — |
 | `be_secret_reload_failures_total` | counter | `key`（键名，从不是值；[P2.9](02-configuration.zh.md)） |
 | `be_outbox_pending` | gauge | — |

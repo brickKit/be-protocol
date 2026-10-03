@@ -80,9 +80,9 @@ EXCEPTION WHEN insufficient_privilege THEN NULL; END $$;
 ROLLBACK TO ddl;
 -- partitions through the definer function, idempotent
 DO $$ BEGIN
-  IF NOT besdk_ensure_range_partition('besdk_outbox', 'besdk_outbox_w2026_40', '2026-09-28', '2026-10-05') THEN RAISE EXCEPTION 'create'; END IF;
-  IF besdk_ensure_range_partition('besdk_outbox', 'besdk_outbox_w2026_40', '2026-09-28', '2026-10-05') THEN RAISE EXCEPTION 'not idempotent'; END IF;
-  PERFORM besdk_ensure_range_partition('besdk_outbox', 'besdk_outbox_w2026_41', '2026-10-05', '2026-10-12');
+  IF NOT besdk_ensure_range_partition('besdk_outbox', 'besdk_outbox_2026w40', '2026-09-28', '2026-10-05') THEN RAISE EXCEPTION 'create'; END IF;
+  IF besdk_ensure_range_partition('besdk_outbox', 'besdk_outbox_2026w40', '2026-09-28', '2026-10-05') THEN RAISE EXCEPTION 'not idempotent'; END IF;
+  PERFORM besdk_ensure_range_partition('besdk_outbox', 'besdk_outbox_2026w41', '2026-10-05', '2026-10-12');
 END $$;
 -- outbox insert and claim (P12.1)
 INSERT INTO besdk_outbox (id, created_at, subject, aggregate_type, aggregate_id, aggregate_version, occurred_at, payload)
@@ -164,8 +164,8 @@ EXCEPTION WHEN SQLSTATE 'BE001' THEN NULL; END $$;
 ROLLBACK TO s3;
 DO $$ BEGIN
   IF NOT besdk_drop_partition('ddl_probe', 'ddl_probe_2025_01') THEN RAISE EXCEPTION 're-freeze drop'; END IF;
-  IF NOT besdk_drop_partition('besdk_outbox', 'besdk_outbox_w2026_41') THEN RAISE EXCEPTION 'drop'; END IF;
-  IF besdk_drop_partition('besdk_outbox', 'besdk_outbox_w2026_41') THEN RAISE EXCEPTION 'drop not idempotent'; END IF;
+  IF NOT besdk_drop_partition('besdk_outbox', 'besdk_outbox_2026w41') THEN RAISE EXCEPTION 'drop'; END IF;
+  IF besdk_drop_partition('besdk_outbox', 'besdk_outbox_2026w41') THEN RAISE EXCEPTION 'drop not idempotent'; END IF;
 END $$;
 SAVEPOINT s4;
 DO $$ BEGIN PERFORM besdk_ensure_range_partition('besdk_idempotency', 'besdk_idempotency_x', now(), now()); RAISE EXCEPTION 'accepted a non-partitioned parent';
@@ -176,9 +176,35 @@ SELECT count(*) FROM besdk_authz_acl a WHERE a.rtype = 'conformance.widget.widge
    AND a.subject = ANY('{user:u1}') AND (a.expires_at IS NULL OR a.expires_at > now());
 COMMIT;
 -- be_bus partition and publish (P12.12)
-CREATE TABLE be_bus.message_2026_10 PARTITION OF be_bus.message FOR VALUES FROM ('2026-10-01') TO ('2026-11-01');
+-- the database initialisation's grants to a component's runtime role
+GRANT USAGE ON SCHEMA be_bus TO r_widget;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA be_bus TO r_widget;
+GRANT USAGE ON SEQUENCE be_bus.message_seq TO r_widget;
+GRANT EXECUTE ON FUNCTION be_bus.ensure_partition(timestamptz), be_bus.drop_partition(text, timestamptz) TO r_widget;
+SET ROLE r_widget;
+-- a publish with no range partition lands in the DEFAULT partition instead of failing
+INSERT INTO be_bus.msg_id (stream, msg_id, expires_at) VALUES ('BE_CONFORMANCE', 'm0', now() + interval '10 minutes') ON CONFLICT DO NOTHING;
+INSERT INTO be_bus.message (stream, msg_id, subject, headers, data, published_at) VALUES ('BE_CONFORMANCE', 'm0', 'conformance.widget.created.v1', '{"ce-id":"m0"}', '\x7b7d', '2026-09-01T00:00:00Z');
+DO $$ BEGIN
+  IF (SELECT count(*) FROM be_bus.message_default) <> 1 THEN RAISE EXCEPTION 'default partition'; END IF;
+  -- the adapter's partition through the definer function, idempotent, named <isoyear>w<ww> (P16.10)
+  IF NOT be_bus.ensure_partition('2026-10-02T12:00:00Z') THEN RAISE EXCEPTION 'be_bus create'; END IF;
+  IF be_bus.ensure_partition('2026-10-04T23:59:59Z') THEN RAISE EXCEPTION 'be_bus create not idempotent'; END IF;
+  IF to_regclass('be_bus.message_2026w40') IS NULL THEN RAISE EXCEPTION 'be_bus partition name'; END IF;
+END $$;
 INSERT INTO be_bus.msg_id (stream, msg_id, expires_at) VALUES ('BE_CONFORMANCE', 'm1', now() + interval '10 minutes') ON CONFLICT DO NOTHING;
-INSERT INTO be_bus.message (stream, msg_id, subject, headers, data) VALUES ('BE_CONFORMANCE', 'm1', 'conformance.widget.created.v1', '{"ce-id":"m1"}', '\x7b7d');
+INSERT INTO be_bus.message (stream, msg_id, subject, headers, data, published_at) VALUES ('BE_CONFORMANCE', 'm1', 'conformance.widget.created.v1', '{"ce-id":"m1"}', '\x7b7d', '2026-10-01T08:00:00Z');
+DO $$ BEGIN
+  IF (SELECT count(*) FROM be_bus.message WHERE tableoid = 'be_bus.message_2026w40'::regclass) <> 1 THEN RAISE EXCEPTION 'be_bus range partition'; END IF;  -- read through the parent: a new partition belongs to be_bus_owner
+  BEGIN
+    PERFORM be_bus.drop_partition('message_2026w40', '2026-10-03T00:00:00Z');
+    RAISE EXCEPTION 'dropped inside the retention window';
+  EXCEPTION WHEN invalid_parameter_value THEN NULL;
+  END;
+  IF NOT be_bus.drop_partition('message_2026w40', '2026-10-06T00:00:00Z') THEN RAISE EXCEPTION 'be_bus drop'; END IF;
+  IF be_bus.drop_partition('message_2026w40', '2026-10-06T00:00:00Z') THEN RAISE EXCEPTION 'be_bus drop not idempotent'; END IF;
+END $$;
+RESET ROLE;
 SQL
 
   if [ "$major" -ge 16 ]; then

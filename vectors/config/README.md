@@ -8,7 +8,7 @@ How a component parses its configuration at start, how dependency and slot-famil
 
 | File | Cases | Operations |
 |---|---|---|
-| `values.json` | 104 | `parse_value`, `read_undeclared`, `secret_text` |
+| `values.json` | 106 | `parse_value`, `read_undeclared`, `secret_text` |
 | `endpoints.json` | 31 | `endpoint_name`, `endpoint_value`, `family_address` |
 | `keys.json` | 29 | `key_name`, `key_declaration` |
 | `forms.json` | 32 | `value_form` |
@@ -29,7 +29,7 @@ How a component parses its configuration at start, how dependency and slot-famil
 
 ## Rules
 
-- **Presence**: a variable that does not exist takes the `default`, or is `CONFIG_MISSING` when required, or is not set. An empty value counts as not set for every type except `string` (brickKit's `${NAME:-}`). A present value that does not parse is `CONFIG_INVALID`; it never falls back to the default, and a default that does not parse is an error too.
+- **Presence**: a variable that does not exist takes the `default`, or is `CONFIG_MISSING` when required, or is not set. An empty value counts as not set for every type, `string` included (brickKit's `${NAME:-}`; rc.2). A present value that does not parse is `CONFIG_INVALID`; it never falls back to the default, and a default that does not parse is an error too.
 - **integer**: `^-?[0-9]+$` (leading zeros are decimal), within ±(2^53−1) so every language holds it exactly; no `+`, spaces, separators, hex, exponent or non-ASCII digits.
 - **boolean**: exactly `true`, `false`, `1`, `0`.
 - **duration**: Go's `time.ParseDuration` syntax (`5s`, `1h30m`, `1.5h`, `200ms`, `10us` / `10µs` / `10μs`, `7ns`, `.5s`, `+5s`, a bare `0`); no day unit, no upper case, no spaces, no ISO 8601; negative durations are rejected. The value is in nanoseconds, written as a decimal string.

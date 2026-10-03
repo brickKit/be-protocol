@@ -9,10 +9,10 @@
 | ID | 等级 | 要求 | 用例 |
 |---|---|---|---|
 | P1.1 | MUST | 镜像有两个入口。默认命令起服务。`component.yaml` 里 `migration.command` 的命令跑迁移，成功时退出 0。两者用同一个镜像、同一份配置。平台在每次启动前都会跑迁移命令，所以它必须幂等：连续跑两次，两次都退出 0，第二次什么都不改（[P11](11-migrations-and-data-shapes.zh.md)）。官方 SDK 用一个带子命令的二进制：`[<binary>, migrate, up]` 迁移，`[<binary>]` 起服务；另外还有 `migrate status`、`migrate down <n>`，以及提供时的 `job run <name>`（[P14.8](14-background-jobs.zh.md)）。入口不认识的参数立即以 **64** 退出，在读配置之前，所以拼错的迁移命令永远不会变成第二个服务进程 | CP-CORE-01 |
-| P1.2 | MUST | 启动顺序固定：(1) 读取并校验配置（[P2](02-configuration.zh.md)）；(2) 开端口；(3) **在后台**连接 PostgreSQL、事件总线、授权 provider 和 JWKS。缺必填键、值解析不了、或组件 ID 与注入的 `COMPONENT_ID` 不同时，每个问题打一行点名该键的 JSON 日志，进程以退出码 **78**（EX_CONFIG）退出。暂时不可达的依赖按退避重试（0.5 s 起步、翻倍、上限 15 s）；进程不退出 | CP-CORE-02, CP-CORE-03 |
+| P1.2 | MUST | 启动顺序固定：(1) 读取并校验配置（[P2](02-configuration.zh.md)）；(2) 开端口；(3) **在后台**连接 PostgreSQL、事件总线、授权 provider 和 JWKS。缺必填键、值解析不了、或组件 ID 与注入的 `COMPONENT_ID` 不同时，每个问题打一行点名该键的 JSON 日志，进程以退出码 **78**（EX_CONFIG）退出。环境里根本没有 `COMPONENT_ID`，说明进程不是平台启动的：立即以 **64** 退出，与不认识的参数相同。暂时不可达的依赖按退避重试（0.5 s 起步、翻倍、上限 15 s）；进程不退出 | CP-CORE-02, CP-CORE-03 |
 | P1.3 | MUST | 主端口上的 `GET /healthz` 和 `HEAD /healthz`，只要进程活着且在服务，就答 `200`。处理函数不碰任何依赖：不碰 PostgreSQL，不碰总线，不碰授权 provider，不碰其它组件。停掉 PostgreSQL 不改变它的回答 | CP-CORE-04 |
 | P1.4 | MUST | 主端口上的 `GET /readyz`，在以下几项全部满足后答 `200`：已加载第一份授权 bundle（仅当组件有受保护路由时）；数据库身份探测已通过（[P10.7](10-database.zh.md)）；schema 的迁移版本等于镜像的迁移版本。否则答 `503`，带错误体，reason 为 `NOT_READY`，`metadata.waiting` 以逗号分隔列出缺了什么（`bundle`、`db_identity`、`migrations`）。一项一旦满足就一直算满足：之后 PostgreSQL、总线、授权 provider 或别的组件出故障，永远不会让 `/readyz` 变回 `503`（bundle 按 fail-static 保留，[P6.1](06-authorization.zh.md)），所以一次下游抖动不会把所有副本一起摘掉。平台经 `readinessCheck`（P1.11）探它：Kubernetes 只在它答 `200` 之后才把流量导给 Pod，Docker / Podman 上依赖方也在那之后才启动 | CP-CORE-05 |
-| P1.5 | MUST | 加载第一份 bundle 之前，每个受保护路由都答 `503`，reason 为 `AUTHZ_NOT_READY`；Public 路由照常服务 | CP-AUTH-10 |
+| P1.5 | MUST | 加载第一份 bundle 之前，每个非 Public 路由（Authenticated 路由也算）先验 token（缺失或无效答 `401` `TOKEN_INVALID`，[P5](05-identity.zh.md)），再答 `503`，reason 为 `AUTHZ_NOT_READY`，因为过期检查和代理检查都要用 bundle（[P6.2](06-authorization.zh.md)）。Public 路由照常服务 | CP-AUTH-10 |
 | P1.6 | MUST | 收到 `SIGTERM`：停止接收新请求和新投递；让在途请求在 `SHUTDOWN_GRACE`（默认 25 s）内完成；然后停止后台工作：取消正在跑的任务、释放租约、对在途消息 ack 或 nak、把 outbox 泵当前这一批收尾；最后以 **0** 退出。`SHUTDOWN_GRACE` 加上停后台工作的时间落在平台的停机宽限期（P1.12）之内，平台永远不必强杀进程 | CP-CORE-06 |
 | P1.7 | MUST | 可恢复的错误永不结束进程。每一项后台工作（任务、worker、reconciler、消费者、outbox 泵、投影拉取、bundle 轮询）都受监督：失败或 panic 被恢复、记日志、计数，然后按 1 s 到 5 min 的指数退避重启；一项停下永远不会让另一项停下。单跑和外壳里行为完全相同 | CP-JOBS-05, CP-SHELL-06 |
 | P1.8 | MUST | 致命错误以**非 0** 码退出：配置非法（78）；在服务入口上，schema 的迁移版本比镜像的新（迁移入口则记一条 WARN 并退出 0，这样回滚到旧镜像时不会被它的迁移步骤挡住）；缺少必需的数据库能力（[P10.7](10-database.zh.md)）；外壳成员没编译进来，或编译进来的是另一个版本（2，[P19.1](19-shells.zh.md)）；组件的一次性初始化失败或超过 30 s。初始化失败后，进程永远不以 0 退出 | CP-SHELL-01, CP-SHELL-02 |
@@ -28,7 +28,7 @@
 |---|---|
 | 0 | 收到 `SIGTERM` 后干净停机；迁移运行成功或无事可做 |
 | 2 | 外壳拒绝了它的成员列表（[P19.1](19-shells.zh.md)） |
-| 64 | 用法错误：入口不认识的参数（P1.1），或 `job run` 给了不存在的任务名（[P14.8](14-background-jobs.zh.md)） |
+| 64 | 用法错误：入口不认识的参数（P1.1）、`job run` 给了不存在的任务名（[P14.8](14-background-jobs.zh.md)），或环境里没有 `COMPONENT_ID`（P1.2） |
 | 78 | 配置错误：键缺失或解析不了、组件 ID 不一致、外壳成员的共享键与外壳的不同 |
 | 其它任何非 0 | 其它任何致命错误（[P1.8](#要求)） |
 

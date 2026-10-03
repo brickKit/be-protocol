@@ -63,9 +63,17 @@ var beReasons = map[string]string{
 	"RANGE_COLD": "FAILED_PRECONDITION", "UNIT_SEALED": "FAILED_PRECONDITION",
 	"RATE_LIMITED": "RESOURCE_EXHAUSTED", "UPSTREAM_UNAVAILABLE": "UNAVAILABLE", "UPSTREAM_TIMEOUT": "DEADLINE_EXCEEDED",
 	"NETWORK_IN_TX": "INTERNAL", "DB_TOO_MANY_CONNECTIONS": "UNAVAILABLE", "NESTED_TX": "INTERNAL",
+	"REQUEST_INVALID": "INVALID_ARGUMENT", "DEPENDENCY_UNAVAILABLE": "UNAVAILABLE", "REQUEST_CANCELLED": "CANCELLED",
 }
 
 type fail string
+
+// a lost or refused database connection (P4: DEPENDENCY_UNAVAILABLE naming the database)
+func dbDown() map[string]any {
+	m := failRes("UNAVAILABLE", "DEPENDENCY_UNAVAILABLE", "be", 503)
+	m["metadata"] = map[string]any{"dependency": "db"}
+	return m
+}
 
 func httpOf(code, reason, domain string) int {
 	s, ok := statusOf(code)
@@ -140,6 +148,9 @@ func run(op string, in map[string]any) any {
 		if a, ok := in["attempt"].(float64); ok {
 			attempt = int(a)
 		}
+		if len(s) == 5 && s[:2] == "08" {
+			return dbDown()
+		}
 		switch s {
 		case "40001", "40P01":
 			if attempt <= 2 {
@@ -150,13 +161,15 @@ func run(op string, in map[string]any) any {
 			return failRes("ABORTED", "LOCK_TIMEOUT", "be", 409)
 		case "57014":
 			if str(in, "context") == "cancelled" {
-				return failRes("CANCELLED", nil, nil, 499)
+				return failRes("CANCELLED", "REQUEST_CANCELLED", "be", 499)
 			}
 			return failRes("DEADLINE_EXCEEDED", "STATEMENT_TIMEOUT", "be", 504)
 		case "25P04":
 			return failRes("DEADLINE_EXCEEDED", "STATEMENT_TIMEOUT", "be", 504)
 		case "53300":
 			return failRes("UNAVAILABLE", "DB_TOO_MANY_CONNECTIONS", "be", 503)
+		case "57P01", "57P02", "57P03":
+			return dbDown()
 		case "23505":
 			if m, ok := in["component_mapping"].(map[string]any); ok {
 				return failRes(str(m, "code"), m["reason"], m["domain"], httpOf(str(m, "code"), "", ""))
@@ -171,6 +184,14 @@ func run(op string, in map[string]any) any {
 			return map[string]any{"level": "warn"}
 		case "CANCELLED", "OK":
 			return map[string]any{"level": "none"}
+		}
+		return map[string]any{"level": "info"}
+	case "access_log_level":
+		switch str(in, "code") {
+		case "INTERNAL", "UNKNOWN", "DATA_LOSS":
+			return map[string]any{"level": "error"}
+		case "UNAVAILABLE", "DEADLINE_EXCEEDED":
+			return map[string]any{"level": "warn"}
 		}
 		return map[string]any{"level": "info"}
 	case "problem":
