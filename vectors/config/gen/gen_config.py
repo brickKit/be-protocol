@@ -2,9 +2,9 @@
 """Generate vectors/config/*.json (protocol P2; foundations 24; brickKit's
 environment-variable contract).
 
-values.json   how a component parses the value of one declared key at start
-endpoints.json  dependency address variables (names and values)
-keys.json     which key names a component may declare
+values.json   how a component parses the value of one declared key at start, and a secret file's text
+endpoints.json  dependency address variables (names and values) and slot-family address keys
+keys.json     which key names a component may declare, and how a secret key is declared
 forms.json    value forms written in config/*.yaml (assembly time, be-ops gates)
 
 xcheck_config.go recomputes every case in Go; durations go through the real
@@ -138,16 +138,27 @@ def parse_value(inp):
         out = v
     else:
         raise KeyError(t)
-    res = {"set": True, "value": out}
     if inp.get("secret"):
-        if v.startswith("@file:"):
-            path = v[len("@file:"):]
-            if not path.startswith("/") or "\x00" in path or path == "/":
-                raise CfgError("CONFIG_INVALID")
-            res = {"set": True, "source": "file", "path": path}
-        else:
-            res = {"set": True, "source": "env", "value": out}
-    return res
+        # P2.7, P2.12: a secret key is declared mount: file; the environment holds the absolute path of
+        # the file (/run/brickkit/secrets/<service>/<KEY>, or a host path for mode: local), never the value
+        if t != "string" or not v.startswith("/") or v.endswith("/") or "\x00" in v:
+            raise CfgError("CONFIG_INVALID")
+        return {"set": True, "source": "file", "path": v}
+    return {"set": True, "value": out}
+
+
+def secret_text(inp):
+    # P2.9: the text of a secret file; exactly one trailing LF or CRLF is removed, nothing else
+    c = inp["content"]
+    if c.endswith("\r\n"):
+        c = c[:-2]
+    elif c.endswith("\n"):
+        c = c[:-1]
+    if c == "":
+        if inp.get("required"):
+            raise CfgError("CONFIG_MISSING")
+        return {"set": False}
+    return {"set": True, "value": c}
 
 
 def endpoint_name(dep, port):
@@ -173,15 +184,26 @@ def endpoint_value(v):
     return {"present": True, "address": rest}
 
 
-def family_url(v):
-    # P2.10: a slot family's *_URL is http://<host>:<port> with no path; its gRPC target is host:(port + 1000)
+FAMILY_KEYS = {"AUTHZ_URL": "http", "AUTHZ_GRPC_URL": "grpc", "IAM_URL": "http", "IAM_GRPC_URL": "grpc"}
+
+
+def family_address(inp):
+    # P2.10: a slot family's address keys hold what $endpoint: writes, http://<host>:<port> (no path); the
+    # *_URL key is the REST base, the *_GRPC_URL key the gRPC target once http:// is stripped. No arithmetic.
+    key, v = inp["key"], inp.get("value")
+    if key not in FAMILY_KEYS:
+        raise CfgError("CONFIG_KEY_INVALID")
+    if v is None:
+        return {"present": False}
     if not isinstance(v, str) or not v.startswith("http://"):
         raise CfgError("CONFIG_INVALID")
     rest = v[len("http://"):].rstrip("/")
     m = re.fullmatch(r"([a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*):([0-9]{1,5})", rest)
-    if not m or not 1 <= int(m.group(5)) <= 65535 - 1000:
+    if not m or not 1 <= int(m.group(5)) <= 65535:
         raise CfgError("CONFIG_INVALID")
-    return {"base": "http://" + rest, "grpc_target": f"{m.group(1)}:{int(m.group(5)) + 1000}"}
+    if FAMILY_KEYS[key] == "grpc":
+        return {"present": True, "target": rest}
+    return {"present": True, "base": "http://" + rest}
 
 
 RESERVED = {"COMPONENT_ID", "COMPONENT_VERSION", "PORT"}
@@ -193,6 +215,55 @@ def key_name(k):
     if k in RESERVED or k.endswith("_ENDPOINT") or k.startswith("BRICKKIT_SERVED_MEMBERS"):
         raise CfgError("CONFIG_KEY_RESERVED")
     return {"valid": True}
+
+
+def key_declaration(inp):
+    # P2.12: secret: true <=> mount: file <=> the name ends in _FILE (brickKit: mount needs secret and string)
+    k, secret, mount, t = inp["key"], inp.get("secret", False), inp.get("mount"), inp.get("type", "string")
+    key_name(k)
+    if mount is not None and mount != "file":
+        raise CfgError("MOUNT_INVALID")
+    if mount == "file" and not secret:
+        raise CfgError("MOUNT_NEEDS_SECRET")
+    if mount == "file" and t != "string":
+        raise CfgError("MOUNT_NEEDS_STRING")
+    if secret and mount != "file":
+        raise CfgError("SECRET_NOT_FILE")
+    if secret and not k.endswith("_FILE"):
+        raise CfgError("FILE_SUFFIX_REQUIRED")
+    if not secret and k.endswith("_FILE"):
+        raise CfgError("FILE_SUFFIX_RESERVED")
+    return {"valid": True}
+
+
+ENDPOINT_RE = re.compile(r"\$endpoint:([a-z][a-z0-9]*)/([^/]*)(/.*)?")
+
+
+def endpoint_form(w):
+    # brickKit's $endpoint:<scope>/<name>[@<version>][:<port name>][/<path>]; the first / after the
+    # second ID segment starts the path
+    m = ENDPOINT_RE.fullmatch(w)
+    if not m:
+        raise CfgError("FORM_INVALID")
+    name, port, version = m.group(2), None, None
+    if ":" in name:
+        name, port = name.split(":", 1)
+        if not re.fullmatch(r"[a-z0-9]([a-z0-9-]*[a-z0-9])?", port) or len(port) > 15:
+            raise CfgError("FORM_INVALID")
+    if "@" in name:
+        name, version = name.split("@", 1)
+        if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+            raise CfgError("FORM_INVALID")
+    if not re.fullmatch(r"[a-z][a-z0-9-]*", name):
+        raise CfgError("FORM_INVALID")
+    out = {"form": "endpoint", "component": m.group(1) + "/" + name}
+    if version:
+        out["version"] = version
+    if port:
+        out["port"] = port
+    if m.group(3):
+        out["path"] = m.group(3)
+    return out
 
 
 REF = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)(:-([^${}]*))?\}")
@@ -213,6 +284,11 @@ def value_form(inp):
         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
             raise CfgError("FORM_INVALID")  # $var: must be the whole value
         return {"form": "var", "name": name}
+    if w.startswith("$endpoint:"):
+        out = endpoint_form(w)
+        if secret:
+            raise CfgError("SECRET_NOT_REFERENCE")  # an address is never a secret
+        return out
     if w.startswith("file://"):
         p = w[7:]
         if not p or p.startswith("/") or ".." in p.split("/"):
@@ -226,7 +302,7 @@ def value_form(inp):
             return {"form": "env", "name": m.group(1), "default": m.group(3)}
         return {"form": "env", "name": m.group(1)}
     rest = REF.sub("", w)
-    if "${" in rest or "$var:" in w:
+    if "${" in rest or "$var:" in w or "$endpoint:" in w:
         raise CfgError("FORM_INVALID")  # a broken reference, or $var: that is not the whole value
     if secret:
         raise CfgError("SECRET_NOT_REFERENCE")  # project rule: a secret is only ever a reference
@@ -323,13 +399,18 @@ def gen_values():
         ("enum-ok", P("enum", "warn", enum=["debug", "info", "warn", "error"]), "LOG_LEVEL"),
         ("enum-upper", P("enum", "WARN", enum=["debug", "info", "warn", "error"]), "enum values are case-sensitive"),
         ("enum-default", P("enum", None, enum=["debug", "info", "warn", "error"], default="info"), "LOG_LEVEL default"),
-        # secrets
-        ("secret-env", P("string", "s3cr3t", secret=True), "a secret from the environment"),
-        ("secret-file", P("string", "@file:/run/secrets/pg_password", secret=True), "a runtime file reference: re-read when it changes"),
-        ("secret-file-relative", P("string", "@file:secrets/pg_password", secret=True), "the file path must be absolute"),
-        ("secret-file-root", P("string", "@file:/", secret=True), "a directory is not a secret file"),
-        ("not-secret-file-literal", P("string", "@file:/run/secrets/x"), "@file: is only special for secret: true keys"),
+        # secrets: delivered as files (mount: file); the variable holds the path (P2.7, P2.12)
+        ("secret-file", P("string", "/run/brickkit/secrets/erp-sales-3-0-0/PG_PASSWORD_FILE", secret=True),
+         "a secret: the variable holds the path brickKit mounted, the value is in the file"),
+        ("secret-file-host-path", P("string", "/home/dev/shop/.brickkit/generated/secrets/erp-sales-3-0-0/PG_PASSWORD_FILE", secret=True),
+         "mode: local / debug: the absolute path of the file on the developer's machine"),
+        ("secret-file-relative", P("string", "secrets/pg_password", secret=True), "the path must be absolute"),
+        ("secret-file-root", P("string", "/", secret=True), "a directory is not a secret file"),
+        ("secret-file-directory", P("string", "/run/brickkit/secrets/erp-sales-3-0-0/", secret=True), "a path ending in / is a directory"),
+        ("secret-value-in-env", P("string", "s3cr3t", secret=True), "a secret value in the environment is refused: secrets travel only as files"),
+        ("secret-at-file-retired", P("string", "@file:/run/secrets/pg_password", secret=True), "the @file: prefix of rc drafts is gone: the value is the path itself"),
         ("secret-missing", P("string", None, secret=True, required=True), "a required secret that is absent"),
+        ("not-secret-path-is-text", P("string", "/etc/app/rules.json"), "for a key that is not secret a path is ordinary text"),
     ]
     for slug, inp, why in rows:
         add(c, slug, why, "parse_value", inp, parse_value, ["P2.3", "P2.7"])
@@ -337,6 +418,18 @@ def gen_values():
           {"key": "SOME_OTHER_KEY", "declared": ["PG_HOST", "PG_SCHEMA"]}, error="CONFIG_UNDECLARED", refs=["P2.2"])
     c.add("undeclared-reserved-ok", "platform names may be read without being declared", "read_undeclared",
           {"key": "COMPONENT_ID", "declared": ["PG_HOST"]}, expected={"allowed": True}, refs=["P2.2"])
+    for slug, content, req, why in [
+        ("plain", "s3cr3t", True, "the file's text is the value"),
+        ("trailing-lf", "s3cr3t\n", True, "one trailing LF (what an editor or echo writes) is removed"),
+        ("trailing-crlf", "s3cr3t\r\n", True, "one trailing CRLF is removed"),
+        ("two-lf", "s3cr3t\n\n", True, "only one trailing newline is removed"),
+        ("spaces-kept", " s3cr3t ", True, "spaces are part of the value"),
+        ("pem", "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIA==\n-----END PRIVATE KEY-----\n", True, "a PEM keeps its inner newlines"),
+        ("empty-required", "", True, "an empty file for a required secret"),
+        ("newline-only-required", "\n", True, "a file holding only a newline is empty"),
+        ("empty-optional", "", False, "an empty file for an optional secret: not set"),
+    ]:
+        add(c, "secret-text-" + slug, why, "secret_text", {"content": content, "required": req}, secret_text, ["P2.9"])
     return c
 
 
@@ -360,17 +453,23 @@ def gen_endpoints():
         ("shell-service", "http://be-go-core-1-1-0:9096", "in a shell the member's port on the shell's service"),
     ]:
         add(c, "value-" + slug, why, "endpoint_value", {"value": v}, lambda i: endpoint_value(i["value"]), ["P2.5", "P2.6"])
-    for slug, v, why in [
-        ("authz", "http://infra-authz-3-0-0:8223", "REST base kept, gRPC target on port + 1000"),
-        ("iam", "http://infra-iam-casdoor-3-0-0:8200", "the identity family the same way"),
-        ("trailing-slash", "http://infra-authz-3-0-0:8223/", "a trailing slash is stripped"),
-        ("no-port", "http://infra-authz-3-0-0", "the port must be explicit"),
-        ("path", "http://infra-authz-3-0-0:8223/authz/v2", "a family URL has no path"),
-        ("https", "https://infra-authz-3-0-0:8223", "project-network addresses are http://"),
-        ("port-overflow", "http://infra-authz-3-0-0:64600", "port + 1000 above 65535"),
-        ("empty", "", "a required family key may not be empty"),
+    for slug, key, v, why in [
+        ("authz", "AUTHZ_URL", "http://infra-authz-3-0-0:8223", "$endpoint:infra/authz: the REST base"),
+        ("authz-grpc", "AUTHZ_GRPC_URL", "http://infra-authz-3-0-0:9223", "$endpoint:infra/authz:grpc: the gRPC target is host:port"),
+        ("iam", "IAM_URL", "http://infra-iam-casdoor-3-0-0:8200", "the identity family the same way"),
+        ("iam-grpc", "IAM_GRPC_URL", "http://infra-iam-casdoor-3-0-0:9200", "$endpoint:infra/iam-casdoor:grpc"),
+        ("grpc-port-unrelated", "AUTHZ_GRPC_URL", "http://infra-authz-openfga-3-0-0:7311", "the gRPC port is whatever the member declares: no port arithmetic"),
+        ("shell-hosted", "AUTHZ_GRPC_URL", "http://be-go-infra-1-1-0:9223", "a member hosted by a shell: the shell's service, the member's own port"),
+        ("trailing-slash", "AUTHZ_URL", "http://infra-authz-3-0-0:8223/", "a trailing slash is stripped"),
+        ("absent", "IAM_GRPC_URL", None, "the family member does not run: the key does not exist and the caller degrades"),
+        ("no-port", "AUTHZ_URL", "http://infra-authz-3-0-0", "the port must be explicit"),
+        ("path", "AUTHZ_URL", "http://infra-authz-3-0-0:8223/authz/v2", "a family address has no path; REST paths are appended by the runtime"),
+        ("https", "AUTHZ_URL", "https://infra-authz-3-0-0:8223", "project-network addresses are http://"),
+        ("grpc-no-scheme", "AUTHZ_GRPC_URL", "infra-authz-3-0-0:9223", "the value is written by $endpoint:, always with http://"),
+        ("empty", "AUTHZ_URL", "", "a family key may not be empty"),
+        ("not-family-key", "AUTHZ_BUNDLE_URL", "http://infra-authz-3-0-0:8223/authz/v2/bundle", "only the four family address keys"),
     ]:
-        add(c, "family-" + slug, why, "family_url", {"value": v}, lambda i: family_url(i["value"]), ["P2.10"])
+        add(c, "family-" + slug, why, "family_address", {"key": key, "value": v}, family_address, ["P2.10"])
     return c
 
 
@@ -385,6 +484,19 @@ def gen_keys():
                     ("hyphen", "PG-HOST"), ("leading-digit", "1PG"), ("leading-underscore", "_PG"), ("space", "PG HOST"),
                     ("empty", "")]:
         add(c, slug, f"may a component declare {k!r}?", "key_name", {"key": k}, lambda i: key_name(i["key"]), ["P2.4"])
+    for slug, inp, why in [
+        ("secret-file", {"key": "PG_PASSWORD_FILE", "secret": True, "mount": "file"}, "a secret key: secret, mount: file, name ending in _FILE"),
+        ("plain", {"key": "PG_USER"}, "a plain key"),
+        ("secret-env", {"key": "PG_PASSWORD", "secret": True}, "a secret that would travel in the environment"),
+        ("secret-env-file-name", {"key": "PG_PASSWORD_FILE", "secret": True}, "the _FILE name without mount: file would carry the value, not a path"),
+        ("mount-no-suffix", {"key": "SIGNING_KEY", "secret": True, "mount": "file"}, "a file-delivered key is named ..._FILE"),
+        ("plain-file-suffix", {"key": "RULES_FILE"}, "_FILE is reserved for file-delivered secrets"),
+        ("mount-not-secret", {"key": "RULES_FILE", "mount": "file"}, "brickKit: mount: file only together with secret: true"),
+        ("mount-integer", {"key": "PORT_FILE", "secret": True, "mount": "file", "type": "integer"}, "brickKit: a mounted item is a string"),
+        ("mount-unknown", {"key": "KEY_FILE", "secret": True, "mount": "volume"}, "file is the only mount"),
+        ("reserved-still", {"key": "UPSTREAM_ENDPOINT", "secret": True, "mount": "file"}, "reserved names stay reserved"),
+    ]:
+        add(c, "decl-" + slug, why, "key_declaration", inp, key_declaration, ["P2.4", "P2.12"])
     return c
 
 
@@ -411,8 +523,21 @@ def gen_forms():
         ("existing-secret", {"existingSecret": "pg-credentials", "key": "password"}, True, "Kubernetes: a Secret managed elsewhere"),
         ("existing-secret-plain", {"existingSecret": "pg-credentials", "key": "host"}, False, "existingSecret only for secret: true items"),
         ("existing-secret-bad", {"existingSecret": "pg-credentials"}, True, "the key is required"),
+        ("endpoint", "$endpoint:infra/authz", False, "a family address: the project's default version, main port"),
+        ("endpoint-port", "$endpoint:infra/authz:grpc", False, "the extra port named grpc"),
+        ("endpoint-version-port", "$endpoint:infra/authz@3.0.0:grpc", False, "a given version, then the port"),
+        ("endpoint-path", "$endpoint:infra/iam-casdoor/.well-known/jwks.json", False, "an address with a path appended"),
+        ("endpoint-self-callback", "$endpoint:infra/iam-casdoor/api/iam/webhooks/casdoor", False, "a member's own callback address, handed to its IdP"),
+        ("endpoint-version-path", "$endpoint:infra/authz@3.0.0/authz/v2/bundle", False, "a version, then a path"),
+        ("endpoint-port-then-version", "$endpoint:infra/authz:grpc@3.0.0", False, "the version comes before the port"),
+        ("endpoint-loose-version", "$endpoint:infra/authz@3.0", False, "versions are exact"),
+        ("endpoint-port-upper", "$endpoint:infra/authz:GRPC", False, "port names are lower case"),
+        ("endpoint-one-segment", "$endpoint:authz", False, "a component ID has two segments"),
+        ("endpoint-suffix", "http://$endpoint:infra/authz", False, "$endpoint: must be the whole value"),
+        ("endpoint-secret", "$endpoint:infra/authz", True, "an address is never a secret"),
     ]:
-        add(c, slug, why, "value_form", {"written": w, "secret": secret}, value_form, ["P2.7"])
+        add(c, slug, why, "value_form", {"written": w, "secret": secret}, value_form,
+            ["P2.10"] if "$endpoint:" in str(w) else ["P2.7"])
     return c
 
 

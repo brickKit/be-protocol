@@ -13,8 +13,8 @@ profiles:
   - { name: scope,       when: "data_scopes is not none, or resources is declared" }
   - { name: grpc,        when: "an extra port is named grpc" }
   - { name: outbound,    when: "dependencies.components is not empty" }
-  - { name: events-pub,  when: "the event contract lists subjects the component publishes" }
-  - { name: events-sub,  when: "the component subscribes to any subject (listed in its fixtures)" }
+  - { name: events-pub,  when: "component.yaml events.publishes is not empty (the subjects of the event contract)" }
+  - { name: events-sub,  when: "component.yaml events.subscribes is not empty (the subjects of fixtures events.consumes)" }
   - { name: idempotency, when: "any write accepts idempotency_key or Idempotency-Key" }
   - { name: db,          when: "configSchema declares PG_SCHEMA" }
   - { name: jobs,        when: "the component has a database" }
@@ -27,13 +27,16 @@ cases:
   - { id: CP-CORE-02, profile: core, level: MUST, tests: [P1.2, P2.2, P2.3], title: "missing or unparsable required key exits 78 and the log names the key" }
   - { id: CP-CORE-03, profile: core, level: MUST, tests: [P1.2, P12.13], title: "PostgreSQL, bus and authz ready after the component: it does not exit and recovers" }
   - { id: CP-CORE-04, profile: core, level: MUST, tests: [P1.3], title: "/healthz stays 200 with PostgreSQL stopped" }
-  - { id: CP-CORE-05, profile: core, level: SHOULD, tests: [P1.4, P10.7], title: "/readyz semantics" }
-  - { id: CP-CORE-06, profile: core, level: MUST, tests: [P1.6], title: "SIGTERM: in-flight requests finish, exit 0 within the grace period" }
+  - { id: CP-CORE-05, profile: core, level: MUST, tests: [P1.4, P10.7], title: "/readyz is 503 NOT_READY with metadata.waiting until bundle, identity and migrations are in place, then 200; stopping PostgreSQL or authz afterwards leaves it 200" }
+  - { id: CP-CORE-06, profile: core, level: MUST, tests: [P1.6, P1.12], title: "SIGTERM: in-flight requests finish, exit 0 within SHUTDOWN_GRACE, before stopGracePeriodSeconds" }
   - { id: CP-CORE-07, profile: core, level: MUST, tests: [P1.9], title: "the image has /bin/sh and wget" }
   - { id: CP-CORE-08, profile: core, level: MUST, tests: [P3.5], title: "slow request headers are disconnected" }
   - { id: CP-CORE-09, profile: core, level: MUST, tests: [P3.6], title: "a body above the limit answers 413 BODY_TOO_LARGE" }
   - { id: CP-CORE-10, profile: core, level: MUST, tests: [P3.2], title: "X-Request-Id echoed, generated when absent" }
   - { id: CP-CORE-11, profile: core, level: MUST, tests: [P3.1, P3.12, P20.2, P20.3, P20.4], title: "/_be/info matches the manifests and the container" }
+  - { id: CP-CORE-12, profile: core, level: MUST, tests: [P1.11, P1.12, P7.14], title: "component.yaml declares healthCheck /healthz, readinessCheck /readyz, stopGracePeriodSeconds >= SHUTDOWN_GRACE + 5 s and the port protocols" }
+  - { id: CP-CORE-13, profile: core, level: MUST, tests: [P1.13], title: "/healthz answers on 127.0.0.1 and on ::1 inside the container, and every declared port accepts IPv4 and IPv6" }
+  - { id: CP-CORE-14, profile: core, level: MUST, tests: [P2.7, P2.12], title: "every secret key is mount: file and named _FILE; no secret value appears in the container's environment" }
   # obs
   - { id: CP-OBS-01, profile: obs, level: MUST, tests: [P3.3, P18.1], title: "an inbound traceparent becomes the parent of the server span seen by the OTLP sink" }
   - { id: CP-OBS-02, profile: obs, level: MUST, tests: [P3.10, P4.6, P18.2, P18.4], title: "log fields complete; access log carries trace_id; error levels by code" }
@@ -97,6 +100,7 @@ cases:
   - { id: CP-EVP-03, profile: events-pub, level: MUST, tests: [P12.1, P10.9], title: "two replicas: each outbox row published once" }
   - { id: CP-EVP-04, profile: events-pub, level: MUST, tests: [P12.1, P12.4], title: "a missing stream is created with defaults; an existing one is not changed" }
   - { id: CP-EVP-05, profile: events-pub, level: MUST, tests: [P12.2], title: "payloads pass the contract; above the limit fails clearly" }
+  - { id: CP-EVP-06, profile: events-pub, level: MUST, tests: [P12.16], title: "events.publishes equals the event contract's subjects, and every subject published during the run is in it" }
   # events-sub
   - { id: CP-EVS-01, profile: events-sub, level: MUST, tests: [P12.5, P12.9], title: "durable name and parameters; events published while offline are received" }
   - { id: CP-EVS-02, profile: events-sub, level: MUST, tests: [P12.6, P15.2], title: "a duplicate delivery takes effect once" }
@@ -106,6 +110,7 @@ cases:
   - { id: CP-EVS-06, profile: events-sub, level: MUST, tests: [P12.8], title: "events from a handler carry causationid and hopcount+1; hopcount 11 inbound goes to the DLQ" }
   - { id: CP-EVS-07, profile: events-sub, level: MUST, skippable: true, tests: [P11.8], title: "a transaction-document event without legal entity goes to the DLQ" }
   - { id: CP-EVS-08, profile: events-sub, level: MUST, tests: [P12.5, P12.7], title: "with EVENTS_MAX_DELIVER=2 a failing message is dead-lettered once (message ID dlq:<durable>:<seq>) and terminated; the durable has max_deliver -1, no backoff, ack_wait 30s; an existing durable is not changed at start" }
+  - { id: CP-EVS-09, profile: events-sub, level: MUST, tests: [P12.16, P12.5], title: "the durables the component creates are exactly those of events.subscribes" }
   # idempotency
   - { id: CP-IDEM-01, profile: idempotency, level: MUST, tests: [P13.1, P13.3], title: "a replay returns the first result" }
   - { id: CP-IDEM-02, profile: idempotency, level: MUST, tests: [P13.2, P13.5], title: "another body answers 400 IDEMPOTENCY_MISMATCH" }
@@ -121,12 +126,14 @@ cases:
   - { id: CP-DB-03, profile: db, level: MUST, tests: [P10.5], title: "under full load the connections with application_name = the component ID stay <= PG_POOL_MAX" }
   - { id: CP-DB-04, profile: db, level: MUST, tests: [P11.3], title: "besdk_* tables match the reference DDL column for column" }
   - { id: CP-DB-05, profile: db, level: MUST, tests: [P10.12, P10.1], title: "while the service runs (migrations done) no session is logged in as PG_OWNER_USER, and partition upkeep still works" }
+  - { id: CP-DB-06, profile: db, level: MUST, tests: [P2.9, P10.5], title: "PG_USER's password changed and its file replaced while running: within 30 s new connections use it, with no restart and no failed request" }
   # jobs
   - { id: CP-JOBS-01, profile: jobs, level: MUST, tests: [P14.2, P14.5, P14.6], title: "two replicas: the platform cron be.cleanup, set to @every 2s through JOBS_OVERRIDES, runs each slot once" }
   - { id: CP-JOBS-02, profile: jobs, level: MUST, tests: [P14.2, P10.8], title: "a singleton has one holder; another takes over within the TTL when it dies" }
   - { id: CP-JOBS-03, profile: jobs, level: MUST, skippable: true, tests: [P14.2], title: "a queued job runs once across two replicas" }
   - { id: CP-JOBS-04, profile: jobs, level: MUST, skippable: true, tests: [P14.2], title: "a rolled-back business transaction leaves no job" }
   - { id: CP-JOBS-05, profile: jobs, level: MUST, tests: [P1.7, P14.2], title: "pg_terminate_backend during a run: the job restarts, the process stays up" }
+  - { id: CP-JOBS-06, profile: jobs, level: MUST, tests: [P14.8, P1.1], title: "only when /_be/info lists job_run: two concurrent job run of one cron job run the slot once and both exit 0, with the in-process copy disabled; an unknown job name exits 64" }
   # lifecycle
   - { id: CP-LIFE-01, profile: lifecycle, level: MUST, tests: [P16.6, P11.3], title: "a freshly migrated database accepts a write at once" }
   - { id: CP-LIFE-02, profile: lifecycle, level: MUST, tests: [P16.3], title: "a range before the online bound answers RANGE_COLD" }
@@ -147,3 +154,4 @@ cases:
   - { id: CP-SHELL-08, profile: shell, level: MUST, tests: [P19.2], title: "each member's own profiles pass again in shell mode" }
   - { id: CP-SHELL-09, profile: shell, level: MUST, tests: [P18.1, P19.4], title: "after an HTTP -> gRPC -> event chain no span carries service.name = the shell's ID" }
   - { id: CP-SHELL-10, profile: shell, level: MUST, tests: [P18.1, P19.3], title: "stopping one member does not drop spans another member emits afterwards" }
+  - { id: CP-SHELL-11, profile: shell, level: MUST, tests: [P19.9, P19.10], title: "the shell's /readyz is 503 naming the members not ready, then 200; its stopGracePeriodSeconds and SHUTDOWN_GRACE are at least every member's" }

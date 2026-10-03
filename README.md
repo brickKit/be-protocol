@@ -4,7 +4,7 @@
 
 The BrickEnterprise **component protocol**: everything a component must do, at the wire, table and configuration level, to be a correct member of a BrickEnterprise project, whatever language it is written in. This repository holds the normative text, the machine-readable schemas, the reference DDL of the tables the runtime owns, the semantic vectors and the fixture-component contract. It holds no implementation.
 
-**Protocol version: 1.0. Release: `v1.0.0-rc.1`** (release candidate; frozen as `v1.0.0` after the pilot components pass).
+**Protocol version: 1.0. Release: `v1.0.0-rc.1`** (release candidate; frozen as `v1.0.0` after the pilot components pass). It relies on **brickKit ≥ v1.3.1** (`readinessCheck`, `stopGracePeriodSeconds`, port `protocol`, `events`, `mount: file`, `$endpoint:`).
 
 ## Who implements it
 
@@ -24,8 +24,8 @@ The three official SDKs are reference implementations of this text. **No SDK may
 
 | Chapter | File | Covers |
 |---|---|---|
-| P1 | [01-process-and-lifecycle](spec/01-process-and-lifecycle.md) | entry points, start order, `/healthz`, `/readyz`, shutdown, supervision, exit codes |
-| P2 | [02-configuration](spec/02-configuration.md) | where configuration comes from, typing, the protocol keys |
+| P1 | [01-process-and-lifecycle](spec/01-process-and-lifecycle.md) | entry points, start order, `/healthz`, `/readyz` and the declared checks, shutdown and the stop grace period, listening on IPv4 and IPv6, supervision, exit codes |
+| P2 | [02-configuration](spec/02-configuration.md) | where configuration comes from, typing, secrets as files, slot-family addresses through `$endpoint:`, the protocol keys |
 | P3 | [03-http-surface](spec/03-http-surface.md) | paths, request id, trace, deadlines, server timeouts, body limit, paging |
 | P4 | [04-errors](spec/04-errors.md) | problem+json, gRPC `ErrorInfo`, GraphQL, reason catalogues, log levels |
 | P5 | [05-identity](spec/05-identity.md) | JWT verification, JWKS, claims, stale tokens |
@@ -35,15 +35,15 @@ The three official SDKs are reference implementations of this text. **No SDK may
 | P9 | [09-deadlines-and-retries](spec/09-deadlines-and-retries.md) | the budget hop by hop, retry layers (summary) |
 | P10 | [10-database](spec/10-database.md) | identity, per-transaction settings, isolation and retries, pools, probes, advisory locks, claims |
 | P11 | [11-migrations-and-data-shapes](spec/11-migrations-and-data-shapes.md) | migration rules, platform migration, keys, money, dates, legal entity, numbering |
-| P12 | [12-events](spec/12-events.md) | CloudEvents envelope, outbox, streams, durables, cursor, handlers, dead letters, replay |
+| P12 | [12-events](spec/12-events.md) | CloudEvents envelope, outbox, streams, durables, cursor, handlers, dead letters, replay, the `events` declaration |
 | P13 | [13-idempotency](spec/13-idempotency.md) | caller namespaces, binding, replay, order of checks, retention |
-| P14 | [14-background-jobs](spec/14-background-jobs.md) | `every`, `singleton`, `cron`, `queue`, reconcilers, supervision, metrics |
+| P14 | [14-background-jobs](spec/14-background-jobs.md) | `every`, `singleton`, `cron`, `queue`, reconcilers, supervision, metrics, running one job once |
 | P15 | [15-snapshots](spec/15-snapshots.md) | local copies of other components' data |
 | P16 | [16-data-lifecycle](spec/16-data-lifecycle.md) | `lifecycle.yaml`, the engine, `RANGE_COLD`, `_lifecycle/*`, sealed units |
 | P17 | [17-object-storage](spec/17-object-storage.md) | S3, one bucket per component, presigned URLs |
 | P18 | [18-observability](spec/18-observability.md) | traces, log lines, metric names |
 | P19 | [19-shells](spec/19-shells.md) | what a shell launcher and its members must do |
-| P20 | [20-self-description-and-versioning](spec/20-self-description-and-versioning.md) | `/_be/info`, the protocol version a component declares |
+| P20 | [20-self-description-and-versioning](spec/20-self-description-and-versioning.md) | `/_be/info`, the protocol version a component declares, what `component.yaml` declares |
 
 - Every chapter is wire-level only: headers, status codes, JSON fields, table shapes, configuration keys, metric and log field names. Nothing here is one language's API.
 - English is canonical; each `X.md` has a Chinese mirror `X.zh.md` with the same `##` sections.
@@ -96,8 +96,8 @@ The black-box suite is `conformance/component/` of `brickKit/be-acceptance` (in 
 | `scope` | `data_scopes` is not `none`, or `resources` is declared |
 | `grpc` | an extra port is named `grpc` |
 | `outbound` | `dependencies.components` is not empty |
-| `events-pub` | the component's event contract lists subjects it publishes |
-| `events-sub` | the component subscribes to any subject (listed in its fixtures) |
+| `events-pub` | `component.yaml` `events.publishes` is not empty (the subjects of its event contract) |
+| `events-sub` | `component.yaml` `events.subscribes` is not empty (the subjects of its fixtures' `events.consumes`) |
 | `idempotency` | any write accepts `idempotency_key` or `Idempotency-Key` |
 | `db` | `configSchema` declares `PG_SCHEMA` |
 | `jobs` | the component has a database (platform jobs always exist) |

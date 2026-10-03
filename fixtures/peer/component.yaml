@@ -31,9 +31,20 @@ deployment:
   type: container
   image: be-acceptance-fake-peer:latest   # placeholder: the suite starts its own fake, never this image
   port: 8080
+  protocol: http
   extraPorts:
-    - {name: grpc, port: 9090}
+    - {name: grpc, port: 9090, protocol: grpc}
+  stopGracePeriodSeconds: 30
 
 healthCheck:
   type: http
   path: /healthz
+
+readinessCheck:
+  type: http
+  path: /readyz
+
+events:
+  publishes:
+    - conformance.owner.updated.v1
+    - conformance.reservation.expired.v1

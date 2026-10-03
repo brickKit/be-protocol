@@ -8,7 +8,7 @@
 
 | File | What |
 |---|---|
-| `component.yaml` | brickKit manifest: dependencies, `configSchema`, ports (8080, grpc 9090), migration command |
+| `component.yaml` | brickKit manifest: dependencies, `configSchema` (secrets as `mount: file`), ports (8080 `http`, grpc 9090 `grpc`), stop grace period, migration command, health and readiness checks, `events` |
 | `assembly.yaml` | protocol keys (`protocol`, `conformance`, `resources`), permissions, data scopes, edge routes |
 | `contracts/widget.openapi.yaml` | user plane; each operation's guard in `x-be-permission`, deadlines in `x-be-deadline-seconds` |
 | `contracts/conformance/widget/v1/widget.proto` | system plane `conformance.widget.v1.WidgetService` |
@@ -81,7 +81,7 @@ Durables: `<instance id with / as _>__<subject with every . as __>` (`conformanc
 
 | Name | Kind | Behaviour |
 |---|---|---|
-| `widget.daily` | Cron `0 3 * * *` in `BUSINESS_TIMEZONE` | writes one `widget_audit` row `action=daily_summary` with the count of widgets approved on the previous business date; `JOBS_OVERRIDES` can set `cron` or `enabled` |
+| `widget.daily` | Cron `0 3 * * *` in `BUSINESS_TIMEZONE` | writes one `widget_audit` row `action=daily_summary` with the count of widgets approved on the previous business date; `JOBS_OVERRIDES` can set `cron` or `enabled`; also runnable once with `job run widget.daily` (P14.8), so `/_be/info` lists `job_run` |
 | `widget.notify` | Worker (queue), 5 attempts, backoff `1s,5s,30s,2m` | calls `PeerService/Notify` with the job's unique key, marks the `widget_jobs` row `SENT`; when attempts are exhausted `OnDead` marks it `DEAD` |
 | `widget.approve` | Reconciler, every 5 s | candidates `APPROVING` with `deadline_at < now`; asks `GetReservationStatus` by key: reserved → step 3; not found → `Reserve` again; rejected → step 4; after 5 attempts gives up: `SUSPENDED`, the key `DONE` with the suspended widget (200 on replay), `widget.notify` `kind=exception` |
 | `be.*` | platform | outbox, cleanup, lifecycle, authz changes, snapshot; not declared by the widget |
@@ -105,6 +105,8 @@ Protocol keys as in `component.yaml`; the widget's own: `WIDGET_NO_FORMAT` (defa
 | CP-SCOPE-03, -09, -11 | `filters`, `sort` on the list | dimension parameter `region`; sort parameter `sort`, masked values `price`, `amount` |
 | CP-EVS-06 | `setup` and `produces` on a consumed subject | approve first (the canned `Reserve` answer uses `rsv-0001`, the sample's reservation), deliver `reservation-expired.json`, expect `conformance.widget.reverted.v1` |
 | CP-JOBS-01 | `jobs.cron` | `widget.daily` with the override `{"cron": "@every 2s"}`; count `daily_summary` audit rows |
+| CP-JOBS-06 | `jobs.cron` (the first entry) | two `job run widget.daily` at once with `{"widget.daily": {"enabled": false}}`: one `daily_summary` row, both exit 0 |
+| CP-EVP-06, CP-EVS-09 | `events.produces`, `events.consumes` | the same subjects as `component.yaml` `events.publishes` / `events.subscribes` |
 | reconciler, CP-IDEM-05 | `jobs.reconcilers` | `Reserve` hangs past the 15 s route deadline: 202 `APPROVING`; then `GetReservationStatus` answers reserved: the widget becomes `APPROVED` |
 | CP-LIFE-02 | `range` on the list | `created_after`, `created_before`, `include_cold` |
 | blob | `blob` | upload `POST /widgets/{id}/attachments` (`$.upload_url`, `$.max_bytes`), download `GET /widgets/{id}/attachments/{attachment_id}` (`$.download_url`) |
@@ -113,7 +115,7 @@ Protocol keys as in `component.yaml`; the widget's own: `WIDGET_NO_FORMAT` (defa
 
 ## Broken variants
 
-Built with `BROKEN=<name>`; each breaks one rule. See `broken-variants.yaml`: `accept-refresh`, `healthz-db`, `no-ce-id`, `select-claim`, `no-set-role`, `unbounded-pool`, `no-deadline`, `leak-internal`.
+Built with `BROKEN=<name>`; each breaks one rule. See `broken-variants.yaml`: `accept-refresh`, `healthz-db`, `no-ce-id`, `select-claim`, `no-set-role`, `unbounded-pool`, `no-deadline`, `leak-internal`, `readyz-live-db`, `ipv4-only`, `secret-read-once`, `undeclared-event`.
 
 ## Decided here
 

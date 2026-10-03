@@ -23,4 +23,4 @@
 
 ## 校验
 
-写下这些文件时（2026-10-02）已核对：proto 带上 `be/v1/limits.proto` 与 `google/type/date.proto` 能编译，并通过 `buf lint`（STANDARD）；两个 OpenAPI 文件通过 `redocly lint`，零警告；`fixtures.yaml`、`errors.yaml`、`lifecycle.yaml`、`assembly.yaml` 和两个事件文件都通过 `schemas/` 的校验；样本通过各自事件 payload 的 schema；`migrations/0001_widget.sql` 能在 PostgreSQL 16 上执行，`fixtures.yaml` 里的 `observe.sql` 在其上能跑；`brickkit lint` 接受两个 `component.yaml`。
+写下这些文件时（2026-10-02）已核对：proto 带上 `be/v1/limits.proto` 与 `google/type/date.proto` 能编译，并通过 `buf lint`（STANDARD）；两个 OpenAPI 文件通过 `redocly lint`，零警告；`fixtures.yaml`、`errors.yaml`、`lifecycle.yaml`、`assembly.yaml` 和两个事件文件都通过 `schemas/` 的校验；样本通过各自事件 payload 的 schema；`migrations/0001_widget.sql` 能在 PostgreSQL 16 上执行，`fixtures.yaml` 里的 `observe.sql` 在其上能跑；`brickkit lint` 接受两个 `component.yaml`。2026-10-03 两个文件加上 `readinessCheck`、`deployment.stopGracePeriodSeconds`、端口 `protocol`、`events` 段和 `mount: file` 密钥之后，用 brickKit v1.3.1 重新核对：`brickkit lint` 没有报错（只有夹具目录的文档警告）。

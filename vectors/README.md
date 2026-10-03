@@ -14,12 +14,12 @@ Language-neutral test vectors for the parts of the component protocol that are p
 | [calendar](calendar/README.md) | business date of an instant in a legal entity's zone (DST, unusual offsets, skipped days), day and range bounds, fiscal periods and years with any start month | P11.7, P11.9 | 3 | 93 |
 | [numbering](numbering/README.md) | document number formats, the period a format resets on, the gap-free and gapped allocation models | P11.10 | 3 | 46 |
 | [errors](errors/README.md) | gRPC code ↔ HTTP status, platform reasons, restoring a dependency's REST error, SQLSTATE classification, log levels, the problem+json body, `Retry-After`, reason names | P4, P10.4 | 4 | 123 |
-| [config](config/README.md) | typed parsing of configuration values, defaults and presence, durations, booleans, secret references, dependency address variables, key names, value forms in `config/*.yaml` | P2 | 4 | 156 |
+| [config](config/README.md) | typed parsing of configuration values, defaults and presence, durations, booleans, secret files, dependency address variables, slot-family addresses, key names and secret declarations, value forms in `config/*.yaml` (including `$endpoint:`) | P2 | 4 | 196 |
 | [redaction](redaction/README.md) | which log field keys are personal data and how they are redacted | P18.2 | 1 | 29 |
 | authz | bundle evaluation, levels, dimensions, subject sets | P6 | — | in `contract-infra-authz` (lane K1); copied here when it is released |
 | lifecycle, search | lifecycle planner, search normalisation | P16, data-platform §7.4 | — | later |
 
-Total: 906 cases in 32 case files.
+Total: 946 cases in 32 case files.
 
 ## Case file format
 
@@ -76,7 +76,7 @@ make xcheck    # cross-check in throwaway golang:1.22-alpine / node:22-alpine co
 make sums      # rewrite SHA256SUMS
 ```
 
-Last run (2026-10-03): 906 cases, 0 disagreements; tz database 2026c on both sides; ISO 4217 List One published 2026-09-17. Disagreements found and fixed during the first run: one (the trailing-newline case above).
+Last run (2026-10-03): 946 cases, 0 disagreements; tz database 2026c on both sides; ISO 4217 List One published 2026-09-17. Disagreements found and fixed during the first run: one (the trailing-newline case above).
 
 ## Versioning
 

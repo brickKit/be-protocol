@@ -61,3 +61,4 @@
 
 - P3.4 的截止时间是预算的根，下面每一层都在它的基础上缩短（[P9](09-deadlines-and-retries.zh.md)）。
 - 超过上限的 `page_size` 被降到上限而不是被拒绝，这样按更大上限写的客户端仍然能用。
+- 边缘按路径段为界匹配用户面前缀：`/erp/sales` 接 `/erp/sales` 和 `/erp/sales/…`，从不接 `/erp/salesman`。be-ops 在两种目标上都从 `edge_routes`（P3.1）生成路由：Kubernetes 的部署条目写 `paths`，brickKit 把它变成以路径段为界的 Ingress 前缀（几个组件共用一个主机名时，各自要写同一个 `tlsSecret`）；Docker / Podman 的部署条目写 Traefik 标签，用 `PathRegexp`（`^/erp/sales(/|$)`），从不用按字符串匹配的 `PathPrefix`。Traefik（≥ 3.2）接在部署文件 `network:` 指定的项目网络上。

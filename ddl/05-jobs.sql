@@ -1,7 +1,9 @@
 -- be-protocol 1.0 reference DDL: background jobs and reconcilers (P14)
 --
--- holder = '<component ID>/<instance id>'. Not partitioned; done queue rows and old slots are
--- deleted after retention by the runtime's cleanup singleton.
+-- holder = '<component ID>/<instance id>' for the in-process scheduler, '<component ID>/job-run:<instance id>'
+-- for a one-shot `job run <name>` (P14.8): both claim through the same rows, so a slot or a lease is
+-- taken once whoever triggers it. Not partitioned; done queue rows and old slots are deleted after
+-- retention by the runtime's cleanup singleton.
 
 CREATE TABLE IF NOT EXISTS besdk_job_lease (
     name       TEXT        PRIMARY KEY,

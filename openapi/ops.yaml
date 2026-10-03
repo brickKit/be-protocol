@@ -24,12 +24,12 @@ paths:
   /readyz:
     get:
       operationId: readyz
-      summary: Ready to serve (SHOULD, P1.4)
+      summary: Ready to serve (P1.4); probed through readinessCheck (P1.11); once ready, stays ready
       security: []
       responses:
         "200": { description: ready }
         "503":
-          description: not ready; reason NOT_READY, metadata.waiting lists bundle, db_identity, migrations
+          description: not ready; reason NOT_READY, metadata.waiting lists bundle, db_identity, migrations (on a shell, the member IDs not ready, P19.10)
           content:
             application/problem+json:
               schema: { $ref: "../schemas/problem.schema.json" }

@@ -4,7 +4,7 @@
 
 BrickEnterprise 的**组件协议**：一个组件不论用什么语言写，要成为 BrickEnterprise 项目里合格的一员，在线上、表和配置这几层必须做到的全部事情。本仓库放规范正文、机器可读的 schema、运行时自有表的参考 DDL、语义向量和夹具组件契约。这里不放任何实现。
 
-**协议版本：1.0。发布：`v1.0.0-rc.1`**（候选版本；试点组件通过后冻结为 `v1.0.0`）。
+**协议版本：1.0。发布：`v1.0.0-rc.1`**（候选版本；试点组件通过后冻结为 `v1.0.0`）。依赖 **brickKit ≥ v1.3.1**（`readinessCheck`、`stopGracePeriodSeconds`、端口 `protocol`、`events`、`mount: file`、`$endpoint:`）。
 
 ## 谁来实现
 
@@ -24,8 +24,8 @@ BrickEnterprise 的**组件协议**：一个组件不论用什么语言写，要
 
 | 章 | 文件 | 内容 |
 |---|---|---|
-| P1 | [01-process-and-lifecycle](spec/01-process-and-lifecycle.zh.md) | 入口、启动顺序、`/healthz`、`/readyz`、停机、监督、退出码 |
-| P2 | [02-configuration](spec/02-configuration.zh.md) | 配置从哪里来、类型、协议配置键 |
+| P1 | [01-process-and-lifecycle](spec/01-process-and-lifecycle.zh.md) | 入口、启动顺序、`/healthz`、`/readyz` 与声明的检查、停机与停机宽限期、同时监听 IPv4 和 IPv6、监督、退出码 |
+| P2 | [02-configuration](spec/02-configuration.zh.md) | 配置从哪里来、类型、密钥以文件交付、经 `$endpoint:` 的槽位族地址、协议配置键 |
 | P3 | [03-http-surface](spec/03-http-surface.zh.md) | 路径、请求 ID、trace、截止时间、服务端超时、请求体上限、分页 |
 | P4 | [04-errors](spec/04-errors.zh.md) | problem+json、gRPC `ErrorInfo`、GraphQL、reason 目录、日志级别 |
 | P5 | [05-identity](spec/05-identity.zh.md) | JWT 验证、JWKS、claim、stale token |
@@ -35,15 +35,15 @@ BrickEnterprise 的**组件协议**：一个组件不论用什么语言写，要
 | P9 | [09-deadlines-and-retries](spec/09-deadlines-and-retries.zh.md) | 逐跳的时间预算、重试分层（汇总） |
 | P10 | [10-database](spec/10-database.zh.md) | 身份、每事务设置、隔离级别与重试、连接池、探测、advisory 锁、认领 |
 | P11 | [11-migrations-and-data-shapes](spec/11-migrations-and-data-shapes.zh.md) | 迁移规则、平台迁移、主键、金额、日期、法人、编号 |
-| P12 | [12-events](spec/12-events.zh.md) | CloudEvents 信封、outbox、流、持久消费者、游标、处理函数、死信、重放 |
+| P12 | [12-events](spec/12-events.zh.md) | CloudEvents 信封、outbox、流、持久消费者、游标、处理函数、死信、重放、`events` 声明 |
 | P13 | [13-idempotency](spec/13-idempotency.zh.md) | 调用方命名空间、绑定、重放、检查顺序、保留期 |
-| P14 | [14-background-jobs](spec/14-background-jobs.zh.md) | `every`、`singleton`、`cron`、`queue`、reconciler、监督、指标 |
+| P14 | [14-background-jobs](spec/14-background-jobs.zh.md) | `every`、`singleton`、`cron`、`queue`、reconciler、监督、指标、只跑一次某个作业 |
 | P15 | [15-snapshots](spec/15-snapshots.zh.md) | 其它组件数据的本地副本 |
 | P16 | [16-data-lifecycle](spec/16-data-lifecycle.zh.md) | `lifecycle.yaml`、引擎、`RANGE_COLD`、`_lifecycle/*`、封存单元 |
 | P17 | [17-object-storage](spec/17-object-storage.zh.md) | S3、每个组件一个 bucket、预签名 URL |
 | P18 | [18-observability](spec/18-observability.zh.md) | trace、日志行、指标名 |
 | P19 | [19-shells](spec/19-shells.zh.md) | 外壳启动器和它的成员必须做到什么 |
-| P20 | [20-self-description-and-versioning](spec/20-self-description-and-versioning.zh.md) | `/_be/info`、组件声明的协议版本 |
+| P20 | [20-self-description-and-versioning](spec/20-self-description-and-versioning.zh.md) | `/_be/info`、组件声明的协议版本、`component.yaml` 里声明什么 |
 
 - 每一章都只写线上层面：请求头、状态码、JSON 字段、表结构、配置键、指标名和日志字段名。这里没有任何一门语言的 API。
 - 英文为准；每个 `X.md` 都有中文镜像 `X.zh.md`，`##` 章节相同。
@@ -96,8 +96,8 @@ BrickEnterprise 的**组件协议**：一个组件不论用什么语言写，要
 | `scope` | `data_scopes` 不是 `none`，或声明了 `resources` |
 | `grpc` | 有一个 extra port 名为 `grpc` |
 | `outbound` | `dependencies.components` 非空 |
-| `events-pub` | 组件的事件契约列出了它发布的 subject |
-| `events-sub` | 组件订阅了任何 subject（在它的 fixtures 里列出） |
+| `events-pub` | `component.yaml` 的 `events.publishes` 不为空（它事件契约里的 subject） |
+| `events-sub` | `component.yaml` 的 `events.subscribes` 不为空（它 fixtures 里 `events.consumes` 的 subject） |
 | `idempotency` | 任何一个写操作接受 `idempotency_key` 或 `Idempotency-Key` |
 | `db` | `configSchema` 声明了 `PG_SCHEMA` |
 | `jobs` | 组件有数据库（平台任务总是存在） |

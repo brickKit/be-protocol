@@ -52,6 +52,7 @@
 | `be_db_pool_wait_seconds` | histogram | — |
 | `be_tx_retries_total` | counter | `reason` |
 | `be_db_identity_ok` | gauge | — |
+| `be_secret_reload_failures_total` | counter | `key`（键名，从不是值；[P2.9](02-configuration.zh.md)） |
 | `be_outbox_pending` | gauge | — |
 | `be_outbox_oldest_age_seconds` | gauge | — |
 | `be_events_published_total` | counter | `subject` |

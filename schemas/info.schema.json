@@ -45,6 +45,7 @@
           "additionalProperties": { "type": "integer", "minimum": 1, "maximum": 65535 }
         },
         "tzdata": { "description": "Version of the IANA time-zone data the runtime embeds, e.g. 2026c (P11.7).", "type": "string", "pattern": "^[0-9]{4}[a-z]$" },
+        "capabilities": { "description": "Optional protocol surface the runtime offers: job_run = the entry point job run <name> (P14.8).", "type": "array", "items": { "enum": ["job_run"] }, "uniqueItems": true },
         "degraded": { "description": "What runs in a degraded mode decided at start, e.g. calendar when mdm/org is not installed (P11.9).", "type": "array", "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }, "uniqueItems": true },
         "migrations": {
           "type": "object", "required": ["component", "platform"], "additionalProperties": false,

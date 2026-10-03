@@ -40,3 +40,20 @@ variants:
     breaks: P4.3
     behaviour: an INTERNAL error's body carries the raw error text (SQL error, SQLSTATE) in detail
     must_fail: [CP-ERR-03]
+  - name: readyz-live-db
+    breaks: P1.4
+    behaviour: /readyz runs SELECT 1 on every call and answers 503 while PostgreSQL is down, after it was ready once
+    must_fail: [CP-CORE-05]
+  - name: ipv4-only
+    breaks: P1.13
+    behaviour: every port listens on 0.0.0.0 only; ::1 and IPv6 addresses are refused
+    must_fail: [CP-CORE-13]
+  - name: secret-read-once
+    breaks: P2.9
+    behaviour: PG_PASSWORD_FILE is read once at start; a replaced file is never read again
+    must_fail: [CP-DB-06]
+  - name: undeclared-event
+    breaks: P12.16
+    behaviour: approving also publishes conformance.widget.touched.v1, which is in neither the event contract nor events.publishes
+    must_fail: [CP-EVP-06]
+    also_fails: [CP-EVP-05]

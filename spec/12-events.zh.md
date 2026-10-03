@@ -23,6 +23,7 @@
 | P12.13 | MUST | 总线客户端：永远重连，每 2 s 一次，加抖动；启动时总线没起来也持续重试；连接以成员的组件 ID 命名；断开、重连和异步错误用成员的 logger 记录。外壳里每个进程一条总线连接 | CP-CORE-03 |
 | P12.14 | MUST | 不读取旧版信封：只有 `X-` 头、或没有 `ce-id` 的消息违反契约，进死信 | CP-EVS-04 |
 | P12.15 | MUST | outbox 在发布后保留行 14 天，然后由生命周期引擎删除所有行都是 `PUBLISHED` 的整个分区。30 天未见的游标行被删除 | — |
+| P12.16 | MUST | `component.yaml` 为 brickKit（≥ v1.3.0）声明组件的事件，brickKit 在 `brickkit graph`、`deps` 和 `lint` 里展示它们：`events.publishes` 恰好列出组件事件契约里的主题（槽位族成员列族的主题），`events.subscribes` 列出组件经 durable（P12.5）消费的每个主题，与它 `conformance/fixtures.yaml` 里的 `events.consumes` 是同一组。这一段由 be-ops 从这两个文件生成。P12.3 的主题原样就是合法的 brickKit 事件名。订阅项是确切的主题；brickKit 结尾 `*` 的前缀写法只能用在 `subscribes` 里，而且只用于真的按前缀订阅的消费者；尽力而为的 poke（P12.10）不列。这一段在运行时什么都不改：门禁 `events-declaration-scan` 把它与契约和夹具比对，套件把它与组件实际发布的主题和它建的 durable 比对 | CP-EVP-06、CP-EVS-09 |
 
 ## 信封
 

@@ -195,13 +195,11 @@ func parseValue(in map[string]any) any {
 		out = v
 	}
 	if sec, _ := in["secret"].(bool); sec {
-		if p, ok := strings.CutPrefix(v, "@file:"); ok {
-			if !filepath.IsAbs(p) || filepath.Clean(p) == "/" {
-				bad("CONFIG_INVALID")
-			}
-			return map[string]any{"set": true, "source": "file", "path": p}
+		// a secret is delivered as a file: the variable holds an absolute path, never the value
+		if t != "string" || !filepath.IsAbs(v) || strings.HasSuffix(v, "/") || strings.ContainsRune(v, 0) {
+			bad("CONFIG_INVALID")
 		}
-		return map[string]any{"set": true, "source": "env", "value": out}
+		return map[string]any{"set": true, "source": "file", "path": v}
 	}
 	return map[string]any{"set": true, "value": out}
 }
@@ -255,19 +253,67 @@ func run(op string, in map[string]any) any {
 			bad("CONFIG_INVALID")
 		}
 		return map[string]any{"present": true, "address": rest}
-	case "family_url":
-		v, _ := s(in, "value")
-		rest, ok := strings.CutPrefix(v, "http://")
+	case "secret_text":
+		c, _ := s(in, "content")
+		if x, ok := strings.CutSuffix(c, "\r\n"); ok {
+			c = x
+		} else {
+			c = strings.TrimSuffix(c, "\n")
+		}
+		if c == "" {
+			if req, _ := in["required"].(bool); req {
+				bad("CONFIG_MISSING")
+			}
+			return map[string]any{"set": false}
+		}
+		return map[string]any{"set": true, "value": c}
+	case "family_address":
+		k, _ := s(in, "key")
+		kind, known := map[string]string{"AUTHZ_URL": "http", "AUTHZ_GRPC_URL": "grpc", "IAM_URL": "http", "IAM_GRPC_URL": "grpc"}[k]
+		if !known {
+			bad("CONFIG_KEY_INVALID")
+		}
+		v, ok := s(in, "value")
 		if !ok {
+			return map[string]any{"present": false}
+		}
+		u, err := url.Parse(v)
+		if err != nil || u.Scheme != "http" || !strings.HasPrefix(v, "http://") || u.User != nil || u.RawQuery != "" ||
+			u.Fragment != "" || strings.Trim(u.Path, "/") != "" || !hostRe.MatchString(u.Hostname()) {
 			bad("CONFIG_INVALID")
 		}
-		rest = strings.TrimRight(rest, "/")
-		h, p, found := strings.Cut(rest, ":")
-		n, err := strconv.Atoi(p)
-		if !found || !hostRe.MatchString(h) || err != nil || len(p) > 5 || n < 1 || n+1000 > 65535 {
+		n, err := strconv.Atoi(u.Port())
+		if err != nil || n < 1 || n > 65535 || len(u.Port()) > 5 {
 			bad("CONFIG_INVALID")
 		}
-		return map[string]any{"base": "http://" + rest, "grpc_target": h + ":" + strconv.Itoa(n+1000)}
+		if kind == "grpc" {
+			return map[string]any{"present": true, "target": u.Host}
+		}
+		return map[string]any{"present": true, "base": "http://" + u.Host}
+	case "key_declaration":
+		k, _ := s(in, "key")
+		run("key_name", map[string]any{"key": k})
+		secret, _ := in["secret"].(bool)
+		mount, hasMount := s(in, "mount")
+		t, ok := s(in, "type")
+		if !ok {
+			t = "string"
+		}
+		switch {
+		case hasMount && mount != "file":
+			bad("MOUNT_INVALID")
+		case hasMount && !secret:
+			bad("MOUNT_NEEDS_SECRET")
+		case hasMount && t != "string":
+			bad("MOUNT_NEEDS_STRING")
+		case secret && !hasMount:
+			bad("SECRET_NOT_FILE")
+		case secret && !strings.HasSuffix(k, "_FILE"):
+			bad("FILE_SUFFIX_REQUIRED")
+		case !secret && strings.HasSuffix(k, "_FILE"):
+			bad("FILE_SUFFIX_RESERVED")
+		}
+		return map[string]any{"valid": true}
 	case "key_name":
 		k, _ := s(in, "key")
 		if !keyRe.MatchString(k) {
@@ -298,6 +344,13 @@ func run(op string, in map[string]any) any {
 				}
 				return map[string]any{"form": "var", "name": name}
 			}
+			if ref, ok := strings.CutPrefix(w, "$endpoint:"); ok {
+				out := endpointForm(ref)
+				if secret {
+					bad("SECRET_NOT_REFERENCE")
+				}
+				return out
+			}
 			if p, ok := strings.CutPrefix(w, "file://"); ok {
 				if p == "" || strings.HasPrefix(p, "/") {
 					bad("FORM_INVALID")
@@ -320,7 +373,7 @@ func run(op string, in map[string]any) any {
 				return map[string]any{"form": "env", "name": sm[1]}
 			}
 			rest := refRe.ReplaceAllString(w, "")
-			if strings.Contains(rest, "${") || strings.Contains(w, "$var:") {
+			if strings.Contains(rest, "${") || strings.Contains(w, "$var:") || strings.Contains(w, "$endpoint:") {
 				bad("FORM_INVALID")
 			}
 			if secret {
@@ -338,6 +391,45 @@ func run(op string, in map[string]any) any {
 		bad("FORM_INVALID")
 	}
 	panic("op " + op)
+}
+
+var (
+	idSegRe   = regexp.MustCompile(`^[a-z][a-z0-9]*$`)
+	nameSegRe = regexp.MustCompile(`^[a-z][a-z0-9-]*$`)
+	verRe     = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+	portNmRe  = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+)
+
+// endpointForm follows brickKit's parseEndpointRef: <scope>/<name>[@<version>][:<port>][/<path>]
+func endpointForm(ref string) map[string]any {
+	scope, rest, found := strings.Cut(ref, "/")
+	if !found || !idSegRe.MatchString(scope) {
+		bad("FORM_INVALID")
+	}
+	out := map[string]any{"form": "endpoint"}
+	name, path, hasPath := strings.Cut(rest, "/")
+	name, port, hasPort := strings.Cut(name, ":")
+	if hasPort {
+		if !portNmRe.MatchString(port) || len(port) > 15 {
+			bad("FORM_INVALID")
+		}
+		out["port"] = port
+	}
+	name, version, hasVersion := strings.Cut(name, "@")
+	if hasVersion {
+		if !verRe.MatchString(version) {
+			bad("FORM_INVALID")
+		}
+		out["version"] = version
+	}
+	if !nameSegRe.MatchString(name) {
+		bad("FORM_INVALID")
+	}
+	out["component"] = scope + "/" + name
+	if hasPath {
+		out["path"] = "/" + path
+	}
+	return out
 }
 
 func exec(op string, in map[string]any) (res any, reason string) {

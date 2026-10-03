@@ -61,3 +61,4 @@ The array's field name is the contract's (`items`, `orders`, …); `next_cursor`
 
 - The deadline in P3.4 is the root of the budget that every lower layer shrinks ([P9](09-deadlines-and-retries.md)).
 - A `page_size` above the cap is lowered rather than refused so that a client written against a larger cap keeps working.
+- The edge matches a user-plane prefix at a path-segment boundary: `/erp/sales` takes `/erp/sales` and `/erp/sales/…`, never `/erp/salesman`. be-ops generates the routes from `edge_routes` (P3.1) on both targets: Kubernetes deploy entries get `paths`, which brickKit turns into segment-bounded Ingress prefixes (one hostname shared by several components needs the same `tlsSecret` on each); Docker / Podman entries get Traefik labels with `PathRegexp` (`^/erp/sales(/|$)`), never `PathPrefix`, which matches by string. Traefik (≥ 3.2) joins the project network named by the deploy file's `network:`.

@@ -19,7 +19,7 @@
 | P10.9 | MUST | 对队列行或幂等键的认领是原子的：`FOR UPDATE SKIP LOCKED`，或 `INSERT … ON CONFLICT DO NOTHING` / `DO UPDATE … WHERE … RETURNING`。从不用普通 `SELECT` 加随后的写入来认领 | CP-EVP-03, CP-IDEM-07 |
 | P10.10 | MUST（组件义务） | 锁多行的事务，按主键或业务键的固定顺序加锁（例如同一个预留的多条库存行，按 `(warehouse_id, product_id)`） | —（INTERNAL） |
 | P10.11 | MUST | 连接池代理（pooler）是可选的。使用时只用 transaction 模式。PgBouncer ≥ 1.21 且 `max_prepared_statements > 0` 时，驱动的语句缓存可以保持开启；用其它任何 pooler 时都关闭它。迁移通过 `PG_MIGRATION_HOST` / `PG_MIGRATION_PORT` 直连 | — |
-| P10.12 | MUST，部分 INTERNAL | 运行中的服务从不以 `PG_OWNER_USER` 登录。brickKit 给迁移容器的环境与服务完全相同，所以服务也会收到 `PG_OWNER_USER` / `PG_OWNER_PASSWORD`；运行时不得使用它们（这是写进文档的限制，直到 brickKit 能给迁移步骤单独的变量）。服务运行期间生命周期引擎需要的 DDL（提前建分区、安装封存守卫、删除过期的平台分区或队列分区、解冻冷单元）只经平台的 `SECURITY DEFINER` 函数执行（[ddl/10-lifecycle-functions.sql](../ddl/10-lifecycle-functions.sql)），这些函数由属主在平台迁移中创建 | CP-DB-05 |
+| P10.12 | MUST，部分 INTERNAL | 运行中的服务从不以 `PG_OWNER_USER` 登录。brickKit 给迁移容器的环境和密钥文件与服务完全相同，这是有意的（迁移读到的每个值都能在组件的 `config/` 文件里看到），所以服务也会收到 `PG_OWNER_USER` 和路径 `PG_OWNER_PASSWORD_FILE`；起服务的运行时从不读它们，官方 SDK 只在迁移入口上读属主的口令文件。服务运行期间生命周期引擎需要的 DDL（提前建分区、安装封存守卫、删除过期的平台分区或队列分区、解冻冷单元）只经平台的 `SECURITY DEFINER` 函数执行（[ddl/10-lifecycle-functions.sql](../ddl/10-lifecycle-functions.sql)），这些函数由属主在平台迁移中创建 | CP-DB-05 |
 
 ## 每个事务发出的语句
 

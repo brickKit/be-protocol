@@ -1461,31 +1461,12 @@
       }
     },
     {
-      "id": "config.values.secret-env",
-      "description": "a secret from the environment",
-      "op": "parse_value",
-      "input": {
-        "type": "string",
-        "value": "s3cr3t",
-        "secret": true
-      },
-      "refs": [
-        "P2.3",
-        "P2.7"
-      ],
-      "expected": {
-        "set": true,
-        "source": "env",
-        "value": "s3cr3t"
-      }
-    },
-    {
       "id": "config.values.secret-file",
-      "description": "a runtime file reference: re-read when it changes",
+      "description": "a secret: the variable holds the path brickKit mounted, the value is in the file",
       "op": "parse_value",
       "input": {
         "type": "string",
-        "value": "@file:/run/secrets/pg_password",
+        "value": "/run/brickkit/secrets/erp-sales-3-0-0/PG_PASSWORD_FILE",
         "secret": true
       },
       "refs": [
@@ -1495,16 +1476,35 @@
       "expected": {
         "set": true,
         "source": "file",
-        "path": "/run/secrets/pg_password"
+        "path": "/run/brickkit/secrets/erp-sales-3-0-0/PG_PASSWORD_FILE"
+      }
+    },
+    {
+      "id": "config.values.secret-file-host-path",
+      "description": "mode: local / debug: the absolute path of the file on the developer's machine",
+      "op": "parse_value",
+      "input": {
+        "type": "string",
+        "value": "/home/dev/shop/.brickkit/generated/secrets/erp-sales-3-0-0/PG_PASSWORD_FILE",
+        "secret": true
+      },
+      "refs": [
+        "P2.3",
+        "P2.7"
+      ],
+      "expected": {
+        "set": true,
+        "source": "file",
+        "path": "/home/dev/shop/.brickkit/generated/secrets/erp-sales-3-0-0/PG_PASSWORD_FILE"
       }
     },
     {
       "id": "config.values.secret-file-relative",
-      "description": "the file path must be absolute",
+      "description": "the path must be absolute",
       "op": "parse_value",
       "input": {
         "type": "string",
-        "value": "@file:secrets/pg_password",
+        "value": "secrets/pg_password",
         "secret": true
       },
       "refs": [
@@ -1521,7 +1521,7 @@
       "op": "parse_value",
       "input": {
         "type": "string",
-        "value": "@file:/",
+        "value": "/",
         "secret": true
       },
       "refs": [
@@ -1533,20 +1533,54 @@
       }
     },
     {
-      "id": "config.values.not-secret-file-literal",
-      "description": "@file: is only special for secret: true keys",
+      "id": "config.values.secret-file-directory",
+      "description": "a path ending in / is a directory",
       "op": "parse_value",
       "input": {
         "type": "string",
-        "value": "@file:/run/secrets/x"
+        "value": "/run/brickkit/secrets/erp-sales-3-0-0/",
+        "secret": true
       },
       "refs": [
         "P2.3",
         "P2.7"
       ],
-      "expected": {
-        "set": true,
-        "value": "@file:/run/secrets/x"
+      "expected_error": {
+        "reason": "CONFIG_INVALID"
+      }
+    },
+    {
+      "id": "config.values.secret-value-in-env",
+      "description": "a secret value in the environment is refused: secrets travel only as files",
+      "op": "parse_value",
+      "input": {
+        "type": "string",
+        "value": "s3cr3t",
+        "secret": true
+      },
+      "refs": [
+        "P2.3",
+        "P2.7"
+      ],
+      "expected_error": {
+        "reason": "CONFIG_INVALID"
+      }
+    },
+    {
+      "id": "config.values.secret-at-file-retired",
+      "description": "the @file: prefix of rc drafts is gone: the value is the path itself",
+      "op": "parse_value",
+      "input": {
+        "type": "string",
+        "value": "@file:/run/secrets/pg_password",
+        "secret": true
+      },
+      "refs": [
+        "P2.3",
+        "P2.7"
+      ],
+      "expected_error": {
+        "reason": "CONFIG_INVALID"
       }
     },
     {
@@ -1565,6 +1599,23 @@
       ],
       "expected_error": {
         "reason": "CONFIG_MISSING"
+      }
+    },
+    {
+      "id": "config.values.not-secret-path-is-text",
+      "description": "for a key that is not secret a path is ordinary text",
+      "op": "parse_value",
+      "input": {
+        "type": "string",
+        "value": "/etc/app/rules.json"
+      },
+      "refs": [
+        "P2.3",
+        "P2.7"
+      ],
+      "expected": {
+        "set": true,
+        "value": "/etc/app/rules.json"
       }
     },
     {
@@ -1600,6 +1651,147 @@
       ],
       "expected": {
         "allowed": true
+      }
+    },
+    {
+      "id": "config.values.secret-text-plain",
+      "description": "the file's text is the value",
+      "op": "secret_text",
+      "input": {
+        "content": "s3cr3t",
+        "required": true
+      },
+      "refs": [
+        "P2.9"
+      ],
+      "expected": {
+        "set": true,
+        "value": "s3cr3t"
+      }
+    },
+    {
+      "id": "config.values.secret-text-trailing-lf",
+      "description": "one trailing LF (what an editor or echo writes) is removed",
+      "op": "secret_text",
+      "input": {
+        "content": "s3cr3t\n",
+        "required": true
+      },
+      "refs": [
+        "P2.9"
+      ],
+      "expected": {
+        "set": true,
+        "value": "s3cr3t"
+      }
+    },
+    {
+      "id": "config.values.secret-text-trailing-crlf",
+      "description": "one trailing CRLF is removed",
+      "op": "secret_text",
+      "input": {
+        "content": "s3cr3t\r\n",
+        "required": true
+      },
+      "refs": [
+        "P2.9"
+      ],
+      "expected": {
+        "set": true,
+        "value": "s3cr3t"
+      }
+    },
+    {
+      "id": "config.values.secret-text-two-lf",
+      "description": "only one trailing newline is removed",
+      "op": "secret_text",
+      "input": {
+        "content": "s3cr3t\n\n",
+        "required": true
+      },
+      "refs": [
+        "P2.9"
+      ],
+      "expected": {
+        "set": true,
+        "value": "s3cr3t\n"
+      }
+    },
+    {
+      "id": "config.values.secret-text-spaces-kept",
+      "description": "spaces are part of the value",
+      "op": "secret_text",
+      "input": {
+        "content": " s3cr3t ",
+        "required": true
+      },
+      "refs": [
+        "P2.9"
+      ],
+      "expected": {
+        "set": true,
+        "value": " s3cr3t "
+      }
+    },
+    {
+      "id": "config.values.secret-text-pem",
+      "description": "a PEM keeps its inner newlines",
+      "op": "secret_text",
+      "input": {
+        "content": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIA==\n-----END PRIVATE KEY-----\n",
+        "required": true
+      },
+      "refs": [
+        "P2.9"
+      ],
+      "expected": {
+        "set": true,
+        "value": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIA==\n-----END PRIVATE KEY-----"
+      }
+    },
+    {
+      "id": "config.values.secret-text-empty-required",
+      "description": "an empty file for a required secret",
+      "op": "secret_text",
+      "input": {
+        "content": "",
+        "required": true
+      },
+      "refs": [
+        "P2.9"
+      ],
+      "expected_error": {
+        "reason": "CONFIG_MISSING"
+      }
+    },
+    {
+      "id": "config.values.secret-text-newline-only-required",
+      "description": "a file holding only a newline is empty",
+      "op": "secret_text",
+      "input": {
+        "content": "\n",
+        "required": true
+      },
+      "refs": [
+        "P2.9"
+      ],
+      "expected_error": {
+        "reason": "CONFIG_MISSING"
+      }
+    },
+    {
+      "id": "config.values.secret-text-empty-optional",
+      "description": "an empty file for an optional secret: not set",
+      "op": "secret_text",
+      "input": {
+        "content": "",
+        "required": false
+      },
+      "refs": [
+        "P2.9"
+      ],
+      "expected": {
+        "set": false
       }
     }
   ]

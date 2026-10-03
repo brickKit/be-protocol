@@ -8,7 +8,7 @@
 
 | 文件 | 内容 |
 |---|---|
-| `component.yaml` | brickKit 清单：依赖、`configSchema`、端口（8080，grpc 9090）、迁移命令 |
+| `component.yaml` | brickKit 清单：依赖、`configSchema`（密钥为 `mount: file`）、端口（8080 `http`，grpc 9090 `grpc`）、停机宽限期、迁移命令、健康与就绪检查、`events` |
 | `assembly.yaml` | 协议键（`protocol`、`conformance`、`resources`）、权限、数据范围、边缘路由 |
 | `contracts/widget.openapi.yaml` | 用户面；每个操作的守卫写在 `x-be-permission`，截止时间写在 `x-be-deadline-seconds` |
 | `contracts/conformance/widget/v1/widget.proto` | 系统面 `conformance.widget.v1.WidgetService` |
@@ -81,7 +81,7 @@ durable 名：`<实例 id 的 / 换成 _>__<subject 的每个 . 换成 __>`（`c
 
 | 名字 | 种类 | 行为 |
 |---|---|---|
-| `widget.daily` | Cron `0 3 * * *`，按 `BUSINESS_TIMEZONE` | 写一行 `widget_audit`，`action=daily_summary`，带上一个业务日审批通过的部件数；`JOBS_OVERRIDES` 可改 `cron` 或 `enabled` |
+| `widget.daily` | Cron `0 3 * * *`，按 `BUSINESS_TIMEZONE` | 写一行 `widget_audit`，`action=daily_summary`，带上一个业务日审批通过的部件数；`JOBS_OVERRIDES` 可改 `cron` 或 `enabled`；也能用 `job run widget.daily` 只跑一次（P14.8），所以 `/_be/info` 列出 `job_run` |
 | `widget.notify` | Worker（队列），5 次，退避 `1s,5s,30s,2m` | 用作业的唯一键调 `PeerService/Notify`，把 `widget_jobs` 行置 `SENT`；次数用尽时 `OnDead` 置 `DEAD` |
 | `widget.approve` | Reconciler，每 5 s | 候选为 `deadline_at < now` 的 `APPROVING`；按键问 `GetReservationStatus`：已预留 → 第 3 步；没有 → 再 `Reserve`；被拒 → 第 4 步；5 次后放弃：`SUSPENDED`，键以挂起后的部件置 `DONE`（重放答 200），并入队 `widget.notify` `kind=exception` |
 | `be.*` | 平台 | outbox、清理、生命周期、授权变更、快照；widget 不用声明 |
@@ -105,6 +105,8 @@ durable 名：`<实例 id 的 / 换成 _>__<subject 的每个 . 换成 __>`（`c
 | CP-SCOPE-03、-09、-11 | 列表上的 `filters`、`sort` | 维度参数 `region`；排序参数 `sort`，被掩码的取值 `price`、`amount` |
 | CP-EVS-06 | 被消费 subject 上的 `setup` 和 `produces` | 先审批（`Reserve` 的预设回答用 `rsv-0001`，即样本里的预留），再投递 `reservation-expired.json`，期望出现 `conformance.widget.reverted.v1` |
 | CP-JOBS-01 | `jobs.cron` | `widget.daily`，覆盖为 `{"cron": "@every 2s"}`；数 `daily_summary` 审计行 |
+| CP-JOBS-06 | `jobs.cron`（第一项） | 在 `{"widget.daily": {"enabled": false}}` 下同时跑两次 `job run widget.daily`：只有一行 `daily_summary`，两次都退出 0 |
+| CP-EVP-06、CP-EVS-09 | `events.produces`、`events.consumes` | 与 `component.yaml` 的 `events.publishes` / `events.subscribes` 是同一组主题 |
 | 调和器、CP-IDEM-05 | `jobs.reconcilers` | `Reserve` 挂起超过 15 s 的路由截止时间：202 `APPROVING`；再让 `GetReservationStatus` 答已预留：部件变成 `APPROVED` |
 | CP-LIFE-02 | 列表上的 `range` | `created_after`、`created_before`、`include_cold` |
 | blob | `blob` | 上传 `POST /widgets/{id}/attachments`（`$.upload_url`、`$.max_bytes`），下载 `GET /widgets/{id}/attachments/{attachment_id}`（`$.download_url`） |
@@ -113,7 +115,7 @@ durable 名：`<实例 id 的 / 换成 _>__<subject 的每个 . 换成 __>`（`c
 
 ## 坏变体
 
-以 `BROKEN=<name>` 构建，每个只违反一条规则，见 `broken-variants.yaml`：`accept-refresh`、`healthz-db`、`no-ce-id`、`select-claim`、`no-set-role`、`unbounded-pool`、`no-deadline`、`leak-internal`。
+以 `BROKEN=<name>` 构建，每个只违反一条规则，见 `broken-variants.yaml`：`accept-refresh`、`healthz-db`、`no-ce-id`、`select-claim`、`no-set-role`、`unbounded-pool`、`no-deadline`、`leak-internal`、`readyz-live-db`、`ipv4-only`、`secret-read-once`、`undeclared-event`。
 
 ## 本处补定的口径
 

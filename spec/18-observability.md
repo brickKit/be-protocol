@@ -52,6 +52,7 @@ Error levels are decided by the runtime from the code ([P4.6](04-errors.md)).
 | `be_db_pool_wait_seconds` | histogram | — |
 | `be_tx_retries_total` | counter | `reason` |
 | `be_db_identity_ok` | gauge | — |
+| `be_secret_reload_failures_total` | counter | `key` (the key name, never the value; [P2.9](02-configuration.md)) |
 | `be_outbox_pending` | gauge | — |
 | `be_outbox_oldest_age_seconds` | gauge | — |
 | `be_events_published_total` | counter | `subject` |

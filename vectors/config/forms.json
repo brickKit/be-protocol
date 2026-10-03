@@ -325,6 +325,199 @@
       "expected_error": {
         "reason": "FORM_INVALID"
       }
+    },
+    {
+      "id": "config.forms.endpoint",
+      "description": "a family address: the project's default version, main port",
+      "op": "value_form",
+      "input": {
+        "written": "$endpoint:infra/authz",
+        "secret": false
+      },
+      "refs": [
+        "P2.10"
+      ],
+      "expected": {
+        "form": "endpoint",
+        "component": "infra/authz"
+      }
+    },
+    {
+      "id": "config.forms.endpoint-port",
+      "description": "the extra port named grpc",
+      "op": "value_form",
+      "input": {
+        "written": "$endpoint:infra/authz:grpc",
+        "secret": false
+      },
+      "refs": [
+        "P2.10"
+      ],
+      "expected": {
+        "form": "endpoint",
+        "component": "infra/authz",
+        "port": "grpc"
+      }
+    },
+    {
+      "id": "config.forms.endpoint-version-port",
+      "description": "a given version, then the port",
+      "op": "value_form",
+      "input": {
+        "written": "$endpoint:infra/authz@3.0.0:grpc",
+        "secret": false
+      },
+      "refs": [
+        "P2.10"
+      ],
+      "expected": {
+        "form": "endpoint",
+        "component": "infra/authz",
+        "version": "3.0.0",
+        "port": "grpc"
+      }
+    },
+    {
+      "id": "config.forms.endpoint-path",
+      "description": "an address with a path appended",
+      "op": "value_form",
+      "input": {
+        "written": "$endpoint:infra/iam-casdoor/.well-known/jwks.json",
+        "secret": false
+      },
+      "refs": [
+        "P2.10"
+      ],
+      "expected": {
+        "form": "endpoint",
+        "component": "infra/iam-casdoor",
+        "path": "/.well-known/jwks.json"
+      }
+    },
+    {
+      "id": "config.forms.endpoint-self-callback",
+      "description": "a member's own callback address, handed to its IdP",
+      "op": "value_form",
+      "input": {
+        "written": "$endpoint:infra/iam-casdoor/api/iam/webhooks/casdoor",
+        "secret": false
+      },
+      "refs": [
+        "P2.10"
+      ],
+      "expected": {
+        "form": "endpoint",
+        "component": "infra/iam-casdoor",
+        "path": "/api/iam/webhooks/casdoor"
+      }
+    },
+    {
+      "id": "config.forms.endpoint-version-path",
+      "description": "a version, then a path",
+      "op": "value_form",
+      "input": {
+        "written": "$endpoint:infra/authz@3.0.0/authz/v2/bundle",
+        "secret": false
+      },
+      "refs": [
+        "P2.10"
+      ],
+      "expected": {
+        "form": "endpoint",
+        "component": "infra/authz",
+        "version": "3.0.0",
+        "path": "/authz/v2/bundle"
+      }
+    },
+    {
+      "id": "config.forms.endpoint-port-then-version",
+      "description": "the version comes before the port",
+      "op": "value_form",
+      "input": {
+        "written": "$endpoint:infra/authz:grpc@3.0.0",
+        "secret": false
+      },
+      "refs": [
+        "P2.10"
+      ],
+      "expected_error": {
+        "reason": "FORM_INVALID"
+      }
+    },
+    {
+      "id": "config.forms.endpoint-loose-version",
+      "description": "versions are exact",
+      "op": "value_form",
+      "input": {
+        "written": "$endpoint:infra/authz@3.0",
+        "secret": false
+      },
+      "refs": [
+        "P2.10"
+      ],
+      "expected_error": {
+        "reason": "FORM_INVALID"
+      }
+    },
+    {
+      "id": "config.forms.endpoint-port-upper",
+      "description": "port names are lower case",
+      "op": "value_form",
+      "input": {
+        "written": "$endpoint:infra/authz:GRPC",
+        "secret": false
+      },
+      "refs": [
+        "P2.10"
+      ],
+      "expected_error": {
+        "reason": "FORM_INVALID"
+      }
+    },
+    {
+      "id": "config.forms.endpoint-one-segment",
+      "description": "a component ID has two segments",
+      "op": "value_form",
+      "input": {
+        "written": "$endpoint:authz",
+        "secret": false
+      },
+      "refs": [
+        "P2.10"
+      ],
+      "expected_error": {
+        "reason": "FORM_INVALID"
+      }
+    },
+    {
+      "id": "config.forms.endpoint-suffix",
+      "description": "$endpoint: must be the whole value",
+      "op": "value_form",
+      "input": {
+        "written": "http://$endpoint:infra/authz",
+        "secret": false
+      },
+      "refs": [
+        "P2.10"
+      ],
+      "expected_error": {
+        "reason": "FORM_INVALID"
+      }
+    },
+    {
+      "id": "config.forms.endpoint-secret",
+      "description": "an address is never a secret",
+      "op": "value_form",
+      "input": {
+        "written": "$endpoint:infra/authz",
+        "secret": true
+      },
+      "refs": [
+        "P2.10"
+      ],
+      "expected_error": {
+        "reason": "SECRET_NOT_REFERENCE"
+      }
     }
   ]
 }

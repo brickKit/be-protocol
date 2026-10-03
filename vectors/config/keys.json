@@ -270,6 +270,170 @@
       "expected_error": {
         "reason": "CONFIG_KEY_INVALID"
       }
+    },
+    {
+      "id": "config.keys.decl-secret-file",
+      "description": "a secret key: secret, mount: file, name ending in _FILE",
+      "op": "key_declaration",
+      "input": {
+        "key": "PG_PASSWORD_FILE",
+        "secret": true,
+        "mount": "file"
+      },
+      "refs": [
+        "P2.4",
+        "P2.12"
+      ],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "config.keys.decl-plain",
+      "description": "a plain key",
+      "op": "key_declaration",
+      "input": {
+        "key": "PG_USER"
+      },
+      "refs": [
+        "P2.4",
+        "P2.12"
+      ],
+      "expected": {
+        "valid": true
+      }
+    },
+    {
+      "id": "config.keys.decl-secret-env",
+      "description": "a secret that would travel in the environment",
+      "op": "key_declaration",
+      "input": {
+        "key": "PG_PASSWORD",
+        "secret": true
+      },
+      "refs": [
+        "P2.4",
+        "P2.12"
+      ],
+      "expected_error": {
+        "reason": "SECRET_NOT_FILE"
+      }
+    },
+    {
+      "id": "config.keys.decl-secret-env-file-name",
+      "description": "the _FILE name without mount: file would carry the value, not a path",
+      "op": "key_declaration",
+      "input": {
+        "key": "PG_PASSWORD_FILE",
+        "secret": true
+      },
+      "refs": [
+        "P2.4",
+        "P2.12"
+      ],
+      "expected_error": {
+        "reason": "SECRET_NOT_FILE"
+      }
+    },
+    {
+      "id": "config.keys.decl-mount-no-suffix",
+      "description": "a file-delivered key is named ..._FILE",
+      "op": "key_declaration",
+      "input": {
+        "key": "SIGNING_KEY",
+        "secret": true,
+        "mount": "file"
+      },
+      "refs": [
+        "P2.4",
+        "P2.12"
+      ],
+      "expected_error": {
+        "reason": "FILE_SUFFIX_REQUIRED"
+      }
+    },
+    {
+      "id": "config.keys.decl-plain-file-suffix",
+      "description": "_FILE is reserved for file-delivered secrets",
+      "op": "key_declaration",
+      "input": {
+        "key": "RULES_FILE"
+      },
+      "refs": [
+        "P2.4",
+        "P2.12"
+      ],
+      "expected_error": {
+        "reason": "FILE_SUFFIX_RESERVED"
+      }
+    },
+    {
+      "id": "config.keys.decl-mount-not-secret",
+      "description": "brickKit: mount: file only together with secret: true",
+      "op": "key_declaration",
+      "input": {
+        "key": "RULES_FILE",
+        "mount": "file"
+      },
+      "refs": [
+        "P2.4",
+        "P2.12"
+      ],
+      "expected_error": {
+        "reason": "MOUNT_NEEDS_SECRET"
+      }
+    },
+    {
+      "id": "config.keys.decl-mount-integer",
+      "description": "brickKit: a mounted item is a string",
+      "op": "key_declaration",
+      "input": {
+        "key": "PORT_FILE",
+        "secret": true,
+        "mount": "file",
+        "type": "integer"
+      },
+      "refs": [
+        "P2.4",
+        "P2.12"
+      ],
+      "expected_error": {
+        "reason": "MOUNT_NEEDS_STRING"
+      }
+    },
+    {
+      "id": "config.keys.decl-mount-unknown",
+      "description": "file is the only mount",
+      "op": "key_declaration",
+      "input": {
+        "key": "KEY_FILE",
+        "secret": true,
+        "mount": "volume"
+      },
+      "refs": [
+        "P2.4",
+        "P2.12"
+      ],
+      "expected_error": {
+        "reason": "MOUNT_INVALID"
+      }
+    },
+    {
+      "id": "config.keys.decl-reserved-still",
+      "description": "reserved names stay reserved",
+      "op": "key_declaration",
+      "input": {
+        "key": "UPSTREAM_ENDPOINT",
+        "secret": true,
+        "mount": "file"
+      },
+      "refs": [
+        "P2.4",
+        "P2.12"
+      ],
+      "expected_error": {
+        "reason": "CONFIG_KEY_RESERVED"
+      }
     }
   ]
 }

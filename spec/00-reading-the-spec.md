@@ -19,7 +19,7 @@ Terms, requirement levels and identifiers used by every chapter. Read this once 
 | profile | a named group of conformance cases, selected from the component's manifests (README, *Conformance*) |
 | suite | the black-box conformance suite `conformance/component/` of `brickKit/be-acceptance` |
 | deadline | the time by which the current unit of work must finish; it only shrinks as work travels ([P9](09-deadlines-and-retries.md)) |
-| the platform | brickKit: it injects configuration and `*_ENDPOINT` variables, generates deployment files and starts containers |
+| the platform | brickKit (≥ v1.3.1): it evaluates configuration (`$var:`, `$endpoint:`, `${VAR}`, `file://`), injects it and the `*_ENDPOINT` variables, mounts secret files, generates deployment files and starts containers |
 
 Durations use Go duration syntax (`200ms`, `5s`, `15m`, `1h`); sizes are binary (1 MiB = 1,048,576 bytes); instants are RFC 3339 in UTC; business dates are `YYYY-MM-DD`.
 
@@ -46,5 +46,5 @@ A row marked **MUST, partly INTERNAL** has an observable part that the suite tes
 
 - Business behaviour: a component's own state machines, its own reasons, its own events.
 - The family contracts of slot families: the authorization provider (`brickKit/contract-infra-authz`, major `authz/2`) and the identity provider (`brickKit/contract-infra-iam`, major `iam/1`). This text says only how a component consumes them.
-- brickKit itself: `component.yaml`, the injected variables and deployment generation are brickKit's contract; this text relies on them and adds nothing to `component.yaml`.
+- brickKit itself: `component.yaml`, the injected variables and deployment generation are brickKit's contract; this text relies on them and adds no field to `component.yaml`; it only requires some of brickKit's fields to be declared ([P20](20-self-description-and-versioning.md#what-componentyaml-declares)).
 - Any one language's API. Function names in official SDKs are in their own documentation.

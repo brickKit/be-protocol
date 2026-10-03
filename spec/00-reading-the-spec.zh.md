@@ -19,7 +19,7 @@
 | profile | 一组有名字的一致性用例，按组件的清单文件选择（README 的 *一致性测试* 一节） |
 | 套件（suite） | `brickKit/be-acceptance` 的黑盒一致性套件 `conformance/component/` |
 | 截止时间（deadline） | 当前这单位工作必须完成的时间点；工作往下传递时它只会缩短（[P9](09-deadlines-and-retries.zh.md)） |
-| 平台（the platform） | brickKit：它注入配置和 `*_ENDPOINT` 变量、生成部署文件、启动容器 |
+| 平台（the platform） | brickKit（≥ v1.3.1）：它对配置求值（`$var:`、`$endpoint:`、`${VAR}`、`file://`），注入配置和 `*_ENDPOINT` 变量，挂载密钥文件，生成部署文件，启动容器 |
 
 时长用 Go duration 语法（`200ms`、`5s`、`15m`、`1h`）；大小用二进制单位（1 MiB = 1,048,576 字节）；时间点用 UTC 的 RFC 3339；业务日期用 `YYYY-MM-DD`。
 
@@ -48,5 +48,5 @@
 
 - 业务行为：组件自己的状态机、自己的 reason、自己的事件。
 - 槽位族的族契约：授权 provider（`brickKit/contract-infra-authz`，major `authz/2`）和身份 provider（`brickKit/contract-infra-iam`，major `iam/1`）。本文只说组件怎么消费它们。
-- brickKit 本身：`component.yaml`、注入的变量和部署文件生成是 brickKit 的契约；本文依赖它们，不往 `component.yaml` 里加任何东西。
+- brickKit 本身：`component.yaml`、注入的变量和部署文件生成是 brickKit 的契约；本文依赖它们，不往 `component.yaml` 里加字段；只要求声明 brickKit 的某些字段（[P20](20-self-description-and-versioning.zh.md#componentyaml-里声明什么)）。
 - 任何一门语言的 API。官方 SDK 里的函数名见它们各自的文档。

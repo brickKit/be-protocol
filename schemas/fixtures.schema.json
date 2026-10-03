@@ -154,6 +154,7 @@
       }
     },
     "events": {
+      "description": "produces: how to make the component publish each subject of its event contract (component.yaml events.publishes); consumes: every subject it subscribes to, the same set as component.yaml events.subscribes (P12.16, CP-EVS-09).",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -240,7 +241,7 @@
           }
         },
         "cron": {
-          "description": "Cron jobs the suite runs on two replicas (CP-JOBS-01): the override it sets through JOBS_OVERRIDES and how to count runs.",
+          "description": "Cron jobs the suite runs on two replicas (CP-JOBS-01): the override it sets through JOBS_OVERRIDES and how to count runs. When /_be/info lists job_run, the first one is also run through job run <name> (CP-JOBS-06).",
           "type": "array",
           "items": {
             "type": "object",

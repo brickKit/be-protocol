@@ -8,7 +8,7 @@
 
 | ID | 等级 | 要求 | 用例 |
 |---|---|---|---|
-| P11.1 | MUST | 迁移以属主角色 `PG_OWNER_USER`（密码 `PG_OWNER_PASSWORD`）登录，直连 PostgreSQL（设置了 `PG_MIGRATION_HOST` / `PG_MIGRATION_PORT` 时连它们）。会话参数：`lock_timeout = 5s`、`statement_timeout = 15min`。拿锁超时会退避重试，最多 3 次；最终失败时记录阻塞者后端的 pid 和它们 SQL 的前 200 个字符。迁移连接是一个专用会话：允许迁移工具在它上面设置会话级的 `search_path`、获取会话级 advisory 锁（这是 [P10.2](10-database.zh.md) 和 [P10.8](10-database.zh.md) 的例外）。迁移锁按 schema 区分：两个组件同时迁移同一个数据库，都会成功 | CP-CORE-01 |
+| P11.1 | MUST | 迁移以属主角色 `PG_OWNER_USER`（口令来自文件 `PG_OWNER_PASSWORD_FILE`）登录，直连 PostgreSQL：设置了 `PG_MIGRATION_HOST` / `PG_MIGRATION_PORT` 时连它们，各自没有时退回 `PG_HOST` / `PG_PORT`（组件自己的键，正是 brickKit 推荐的做法：迁移容器的环境与服务完全相同）。会话参数：`lock_timeout = 5s`、`statement_timeout = 15min`。拿锁超时会退避重试，最多 3 次；最终失败时记录阻塞者后端的 pid 和它们 SQL 的前 200 个字符。迁移连接是一个专用会话：允许迁移工具在它上面设置会话级的 `search_path`、获取会话级 advisory 锁（这是 [P10.2](10-database.zh.md) 和 [P10.8](10-database.zh.md) 的例外）。迁移锁按 schema 区分：两个组件同时迁移同一个数据库，都会成功 | CP-CORE-01 |
 | P11.2 | MUST | 迁移文件里不出现 `OWNER TO`、`GRANT`、`REVOKE`、`CREATE SCHEMA`、`CREATE ROLE`、`ALTER ROLE`、`SET`，不出现带 schema 限定的名字，不出现角色或 schema 字面量，也不出现以日期字面量为边界的分区。名字都不带限定，靠 `search_path` 解析 | CP-DB-01（门禁 `migration-identity-scan`） |
 | P11.3 | MUST | 迁移状态表放在本组件自己的 schema 里；官方 SDK 使用[下表](#迁移状态表)里的表名，这些表不受 P11.11 约束。组件的迁移之后，在同一个迁移步骤里、以属主角色，运行时运行**平台迁移**，顺序为：建或升级 `besdk_*` 表和平台函数（[ddl/](../ddl/)），把版本记在 `besdk_platform_version`；按 `lifecycle.yaml` 为每张分区表建出当前分区窗口（[P16.6](16-data-lifecycle.zh.md)）；确保事件流和本组件的 durable 存在（[P12.4](12-events.zh.md)、[P12.5](12-events.zh.md)）。三者都幂等。`besdk_*` 表与参考 DDL 逐列一致 | CP-DB-04, CP-LIFE-01 |
 | P11.4 | MUST | schema 演进遵守 expand / contract。contract 类迁移以文件头行 `-- be:contract after=<version>` 开头；`CREATE INDEX CONCURRENTLY` 单独一个文件，文件以 `-- be:no-transaction` 开头。生产只前滚 | —（门禁） |

@@ -25,6 +25,7 @@
   "profiles": ["core", "auth", "scope", "grpc", "outbound", "events-pub", "events-sub", "idempotency", "db", "jobs", "lifecycle"],
   "ports": { "http": 8085, "grpc": 9095 },
   "migrations": { "component": "0001", "platform": 1 },
+  "capabilities": ["job_run"],
   "members": null
 }
 ```
@@ -40,7 +41,22 @@
 | `migrations.component` | 镜像里已应用的最新组件迁移；`migrations.platform` 是平台迁移版本（`besdk_platform_version`） |
 | `tzdata` | 可选：运行时自带的 IANA 时区数据版本，例如 `2026c`（[P11.7](11-migrations-and-data-shapes.zh.md)） |
 | `degraded` | 可选：启动时决定以降级模式运行的部分，例如没装 `mdm/org` 时的 `calendar`（[P11.9](11-migrations-and-data-shapes.zh.md)）；没有降级时不出现或为空 |
+| `capabilities` | 可选：运行时提供的可选协议面；1.0 只有 `job_run`（[P14.8](14-background-jobs.zh.md)） |
 | `members` | 组件为 `null`；外壳上是成员对象的数组，形状相同，只是没有 `members` |
+
+## `component.yaml` 里声明什么
+
+协议不往 `component.yaml` 里加字段；它要求声明下面这些 brickKit 字段（brickKit ≥ v1.3.1 全部会读），由门禁和用例 CP-CORE-12 检查。协议自己的键在 `assembly.yaml` 里（P20.2）。
+
+| 字段 | 取值 | 规则 |
+|---|---|---|
+| `migration.command` | 迁移入口，官方 SDK 是 `[<binary>, migrate, up]` | [P1.1](01-process-and-lifecycle.zh.md) |
+| `healthCheck` | `{type: http, path: /healthz}` | [P1.3](01-process-and-lifecycle.zh.md)、[P1.11](01-process-and-lifecycle.zh.md) |
+| `readinessCheck` | `{type: http, path: /readyz}` | [P1.4](01-process-and-lifecycle.zh.md)、[P1.11](01-process-and-lifecycle.zh.md) |
+| `deployment.stopGracePeriodSeconds` | 除非需要更久就是 30；至少 `SHUTDOWN_GRACE` + 5 秒；外壳至少是它最大的成员的值 | [P1.12](01-process-and-lifecycle.zh.md)、[P19.9](19-shells.zh.md) |
+| `deployment.protocol`、`deployment.extraPorts[].protocol` | 主端口 `http`，`grpc` 端口 `grpc` | [P7.14](07-system-rpc.zh.md) |
+| `configSchema` | be-ops 从 `schemas/config-keys.yaml` 生成的协议段；每个密钥 `mount: file`、名字是 `…_FILE` | [P2.8](02-configuration.zh.md)、[P2.12](02-configuration.zh.md) |
+| `events.publishes`、`events.subscribes` | be-ops 从事件契约和夹具生成 | [P12.16](12-events.zh.md) |
 
 ## 说明
 
