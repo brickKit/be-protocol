@@ -20,5 +20,10 @@ var Schemas embed.FS
 //go:embed migrations
 var Migrations embed.FS
 
+// BusMigrations holds the PostgreSQL queue transport's tables (chapter 06), applied to the bus database's schema.
+//
+//go:embed migrations-bus
+var BusMigrations embed.FS
+
 // Version is the protocol version this tree describes.
 const Version = "3.0.0-alpha.1"
