@@ -1,0 +1,6 @@
+.PHONY: check vectors
+check:  ## structure, SHA256SUMS and the reference recomputation of every vector
+	go vet ./...
+	go test ./...
+vectors:  ## regenerate vectors/*.json and vectors/SHA256SUMS
+	python3 -I scripts/gen-vectors.py
