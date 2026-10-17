@@ -5,12 +5,12 @@
     "P5.7",
     "P5.8"
   ],
-  "description": "Database errors that reach the transaction entry: which are retried (the whole transaction, at most 3 attempts) and which reason each one ends as. 'connect' stands for a failure before any SQLSTATE. A DEPENDENCY_UNAVAILABLE carries metadata dependency=db. Errors the module returns itself pass through.",
+  "description": "到达事务入口的数据库错误：哪些重试（重做整个事务，最多 3 次尝试），最终答哪个 reason。sqlstate 为 connect 表示还没有 SQLSTATE 的连接失败。DEPENDENCY_UNAVAILABLE 带 metadata dependency=db。模块自己返回的错误原样传出。",
   "fields": {
-    "sqlstate": "SQLSTATE, or 'connect'",
-    "reason": "reason in domain be",
-    "retried": "retried inside the transaction entry",
-    "note": "explanation"
+    "sqlstate": "SQLSTATE，或 connect",
+    "reason": "domain 为 be 的 reason",
+    "retried": "是否在事务入口内重试",
+    "note": "说明"
   },
   "cases": [
     {

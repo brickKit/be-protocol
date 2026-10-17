@@ -354,6 +354,113 @@ def config_parse_vectors():
                   "default": "声明的缺省值", "values": "enum 的取值", "expect": "{value} 或 {error}"})
 
 
+# ---------------------------------------------------------------- call outcomes (P4.6, P4.11, P4.18, P4.19)
+RELAYED = {("be", "DEPENDENCY_UNAVAILABLE"), ("be", "CIRCUIT_OPEN"), ("be", "DEADLINE_BUDGET_EXHAUSTED"),
+           ("be", "RESULT_UNKNOWN")}
+REASON_CODE = {r: code for r, code, _, _ in REASONS}
+
+
+def code_of(c):
+    if c["surface"] == "grpc":
+        return c["code"]
+    p = c.get("problem")
+    if p and p["domain"] == "be":
+        return REASON_CODE[p["reason"]]
+    return {200: "OK", 502: "UNAVAILABLE", 503: "UNAVAILABLE", 504: "DEADLINE_EXCEEDED"}.get(c["status"], "OTHER")
+
+
+def classify(c):
+    if c.get("caller_cancelled"):
+        return "cancelled"
+    if c.get("connect_failed"):
+        return "connect_failed"
+    code = code_of(c)
+    info = c.get("problem") if c["surface"] == "http" else c.get("info")
+    if code == "OK":
+        return "success"
+    if info and (info["domain"], info["reason"]) in RELAYED:
+        return "relayed"
+    if code == "UNAVAILABLE":
+        return "unavailable"
+    if code == "DEADLINE_EXCEEDED":
+        return "deadline"
+    return "other"
+
+
+def expect(c):
+    k = classify(c)
+    breaker = {"success": "success", "unavailable": "failure", "connect_failed": "failure",
+               "deadline": "failure"}.get(k, "ignored")
+    budget = {"success": "success", "unavailable": "unavailable", "connect_failed": "unavailable"}.get(k, "other")
+    retry = {"unavailable": "UNAVAILABLE", "connect_failed": "CONNECT_FAILED_BEFORE_SEND"}.get(k, "NONE")
+    if k == "success":
+        upward = None
+    elif k in ("unavailable", "connect_failed"):
+        upward = {"domain": "be", "reason": "DEPENDENCY_UNAVAILABLE", "metadata": {"dependency": c["dependency"]}}
+    elif k == "deadline":
+        upward = {"domain": "be", "reason": "DEADLINE_EXCEEDED" if c["idempotent"] else "RESULT_UNKNOWN",
+                  "metadata": {"dependency": c["dependency"]}}
+    elif k == "cancelled":
+        upward = {"domain": "be", "reason": "REQUEST_CANCELLED"}
+    else:
+        upward = "unchanged"
+    return {"class": k, "breaker": breaker, "budget": budget, "retry_outcome": retry, "upward": upward}
+
+
+def call_outcomes_vectors():
+    dep = "erp/inventory"
+    g = lambda code, info=None, **kw: dict({"surface": "grpc", "code": code, "info": info}, **kw)
+    h = lambda status, problem=None, **kw: dict({"surface": "http", "status": status, "problem": problem}, **kw)
+    be = lambda reason: {"domain": "be", "reason": reason}
+    scen = [
+        ("grpc-ok", g("OK")),
+        ("grpc-unavailable-transport", g("UNAVAILABLE")),
+        ("grpc-service-busy", g("UNAVAILABLE", be("SERVICE_BUSY"))),
+        ("grpc-not-ready", g("UNAVAILABLE", be("NOT_READY"))),
+        ("grpc-relayed-dependency-unavailable", g("UNAVAILABLE", be("DEPENDENCY_UNAVAILABLE"))),
+        ("grpc-relayed-circuit-open", g("UNAVAILABLE", be("CIRCUIT_OPEN"))),
+        ("grpc-connect-failed", g("UNAVAILABLE", connect_failed=True)),
+        ("grpc-attempt-timeout-idempotent", g("DEADLINE_EXCEEDED")),
+        ("grpc-attempt-timeout-command", g("DEADLINE_EXCEEDED", idempotent=False)),
+        ("grpc-relayed-budget-exhausted", g("DEADLINE_EXCEEDED", be("DEADLINE_BUDGET_EXHAUSTED"))),
+        ("grpc-relayed-result-unknown", g("DEADLINE_EXCEEDED", be("RESULT_UNKNOWN"), idempotent=False)),
+        ("grpc-not-found", g("NOT_FOUND", be("NOT_FOUND"))),
+        ("grpc-component-reason", g("FAILED_PRECONDITION", {"domain": dep, "reason": "STOCK_SHORT"})),
+        ("grpc-outbound-limit", g("RESOURCE_EXHAUSTED", be("OUTBOUND_LIMIT"))),
+        ("grpc-internal", g("INTERNAL", be("INTERNAL"))),
+        ("grpc-caller-cancelled", g("CANCELLED", caller_cancelled=True)),
+        ("http-ok", h(200)),
+        ("http-service-busy", h(503, be("SERVICE_BUSY"))),
+        ("http-outbound-limit-is-not-unavailable", h(503, be("OUTBOUND_LIMIT"))),
+        ("http-relayed-dependency-unavailable", h(503, be("DEPENDENCY_UNAVAILABLE"))),
+        ("http-503-without-problem", h(503)),
+        ("http-502-without-problem", h(502)),
+        ("http-504-without-problem", h(504)),
+        ("http-component-conflict", h(409, {"domain": "erp/sales", "reason": "ORDER_LOCKED"})),
+        ("http-component-unavailable", h(503, {"domain": dep, "reason": "MAINTENANCE"})),
+        ("http-connect-failed", h(None, connect_failed=True)),
+    ]
+    cases = []
+    for name, c in scen:
+        c = dict({"idempotent": True, "dependency": dep}, **c)
+        c["id"] = name
+        c["expect"] = expect(c)
+        cases.append(c)
+    write("call-outcomes", ["P4.6", "P4.8", "P4.11", "P4.18", "P4.19"],
+          "一次尝试的结果怎样计入。surface=grpc：code 为 gRPC 码，info 为 ErrorInfo 的 domain 与 reason（没有时为 null）；"
+          "surface=http：status 为 HTTP 状态，problem 为 problem+json 正文的 domain 与 reason（正文不是 problem+json 时为 null）。"
+          "http 回答的码：平台 reason 取目录中的码，其余按状态（502、503 为 UNAVAILABLE，504 为 DEADLINE_EXCEEDED）。"
+          "connect_failed：请求发出之前连接失败；caller_cancelled：调用方自己的上下文已结束。"
+          "expect.class：success、unavailable、connect_failed、deadline、relayed（依赖转述的更下游的故障）、other、cancelled；"
+          "breaker 与 budget：熔断器与重试预算记下什么；retry_outcome：交给重试决定（向量 retry-decision）的结果，NONE 表示从不重试；"
+          "upward：这是最后一次尝试时调用方向上答什么（unchanged 表示依赖的错误原样）。",
+          cases, {"surface": "grpc | http", "code": "gRPC 码名", "info": "ErrorInfo 的 domain 与 reason，或 null",
+                  "status": "HTTP 状态，什么都没收到时为 null", "problem": "problem 正文的 domain 与 reason",
+                  "idempotent": "方法是否声明为幂等", "dependency": "依赖的组件 ID",
+                  "connect_failed": "发出之前失败", "caller_cancelled": "调用方已取消",
+                  "expect": "class、breaker、budget、retry_outcome、upward"})
+
+
 # ---------------------------------------------------------------- database (P5.7, P5.8, P5.13)
 def db_errors_vectors():
     # sqlstate, reason, retried inside the transaction entry
@@ -373,26 +480,25 @@ def db_errors_vectors():
     cases = [{"id": f"db-{state}", "sqlstate": state, "reason": reason, "retried": retried, "note": note}
              for state, reason, retried, note in rows]
     write("db-errors", ["P5.7", "P5.8"],
-          "Database errors that reach the transaction entry: which are retried (the whole transaction, at most 3 "
-          "attempts) and which reason each one ends as. 'connect' stands for a failure before any SQLSTATE. A "
-          "DEPENDENCY_UNAVAILABLE carries metadata dependency=db. Errors the module returns itself pass through.",
-          cases, {"sqlstate": "SQLSTATE, or 'connect'", "reason": "reason in domain be",
-                  "retried": "retried inside the transaction entry", "note": "explanation"})
+          "到达事务入口的数据库错误：哪些重试（重做整个事务，最多 3 次尝试），最终答哪个 reason。sqlstate 为 connect 表示还没有 "
+          "SQLSTATE 的连接失败。DEPENDENCY_UNAVAILABLE 带 metadata dependency=db。模块自己返回的错误原样传出。",
+          cases, {"sqlstate": "SQLSTATE，或 connect", "reason": "domain 为 be 的 reason",
+                  "retried": "是否在事务入口内重试", "note": "说明"})
 
 
 LINT_RULES = {
-    "NAME": "the file name is not <version>_<lower_snake_title>.up.sql",
-    "DOWN": "a down migration (production only moves forward)",
-    "DUP_VERSION": "two files with the same version",
-    "SET": "SET or RESET at the start of a statement",
-    "TX_CONTROL": "BEGIN, START TRANSACTION, COMMIT, END, ROLLBACK, SAVEPOINT or RELEASE at the start of a statement",
-    "GRANT": "GRANT, REVOKE or REASSIGN at the start of a statement",
-    "ROLE_SCHEMA": "CREATE, ALTER or DROP of a ROLE, USER, GROUP or SCHEMA",
+    "NAME": "文件名不是 <版本>_<小写下划线标题>.up.sql",
+    "DOWN": "回退迁移（生产只向前）",
+    "DUP_VERSION": "两个文件版本相同",
+    "SET": "语句以 SET 或 RESET 开头",
+    "TX_CONTROL": "语句以 BEGIN、START TRANSACTION、COMMIT、END、ROLLBACK、SAVEPOINT 或 RELEASE 开头",
+    "GRANT": "语句以 GRANT、REVOKE 或 REASSIGN 开头",
+    "ROLE_SCHEMA": "CREATE、ALTER 或 DROP 一个 ROLE、USER、GROUP 或 SCHEMA",
     "DEFAULT_PRIVILEGES": "ALTER DEFAULT PRIVILEGES",
     "DROP_OWNED": "DROP OWNED",
-    "OWNER": "OWNER TO anywhere in a statement",
-    "CONCURRENTLY": "CONCURRENTLY anywhere in a statement (cannot run inside the file's transaction)",
-    "SCHEMA_NAME": "the component's own schema name used as a qualifier (\"<schema>.\" or \"\\\"<schema>\\\".\")",
+    "OWNER": "语句中任何位置的 OWNER TO",
+    "CONCURRENTLY": "语句中任何位置的 CONCURRENTLY（不能在文件的事务中执行）",
+    "SCHEMA_NAME": "用组件自己的 schema 名限定名字（<schema>. 或带双引号的 \"<schema>\".）",
 }
 
 
@@ -435,13 +541,10 @@ def migration_lint_vectors():
         for r in c["refused"]:
             assert r["rule"] in LINT_RULES, r
     write("migration-lint", ["P5.13"],
-          "Migration files and the refusals of the migrate entry's check. Statements are split on top-level semicolons; "
-          "comments, string literals and dollar-quoted bodies are not statements of their own; a double-quoted "
-          "identifier containing a dot is one name. Files are checked in name order, statements in file order, and "
-          "within one statement the rules in the order listed below. Files not ending in .sql are ignored. "
-          "Rules: " + "; ".join(f"{k}: {v}" for k, v in LINT_RULES.items()) + ".",
-          cases, {"schema": "the component's schema", "files": "file name to content",
-                  "refused": "expected refusals in order: file and rule"})
+          "迁移文件与迁移入口检查的拒绝项。语句按顶层分号切分；注释、字符串字面量与美元引号包起来的正文不单独算语句；"
+          "含点号的双引号标识符是一个名字。文件按名字排序检查，语句按文件中的顺序，同一语句内按下面规则列出的顺序。"
+          "不以 .sql 结尾的文件忽略。规则：" + "；".join(f"{k}: {v}" for k, v in LINT_RULES.items()) + "。",
+          cases, {"schema": "组件的 schema", "files": "文件名到内容", "refused": "按顺序期望的拒绝项：文件与规则"})
 
 
 def sums():
@@ -458,6 +561,7 @@ if __name__ == "__main__":
     retry_decision_vectors()
     retry_budget_vectors()
     circuit_breaker_vectors()
+    call_outcomes_vectors()
     config_parse_vectors()
     db_errors_vectors()
     migration_lint_vectors()

@@ -48,7 +48,7 @@ func TestDBErrorsVectors(t *testing.T) {
 func TestMigrationLintVectors(t *testing.T) {
 	v := load(t, "migration-lint")
 	defined := map[string]bool{}
-	for _, m := range regexp.MustCompile(`([A-Z_]+): `).FindAllStringSubmatch(v.Description[strings.Index(v.Description, "Rules: "):], -1) {
+	for _, m := range regexp.MustCompile(`([A-Z_]+): `).FindAllStringSubmatch(v.Description[strings.Index(v.Description, "规则："):], -1) {
 		defined[m[1]] = true
 	}
 	for _, raw := range v.Cases {

@@ -21,7 +21,7 @@
 
 | 编号 | 层级 | 规则 | 检验 |
 | --- | --- | --- | --- |
-| P4.6 | 必须 | 只有契约声明为无副作用或幂等的方法才重试；只在下游不可用时重试：gRPC 码 `UNAVAILABLE`，或连接在请求发出之前失败。`DEADLINE_EXCEEDED`、业务错误、`RESOURCE_EXHAUSTED` 都不重试 | 向量 `retry-decision` |
+| P4.6 | 必须 | 只有契约声明为无副作用或幂等的方法才重试；只在下游**自己**不可用时重试：gRPC 码 `UNAVAILABLE`（不含 P4.18 的转述），或连接在请求发出之前失败。`DEADLINE_EXCEEDED`、业务错误、`RESOURCE_EXHAUSTED` 都不重试。用户面（HTTP）的回答按向量 `call-outcomes` 换算成码 | 向量 `retry-decision`、`call-outcomes` |
 | P4.7 | 必须 | 每次调用（含首次）最多 3 次尝试；两次尝试之间退避 = 随机取 [0, min(1000, 100 × 2^(n−1))] 毫秒（n 为已失败的次数，全抖动）；退避后剩余时间不够下一次尝试（P4.4）时停止，返回最后一次的错误 | 向量 `retry-decision` |
 | P4.8 | 必须 | 重试预算按 gRPC 的 `retryThrottling` 语义：每个（成员，依赖）一个令牌桶，`maxTokens` 10、`tokenRatio` 0.1，初始为满。每次尝试（首次与重试都算）的结果：成功时加 0.1（不超过 10）；P4.6 所说的不可用时减 1（不低于 0）；其他结果不变。只有令牌**严格大于** `maxTokens/2` 时才允许重试；首次尝试从不受预算限制。为了各语言结果一致，令牌以千分之一为单位用整数计：上限 10000，成功加 100，不可用减 1000，阈值 5000 | 向量 `retry-budget` |
 | P4.9 | 内部 | 只有 SDK 的客户端重试；组件代码不在一个本来就会重试的调用外面再包重试循环。更高一层的重试（工作项、重投的事件）使用同一个幂等键 | SDK 静态检查 |
@@ -36,11 +36,19 @@
 
 | 编号 | 层级 | 规则 | 检验 |
 | --- | --- | --- | --- |
-| P4.11 | 必须 | 每个（成员，依赖）一个熔断器，状态 `closed`、`open`、`half_open`。计入的结果只有：成功，与“依赖故障”（gRPC 码 `UNAVAILABLE`、`DEADLINE_EXCEEDED`，或连接失败）；业务错误、调用方取消、`OUTBOUND_LIMIT` 与熔断自己的快速失败都不计入 | 向量 `circuit-breaker` |
+| P4.11 | 必须 | 每个（成员，依赖）一个熔断器，状态 `closed`、`open`、`half_open`。计入的结果只有：成功，与“依赖故障”（gRPC 码 `UNAVAILABLE`、`DEADLINE_EXCEEDED`，或连接失败；P4.18 的转述除外）；业务错误、转述、调用方取消、`OUTBOUND_LIMIT` 与熔断自己的快速失败都不计入 | 向量 `circuit-breaker`、`call-outcomes` |
 | P4.12 | 必须 | `closed`：记录最近 20 个计入的结果；记满 20 个、其中依赖故障**超过** 50%（即至少 11 个）时转为 `open`，清空记录 | 向量 `circuit-breaker` |
 | P4.13 | 必须 | `open`：调用不发出，立即答 `CIRCUIT_OPEN`；自转为 `open` 起 30 秒后，下一个调用到来时转为 `half_open` | 向量 `circuit-breaker` |
 | P4.14 | 必须 | `half_open`：同一时刻只放行一个试探调用，其余立即答 `CIRCUIT_OPEN`；试探成功累计到连续 3 次转为 `closed`（记录清空）；任何一次试探是依赖故障，转回 `open` 并重新计时 | 向量 `circuit-breaker` |
 | P4.15 | 必须 | 熔断只决定“发不发”：打开之前已发出、结果未知的非幂等调用，仍按结果未知处理（装配项目协议 01、10） | — |
+
+## 转述与向上报告
+
+| 编号 | 层级 | 规则 | 检验 |
+| --- | --- | --- | --- |
+| P4.18 | 必须 | **转述**：依赖答的 `DEPENDENCY_UNAVAILABLE`、`CIRCUIT_OPEN`、`DEADLINE_BUDGET_EXHAUSTED`、`RESULT_UNKNOWN`（`domain` 为 `be`）说的是它更下游的情况，下面一层已经按自己的预算重试过：不重试、不计入熔断、不改变重试预算，原样向上传。这样故障注入下整条调用链只有一层重试 | 向量 `call-outcomes` |
+| P4.19 | 必须 | 一次调用最终失败时，调用方向它自己的调用方答：依赖自己不可用或连接失败 → `DEPENDENCY_UNAVAILABLE`；尝试超时或依赖答 `DEADLINE_EXCEEDED` → 幂等方法 `DEADLINE_EXCEEDED`、非幂等方法 `RESULT_UNKNOWN`（结果要先查询）；以上都带 `metadata` `dependency=<依赖的组件 ID>`。发出之前就拒绝的 `DEADLINE_BUDGET_EXHAUSTED`、`OUTBOUND_LIMIT`、`CIRCUIT_OPEN` 同样带它。业务错误与转述原样（P3.3）；调用方自己被取消 → `REQUEST_CANCELLED` | 向量 `call-outcomes` |
+| P4.20 | 内部 | 事务内不发出调用：SDK 的客户端在事务内拒绝，答 `INTERNAL`，日志写 `NETWORK_IN_TX`（[05](05-database.md) 的 P5.9） | SDK 测试 |
 
 ## 其他
 
