@@ -51,6 +51,10 @@
 | `PG_POOL_FOREGROUND`、`PG_POOL_BACKGROUND` | integer | 否 | 成员级 | 成员的连接预算：前台与后台各自最多同时持有的连接，缺省 `8`、`4`（P5.2） |
 | `BUS_URL` | string | 否 | 进程级 | 消息运输；scheme 选择适配器：`nats://` 为 JetStream，`pgqueue://` 为 PostgreSQL 队列（[06](06-events.md) 的 P6.16）；产生或订阅事件的组件必填 |
 | `IMPLEMENTATION_INSTANCE` | string（UUID） | 否 | 成员级 | 实现实例：安装时生成的随机身份，事件与读取响应用它声明来源（P6.9）；产生事件的组件必填 |
+| `DEPLOYMENT_ID` | string（UUID） | 否 | 进程级 | 部署身份：用户凭据的受众 `be:deployment:<它>`、服务证书的信任域（[08](08-identity-authz-audit.md) 的 P8.2、P8.5）；有受保护路由或系统面的组件必填 |
+| `IAM_ISSUER`、`IAM_JWKS_URL` | string、string | 否 | 进程级 | 身份成员的签发方与公钥地址（P8.1、P8.2）；有受保护路由的组件必填 |
+| `AUTHZ_GRPC_URL` | string | 否 | 进程级 | 授权成员的系统面地址（`$endpoint:` 引用，P8.9）；有受保护路由的组件必填 |
+| `SERVICE_TLS_CERT_FILE`、`SERVICE_TLS_KEY_FILE`、`SERVICE_TLS_CA_FILE` | string | 否 | 成员级 | 服务身份的证书、私钥与部署的信任根文件（P8.5），按文件重读；有受保护路由、系统面或系统调用的组件必填 |
 | `OTEL_URL` | string | 否 | 进程级 | 遥测的 OTLP/HTTP 导出地址；未设置时不导出（基本观测档只写本地日志与指标）。不用 OpenTelemetry 惯用的 `OTEL_EXPORTER_OTLP_ENDPOINT`：以 `_ENDPOINT` 结尾的键属于平台（P2.3），组件拿不到它的值 |
 | `LOG_LEVEL` | enum（`debug`、`info`、`warn`、`error`） | 否 | 成员级 | 缺省 `info` |
 

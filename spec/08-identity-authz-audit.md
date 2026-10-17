@@ -7,7 +7,7 @@
 | 编号 | 层级 | 规则 | 检验 |
 | --- | --- | --- | --- |
 | P8.1 | 必须 | 用户访问凭据是 JWS 紧凑格式的 JWT：头部 `typ` 为 `at+jwt`（RFC 9068）、带 `kid`，`alg` 只接受 `RS256`、`ES256`、`EdDSA`（`none` 与 `HS*` 一律拒绝）；`iss` 等于配置的签发方；`aud` 含本部署的受众；`exp` 晚于当前时刻减 60 秒，`nbf` 与 `iat`（有时）不晚于当前时刻加 60 秒；`sub` 是平台主体（小写 UUIDv7）。凭据里的角色、部门等声明一律忽略：授权只来自授权视图 | 向量 `jwt-verify` |
-| P8.2 | 必须 | 公钥只从配置的 JWKS 地址取得（`IAM_JWKS_URL`，键 `IAM_ISSUER`、`DEPLOYMENT_AUDIENCE` 同时配置），启动时取一次，之后每 10 分钟刷新；遇到不认识的 `kid` 立即刷新，但每 30 秒至多一次。取不到时沿用上次的公钥，最长 1 小时；超过即无法核验，答 `DEPENDENCY_UNAVAILABLE`（`dependency=iam`） | CK-ID-01 |
+| P8.2 | 必须 | 公钥只从配置的 JWKS 地址取得（`IAM_JWKS_URL`；签发方 `IAM_ISSUER`；受众是 `be:deployment:<DEPLOYMENT_ID>`），启动时取一次，之后每 10 分钟刷新；遇到不认识的 `kid` 立即刷新，但每 30 秒至多一次。取不到时沿用上次的公钥，最长 1 小时；超过即无法核验，答 `DEPENDENCY_UNAVAILABLE`（`dependency=iam`） | CK-ID-01 |
 | P8.3 | 必须 | 凭据缺失或任一项不合格答 `TOKEN_INVALID`（401）；凭据、令牌与签名从不进入日志、追踪或指标 | 向量 `jwt-verify`、CK-ID-02 |
 
 ## 调用模式与服务身份
