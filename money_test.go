@@ -122,7 +122,9 @@ func TestMoneyVectors(t *testing.T) {
 			Valid                                                 bool
 			Weights, Parts                                        []string
 		}
-		_ = json.Unmarshal(raw, &c)
+		if err := json.Unmarshal(raw, &c); err != nil {
+			t.Fatal(err)
+		}
 		var got any
 		var want any
 		switch c.Kind {
@@ -151,7 +153,9 @@ func TestMoneyVectors(t *testing.T) {
 func TestBusinessDateVectors(t *testing.T) {
 	for _, raw := range load(t, "business-date").Cases {
 		var c struct{ ID, Instant, TZ, Date string }
-		_ = json.Unmarshal(raw, &c)
+		if err := json.Unmarshal(raw, &c); err != nil {
+			t.Fatal(err)
+		}
 		at, err := time.Parse(time.RFC3339, c.Instant)
 		loc, lerr := time.LoadLocation(c.TZ)
 		if err != nil || lerr != nil {

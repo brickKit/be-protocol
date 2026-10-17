@@ -39,6 +39,10 @@ DECLARE
 BEGIN
     PERFORM pg_advisory_xact_lock(hashtextextended('be_partitions:' || current_schema(), 0));
     FOR p IN SELECT table_name, key_type, months_ahead FROM be_partition_plan ORDER BY table_name LOOP
+        IF to_regclass(quote_ident(p.table_name)) IS NULL THEN
+            RAISE EXCEPTION 'the declared table % no longer exists: undeclare it with be_undeclare_monthly_partitions in the migration that drops or renames it',
+                p.table_name USING ERRCODE = '42P01';
+        END IF;
         FOR m IN 0..p.months_ahead LOOP
             lo := (month0 + make_interval(months => m))::date;
             hi := (lo + interval '1 month')::date;
@@ -88,6 +92,10 @@ BEGIN
     IF NOT FOUND THEN
         RAISE EXCEPTION '% is not a table of this schema partitioned by range on one column', p_table USING ERRCODE = '42P17';
     END IF;
+    IF octet_length(p_table) > 55 THEN
+        RAISE EXCEPTION 'the name % is longer than 55 bytes: its partitions (<name>_pYYYYMM) would be truncated', p_table
+            USING ERRCODE = '42622';
+    END IF;
     IF v_type NOT IN ('date', 'timestamp with time zone') THEN
         RAISE EXCEPTION 'the partition key %.% is %, not date or timestamptz', p_table, v_column, v_type USING ERRCODE = '42P17';
     END IF;
@@ -96,4 +104,9 @@ BEGIN
         ON CONFLICT (table_name) DO UPDATE SET months_ahead = excluded.months_ahead;
     RETURN QUERY SELECT * FROM be_maintain_partitions();
 END
+$$;
+
+-- Undeclaring belongs to the migration that drops or renames a declared table; existing partitions stay as they are.
+CREATE FUNCTION be_undeclare_monthly_partitions(p_table text) RETURNS void LANGUAGE sql AS $$
+    DELETE FROM be_partition_plan WHERE table_name = p_table;
 $$;

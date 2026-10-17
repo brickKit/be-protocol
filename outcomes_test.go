@@ -85,14 +85,18 @@ func TestCallOutcomesVectors(t *testing.T) {
 			Kind, Reason string
 			GRPCCode     string `json:"grpc_code"`
 		}
-		_ = json.Unmarshal(raw, &c)
+		if err := json.Unmarshal(raw, &c); err != nil {
+			t.Fatal(err)
+		}
 		if c.Kind == "reason" {
 			reasons[c.Reason] = c.GRPCCode
 		}
 	}
 	for _, raw := range load(t, "call-outcomes").Cases {
 		var c map[string]any
-		_ = json.Unmarshal(raw, &c)
+		if err := json.Unmarshal(raw, &c); err != nil {
+			t.Fatal(err)
+		}
 		want := refOutcome(t, reasons, c)
 		got := c["expect"].(map[string]any)
 		if !reflect.DeepEqual(want, got) {
@@ -107,7 +111,9 @@ func TestIdempotencyVectors(t *testing.T) {
 			ID, Kind, Key, Principal, Operation, Target, Body, Fingerprint string
 			Valid                                                          bool
 		}
-		_ = json.Unmarshal(raw, &c)
+		if err := json.Unmarshal(raw, &c); err != nil {
+			t.Fatal(err)
+		}
 		switch c.Kind {
 		case "key":
 			valid := len(c.Key) >= 1 && len(c.Key) <= 255
