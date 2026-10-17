@@ -32,7 +32,7 @@
 | 编号 | 层级 | 规则 | 检验 |
 | --- | --- | --- | --- |
 | P5.11 | 必须 | `migrate` 入口以属主角色（`PG_OWNER_USER`）直连数据库（`PG_MIGRATION_HOST`、`PG_MIGRATION_PORT`，未设置时用 `PG_HOST`、`PG_PORT`），连接上 `search_path` 为组件的 schema、`lock_timeout` 3 秒。缺少属主凭据时以 78 退出。`serve` 不解析也不使用属主凭据 | CK-LC-02 |
-| P5.12 | 必须 | 先执行 SDK 自己的迁移（本仓库 `migrations/` 下的文件，状态表 `be_sdk_migrations`），再执行组件的迁移（状态表 `schema_migrations`）；两张状态表都在组件的 schema 里，形状为 `(version bigint primary key, dirty boolean not null)`，与 golang-migrate 相同，所以三种语言的 SDK 读写同一份状态 | CK-DB-05 |
+| P5.12 | 必须 | 先执行 SDK 自己的迁移（本仓库 `migrations/` 下的文件，状态表 `be_sdk_migrations`），再执行组件的迁移（状态表 `schema_migrations`）；两张状态表都在组件的 schema 里，形状为 `(version bigint primary key, dirty boolean not null)`，与 golang-migrate 相同，所以三种语言的 SDK 读写同一份状态 | CK-DB-05、CK-DB-09 |
 | P5.13 | 必须 | 迁移文件名为 `<版本>_<小写下划线标题>.up.sql`，版本是十进制整数，按数值顺序执行；每个文件作为一个事务执行。执行前检查全部文件，不合格时一个也不执行，按向量 `migration-lint` 的规则编号逐条报出 | 向量 `migration-lint` |
 | P5.14 | 必须 | 等锁超时（`55P03`）的那次尝试回滚后重试，最多 5 次；最后一次仍超时时失败，报告阻塞者（进程号、用户、应用名；能看到时加状态、事务时长与语句）。属主角色看不到其他角色会话的语句与状态（需要 `pg_read_all_stats`，不授予），所以只保证进程号、用户与应用名 | CK-DB-06 |
 | P5.15 | 必须 | 本次执行中失败的文件（它的事务已回滚）在迁移锁内把状态退回上一个版本，所以修好后可以直接再跑。开始时发现状态被标记为 dirty（上一次执行在文件中途被中断），不自动处理：失败并写明版本与文件，由人核对后修正状态表 | CK-DB-05 |
@@ -52,8 +52,9 @@
 | 编号 | 层级 | 规则 | 检验 |
 | --- | --- | --- | --- |
 | P5.21 | 必须 | 分区表按一个显式的分区键列（`date` 或 `timestamptz`，业务日期、期间或创建时刻，不从身份推出）做范围分区；按身份去重的表（收件表、幂等记录、身份登记表、消费进度）不分区。按月分区的表在组件自己的迁移中建立后，用 SDK 迁移提供的 `be_declare_monthly_partitions('<表>', <预建月数>)`（1–24，缺省 3）声明，声明时校验表的形状（表名不超过 55 字节，分区名才不会被截断）、写入声明表 `be_partition_plan` 并建好当月起的分区；删除或改名已声明的表的迁移同时调用 `be_undeclare_monthly_partitions('<表>')`，否则维护报错 | CK-DB-08 |
+| CK-DB-09 | 迁移之后从外部看：两张状态表与 SDK 的表都在组件 schema、形状正确；schema 中的对象都属于属主角色；运行角色能使用 schema 与增删改查表，不能在 schema 中建对象；属主建的函数不对 `PUBLIC` 开放执行；两种角色在 `public` 中没有对象 |
 | P5.22 | 必须 | 运行期的预建由 SDK 迁移提供的 `be_maintain_partitions()` 执行：以属主身份运行（`SECURITY DEFINER`，`search_path` 固定为组件 schema 与 `pg_temp`，时区 UTC），为每张声明的表补齐当月到当月加预建月数的分区，名为 `<表>_p<YYYYMM>`、边界为 [月初, 下月初)；先建空表再 `ATTACH PARTITION`；同一 schema 内用事务级咨询锁串行；不做其他任何 DDL。声明表只有属主能写（触发器拒绝其他角色） | CK-DB-08 |
-| P5.23 | 必须 | 函数的执行权由建库与授权脚本授予，迁移不含授权语句：属主建的函数默认不对 `PUBLIC` 开放执行（`ALTER DEFAULT PRIVILEGES FOR ROLE <属主> REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC`），只授予本组件的运行角色（`… IN SCHEMA <schema> GRANT EXECUTE ON FUNCTIONS TO <运行角色>`） | CK-DB-08 |
+| P5.23 | 必须 | 函数的执行权由建库与授权脚本授予，迁移不含授权语句：属主建的函数默认不对 `PUBLIC` 开放执行（`ALTER DEFAULT PRIVILEGES FOR ROLE <属主> REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC`），只授予本组件的运行角色（`… IN SCHEMA <schema> GRANT EXECUTE ON FUNCTIONS TO <运行角色>`） | CK-DB-08、CK-DB-09 |
 | P5.24 | 必须 | 每个有数据库的成员带一个 SDK 自带的 singleton 作业 `be.partitions.maintain`（每小时一次，副作用 `local`）调用维护函数。同名分区的边界不符、已摘除，或新分区与已有分区重叠时，维护失败并告警（作业按失败处理），不跳过、不改动已有分区 | CK-DB-08 |
 
 ## 金额与业务日期
