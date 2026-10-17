@@ -85,3 +85,15 @@ func TestSharedMigrationFiles(t *testing.T) {
 		}
 	}
 }
+
+func TestCronSlotVectorsAreWellFormed(t *testing.T) {
+	for _, raw := range load(t, "cron-slots").Cases {
+		var c struct {
+			ID, Kind, Cron, TZ string
+		}
+		_ = json.Unmarshal(raw, &c)
+		if (c.Kind != "slots" && c.Kind != "materialize") || len(strings.Fields(c.Cron)) != 5 || c.TZ == "" {
+			t.Errorf("%s: kind, a 5-field cron and a time zone are required", c.ID)
+		}
+	}
+}
