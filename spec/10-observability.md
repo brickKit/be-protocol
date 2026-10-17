@@ -8,7 +8,7 @@
 | --- | --- | --- | --- |
 | P10.1 | 必须 | 运行日志写到标准输出，每行一个 JSON 对象（UTF-8），不跨行；外壳中全部成员与外壳自己写同一输出 | CK-OBS-01 |
 | P10.2 | 必须 | 每行至少有：`time`（RFC 3339，UTC，以 `Z` 结尾，至少到毫秒）、`level`（`DEBUG`、`INFO`、`WARN`、`ERROR` 之一）、`msg`（非空）、`component`（组件 ID；外壳自己的行写外壳 ID）、`version`。请求或调用范围内的行另有 `request_id` 与 `trace_id`（32 位小写十六进制） | CK-OBS-01 |
-| P10.3 | 必须 | 每个用户面请求与系统面调用写一行访问日志：`msg` 为 `access`；HTTP 带 `method`、`route`（路由模板，不是实际路径）、`status`、`duration_ms`；gRPC 带 `method`（完整方法名）、`code`（gRPC 码名）、`duration_ms`；级别按 P3.9。平台端点不写 INFO 级的访问日志（P1.7） | CK-OBS-02 |
+| P10.3 | 必须 | 每个用户面请求与系统面调用写一行访问日志：`msg` 为 `access`；HTTP 带 `method`、`route`（路由模板，用 OpenAPI 的写法，例如 `/api/orders/{id}`，不是实际路径）、`status`、`duration_ms`；gRPC 带 `method`（完整方法名）、`code`（gRPC 码名）、`duration_ms`；级别按 P3.9。平台端点不写 INFO 级的访问日志（P1.7） | CK-OBS-02 |
 | P10.4 | 必须 | 日志从不包含凭据与密钥的值：请求的 `Authorization` 头、令牌、密码、密钥文件的内容（P8.3；协议 17 的脱敏） | CK-OBS-03 |
 
 ## 指标
@@ -21,7 +21,7 @@
 
 | 指标族 | 类型 | 标签 | 何时有序列 |
 | --- | --- | --- | --- |
-| `be_http_server_duration_seconds` | 直方图 | `method`、`route`（路由模板）、`status` | 用户面处理过请求之后 |
+| `be_http_server_duration_seconds` | 直方图 | `method`、`route`（路由模板，OpenAPI 写法，与 P10.3 相同）、`status` | 用户面处理过请求之后 |
 | `be_grpc_server_duration_seconds` | 直方图 | `method`（完整方法名）、`code` | 系统面处理过调用之后（有系统面的组件） |
 | `be_outbound_attempts_total` | 计数 | `dependency`（组件 ID）、`surface`（`http`、`grpc`）、`class`（[04](04-calls.md) 的结果分类） | 发起过出站调用之后 |
 | `be_outbound_rejected_total` | 计数 | `dependency`、`surface`、`reason`（没有发出的原因） | 有调用没有发出之后 |
