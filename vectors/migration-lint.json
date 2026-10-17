@@ -1,0 +1,143 @@
+{
+  "topic": "migration-lint",
+  "protocol": "3.0.0-alpha.1",
+  "rules": [
+    "P5.13"
+  ],
+  "description": "Migration files and the refusals of the migrate entry's check. Statements are split on top-level semicolons; comments, string literals and dollar-quoted bodies are not statements of their own; a double-quoted identifier containing a dot is one name. Files are checked in name order, statements in file order, and within one statement the rules in the order listed below. Files not ending in .sql are ignored. Rules: NAME: the file name is not <version>_<lower_snake_title>.up.sql; DOWN: a down migration (production only moves forward); DUP_VERSION: two files with the same version; SET: SET or RESET at the start of a statement; TX_CONTROL: BEGIN, START TRANSACTION, COMMIT, END, ROLLBACK, SAVEPOINT or RELEASE at the start of a statement; GRANT: GRANT, REVOKE or REASSIGN at the start of a statement; ROLE_SCHEMA: CREATE, ALTER or DROP of a ROLE, USER, GROUP or SCHEMA; DEFAULT_PRIVILEGES: ALTER DEFAULT PRIVILEGES; DROP_OWNED: DROP OWNED; OWNER: OWNER TO anywhere in a statement; CONCURRENTLY: CONCURRENTLY anywhere in a statement (cannot run inside the file's transaction); SCHEMA_NAME: the component's own schema name used as a qualifier (\"<schema>.\" or \"\\\"<schema>\\\".\").",
+  "fields": {
+    "schema": "the component's schema",
+    "files": "file name to content",
+    "refused": "expected refusals in order: file and rule"
+  },
+  "cases": [
+    {
+      "id": "plain-structure",
+      "schema": "sales",
+      "files": {
+        "0001_orders.up.sql": "CREATE TABLE orders (id uuid PRIMARY KEY, status text NOT NULL);\nALTER TABLE orders ALTER COLUMN status SET DEFAULT 'draft';\nCREATE INDEX orders_status ON orders (status);"
+      },
+      "refused": []
+    },
+    {
+      "id": "comments-and-literals-ignored",
+      "schema": "sales",
+      "files": {
+        "0001_a.up.sql": "-- SET search_path = x;\n/* GRANT ALL */ CREATE TABLE a (note text DEFAULT 'COMMIT; SET x');\nALTER TABLE a ADD COLUMN \"sales.x\" int;"
+      },
+      "refused": []
+    },
+    {
+      "id": "function-body-is-one-statement",
+      "schema": "sales",
+      "files": {
+        "0001_f.up.sql": "CREATE FUNCTION f() RETURNS void LANGUAGE plpgsql AS $body$\nBEGIN\n  SET LOCAL lock_timeout = '1s';\n  PERFORM 1;\nEND $body$;"
+      },
+      "refused": []
+    },
+    {
+      "id": "session-and-transaction-control",
+      "schema": "sales",
+      "files": {
+        "0001_a.up.sql": "SET search_path = public;\nBEGIN;\nCREATE TABLE a (id int);\nCOMMIT;\nreset all;"
+      },
+      "refused": [
+        {
+          "file": "0001_a.up.sql",
+          "rule": "SET"
+        },
+        {
+          "file": "0001_a.up.sql",
+          "rule": "TX_CONTROL"
+        },
+        {
+          "file": "0001_a.up.sql",
+          "rule": "TX_CONTROL"
+        },
+        {
+          "file": "0001_a.up.sql",
+          "rule": "SET"
+        }
+      ]
+    },
+    {
+      "id": "provisioning-statements",
+      "schema": "sales",
+      "files": {
+        "0001_a.up.sql": "GRANT SELECT ON a TO x;\ncreate role r;\nDROP SCHEMA s;\nALTER DEFAULT PRIVILEGES GRANT SELECT ON TABLES TO x;\nDROP OWNED BY x;\nALTER TABLE a OWNER TO y;"
+      },
+      "refused": [
+        {
+          "file": "0001_a.up.sql",
+          "rule": "GRANT"
+        },
+        {
+          "file": "0001_a.up.sql",
+          "rule": "ROLE_SCHEMA"
+        },
+        {
+          "file": "0001_a.up.sql",
+          "rule": "ROLE_SCHEMA"
+        },
+        {
+          "file": "0001_a.up.sql",
+          "rule": "DEFAULT_PRIVILEGES"
+        },
+        {
+          "file": "0001_a.up.sql",
+          "rule": "DROP_OWNED"
+        },
+        {
+          "file": "0001_a.up.sql",
+          "rule": "OWNER"
+        }
+      ]
+    },
+    {
+      "id": "concurrently-and-own-schema",
+      "schema": "sales",
+      "files": {
+        "0001_a.up.sql": "CREATE INDEX CONCURRENTLY i ON a (id);\nCREATE TABLE sales.b (id int);\nCREATE TABLE \"sales\".c (id int);\nCREATE TABLE wholesales.d (id int);"
+      },
+      "refused": [
+        {
+          "file": "0001_a.up.sql",
+          "rule": "CONCURRENTLY"
+        },
+        {
+          "file": "0001_a.up.sql",
+          "rule": "SCHEMA_NAME"
+        },
+        {
+          "file": "0001_a.up.sql",
+          "rule": "SCHEMA_NAME"
+        }
+      ]
+    },
+    {
+      "id": "file-names",
+      "schema": "sales",
+      "files": {
+        "0001_a.down.sql": "DROP TABLE a;",
+        "2_Bad-Name.up.sql": "SELECT 1;",
+        "0003_x.up.sql": "SELECT 1;",
+        "3_y.up.sql": "SELECT 1;",
+        "README.md": "not a migration"
+      },
+      "refused": [
+        {
+          "file": "0001_a.down.sql",
+          "rule": "DOWN"
+        },
+        {
+          "file": "2_Bad-Name.up.sql",
+          "rule": "NAME"
+        },
+        {
+          "file": "3_y.up.sql",
+          "rule": "DUP_VERSION"
+        }
+      ]
+    }
+  ]
+}

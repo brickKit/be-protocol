@@ -11,9 +11,10 @@
 | `spec/` | 规范，按章编号；每条规则有编号（`P<章>.<序号>`）与层级（必须、应当、内部），见 [阅读说明](spec/00-reading.md) |
 | `vectors/` | 语义向量：JSON，一个文件一个主题；`SHA256SUMS` 记录每个文件的摘要 |
 | `schemas/` | JSON Schema（错误体等） |
+| `migrations/` | SDK 自己的表（单号序列等）的迁移文件：三种语言的 SDK 执行同一份（第 5 章 P5.12） |
 | `ddl/` | 参考 DDL（发件表、收件表、工作项等，随相应章节加入） |
 
-本模块同时是一个 Go 模块（`github.com/brickKit/be-protocol/v3`），用 `embed` 交出 `vectors/` 与 `schemas/`。SDK 按精确版本引用它，在 L1 测试中逐条运行向量；其他语言按同一版本的标签读取这两个目录。
+本模块同时是一个 Go 模块（`github.com/brickKit/be-protocol/v3`），用 `embed` 交出 `vectors/`、`schemas/` 与 `migrations/`。SDK 按精确版本引用它，在 L1 测试中逐条运行向量；其他语言按同一版本的标签读取这些目录。
 
 ## 当前范围
 

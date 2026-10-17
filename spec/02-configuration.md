@@ -33,7 +33,7 @@
 | 编号 | 层级 | 规则 | 检验 |
 | --- | --- | --- | --- |
 | P2.10 | 必须 | 外壳中每个成员的配置按本章独立解析与校验；任何成员不合法时外壳不启动，一次报出全部成员的全部错误，每行带成员组件 ID | CK-SH-01 |
-| P2.11 | 必须 | 下表“进程级”的键在同一外壳的全部成员中必须一致（同一个消息系统、同一组身份与授权地址）；不一致时外壳不启动并点名成员与键。“按目标”的键（数据库）可以不同：同一目标的成员共用一个物理连接池，不同目标各一个（细则随数据库章节加入） | CK-SH-02 |
+| P2.11 | 必须 | 下表“进程级”的键在同一外壳的全部成员中必须一致（同一个消息系统、同一组身份与授权地址）；不一致时外壳不启动并点名成员与键。“按目标”的键（数据库）可以不同：同一目标（`PG_HOST`、`PG_PORT`、`PG_DATABASE` 相同）的成员共用一个物理连接池，不同目标各一个；同一目标的成员其余“按目标”的键必须一致（[05](05-database.md) 的 P5.1、P5.3） | CK-SH-02 |
 
 ## 共享连接键
 
@@ -45,10 +45,18 @@
 | `PG_USER`、`PG_PASSWORD` | string、string | `PG_PASSWORD` 是 | 成员级 | 运行角色的登录凭据（单独运行时直接以它登录） |
 | `PG_SCHEMA` | string | 否 | 成员级 | 组件的 schema（注册表中的名字） |
 | `PG_MIGRATION_HOST`、`PG_MIGRATION_PORT` | string、integer | 否 | 成员级 | 迁移入口直连数据库的地址；未设置时用 `PG_HOST`、`PG_PORT`（迁移绕过连接池代理） |
-| `PG_OWNER_USER`、`PG_OWNER_PASSWORD` | string、string | `PG_OWNER_PASSWORD` 是 | 成员级 | 属主角色；**只有** `migrate` 入口读取，`serve` 读到它是错误（服务进程不使用属主角色） |
+| `PG_OWNER_USER`、`PG_OWNER_PASSWORD` | string、string | `PG_OWNER_PASSWORD` 是 | 成员级 | 属主角色；**只有** `migrate` 入口读取，`serve` 不解析也不使用（服务进程不使用属主角色；凭据在同一容器中可见是已接受的平台限制） |
 | `PG_POOLER_PREPARED` | boolean | 否 | 按目标 | 目标是事务模式的连接池代理、并且代理**不**支持协议层的预编译语句时设为 `false`；缺省 `true`（直连或代理已开启） |
+| `PG_STATEMENT_TIMEOUT`、`PG_LOCK_TIMEOUT`、`PG_IDLE_IN_TX_TIMEOUT` | duration | 否 | 成员级 | 每个事务设置的超时，缺省 `5s`、`2s`、`10s`（[05](05-database.md) 的 P5.6） |
+| `PG_POOL_FOREGROUND`、`PG_POOL_BACKGROUND` | integer | 否 | 成员级 | 成员的连接预算：前台与后台各自最多同时持有的连接，缺省 `8`、`4`（P5.2） |
 | `BUS_URL` | string | 否 | 进程级 | 消息运输；scheme 选择适配器：`nats://` 为 JetStream，`pgqueue://` 为 PostgreSQL 队列（随事件章节加入） |
 | `OTEL_URL` | string | 否 | 进程级 | 遥测的 OTLP/HTTP 导出地址；未设置时不导出（基本观测档只写本地日志与指标）。不用 OpenTelemetry 惯用的 `OTEL_EXPORTER_OTLP_ENDPOINT`：以 `_ENDPOINT` 结尾的键属于平台（P2.3），组件拿不到它的值 |
 | `LOG_LEVEL` | enum（`debug`、`info`、`warn`、`error`） | 否 | 成员级 | 缺省 `info` |
+
+外壳自己的键（写在外壳的配置中，不在成员的配置中）：
+
+| 键 | 类型 | 密钥 | 含义 |
+| --- | --- | --- | --- |
+| `PG_SHELL_USER`、`PG_SHELL_PASSWORD` | string、string | `PG_SHELL_PASSWORD` 是 | 外壳共享池的登录角色（P5.1）；外壳承载的成员中有组件拥有数据库时必填，缺少时外壳不启动 |
 
 身份与授权的地址、对象存储的键随相应章节加入本表。

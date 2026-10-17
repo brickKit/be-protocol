@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the vectors of chapters 02-04 and vectors/SHA256SUMS.
+"""Generate the vectors of chapters 02-05 and vectors/SHA256SUMS.
 
 The scenarios are chosen by hand (edges, transitions); the expected values come from the small reference computations
 below. The Go test (vectors_test.go) recomputes every expectation with an independent implementation, so a slip in
@@ -354,6 +354,96 @@ def config_parse_vectors():
                   "default": "声明的缺省值", "values": "enum 的取值", "expect": "{value} 或 {error}"})
 
 
+# ---------------------------------------------------------------- database (P5.7, P5.8, P5.13)
+def db_errors_vectors():
+    # sqlstate, reason, retried inside the transaction entry
+    rows = [
+        ("40001", "TX_CONFLICT", True, "serialization failure; retried, then TX_CONFLICT"),
+        ("40P01", "TX_CONFLICT", True, "deadlock; retried, then TX_CONFLICT"),
+        ("55P03", "LOCK_TIMEOUT", False, "lock_timeout"),
+        ("57014", "STATEMENT_TIMEOUT", False, "statement_timeout (query canceled)"),
+        ("53300", "DEPENDENCY_UNAVAILABLE", False, "too many connections"),
+        ("57P01", "DEPENDENCY_UNAVAILABLE", False, "admin shutdown"),
+        ("57P02", "DEPENDENCY_UNAVAILABLE", False, "crash shutdown"),
+        ("57P03", "DEPENDENCY_UNAVAILABLE", False, "cannot connect now"),
+        ("23505", "INTERNAL", False, "unique violation the module did not handle"),
+        ("42P01", "INTERNAL", False, "undefined table"),
+        ("connect", "DEPENDENCY_UNAVAILABLE", False, "no connection could be made (not an SQLSTATE)"),
+    ]
+    cases = [{"id": f"db-{state}", "sqlstate": state, "reason": reason, "retried": retried, "note": note}
+             for state, reason, retried, note in rows]
+    write("db-errors", ["P5.7", "P5.8"],
+          "Database errors that reach the transaction entry: which are retried (the whole transaction, at most 3 "
+          "attempts) and which reason each one ends as. 'connect' stands for a failure before any SQLSTATE. A "
+          "DEPENDENCY_UNAVAILABLE carries metadata dependency=db. Errors the module returns itself pass through.",
+          cases, {"sqlstate": "SQLSTATE, or 'connect'", "reason": "reason in domain be",
+                  "retried": "retried inside the transaction entry", "note": "explanation"})
+
+
+LINT_RULES = {
+    "NAME": "the file name is not <version>_<lower_snake_title>.up.sql",
+    "DOWN": "a down migration (production only moves forward)",
+    "DUP_VERSION": "two files with the same version",
+    "SET": "SET or RESET at the start of a statement",
+    "TX_CONTROL": "BEGIN, START TRANSACTION, COMMIT, END, ROLLBACK, SAVEPOINT or RELEASE at the start of a statement",
+    "GRANT": "GRANT, REVOKE or REASSIGN at the start of a statement",
+    "ROLE_SCHEMA": "CREATE, ALTER or DROP of a ROLE, USER, GROUP or SCHEMA",
+    "DEFAULT_PRIVILEGES": "ALTER DEFAULT PRIVILEGES",
+    "DROP_OWNED": "DROP OWNED",
+    "OWNER": "OWNER TO anywhere in a statement",
+    "CONCURRENTLY": "CONCURRENTLY anywhere in a statement (cannot run inside the file's transaction)",
+    "SCHEMA_NAME": "the component's own schema name used as a qualifier (\"<schema>.\" or \"\\\"<schema>\\\".\")",
+}
+
+
+def migration_lint_vectors():
+    cases = [
+        {"id": "plain-structure", "schema": "sales", "files": {
+            "0001_orders.up.sql": "CREATE TABLE orders (id uuid PRIMARY KEY, status text NOT NULL);\n"
+                                  "ALTER TABLE orders ALTER COLUMN status SET DEFAULT 'draft';\n"
+                                  "CREATE INDEX orders_status ON orders (status);"}, "refused": []},
+        {"id": "comments-and-literals-ignored", "schema": "sales", "files": {
+            "0001_a.up.sql": "-- SET search_path = x;\n/* GRANT ALL */ CREATE TABLE a (note text DEFAULT 'COMMIT; SET x');\n"
+                             "ALTER TABLE a ADD COLUMN \"sales.x\" int;"}, "refused": []},
+        {"id": "function-body-is-one-statement", "schema": "sales", "files": {
+            "0001_f.up.sql": "CREATE FUNCTION f() RETURNS void LANGUAGE plpgsql AS $body$\nBEGIN\n  SET LOCAL lock_timeout = '1s';\n"
+                             "  PERFORM 1;\nEND $body$;"}, "refused": []},
+        {"id": "session-and-transaction-control", "schema": "sales", "files": {
+            "0001_a.up.sql": "SET search_path = public;\nBEGIN;\nCREATE TABLE a (id int);\nCOMMIT;\nreset all;"},
+         "refused": [{"file": "0001_a.up.sql", "rule": "SET"}, {"file": "0001_a.up.sql", "rule": "TX_CONTROL"},
+                     {"file": "0001_a.up.sql", "rule": "TX_CONTROL"}, {"file": "0001_a.up.sql", "rule": "SET"}]},
+        {"id": "provisioning-statements", "schema": "sales", "files": {
+            "0001_a.up.sql": "GRANT SELECT ON a TO x;\ncreate role r;\nDROP SCHEMA s;\n"
+                             "ALTER DEFAULT PRIVILEGES GRANT SELECT ON TABLES TO x;\nDROP OWNED BY x;\n"
+                             "ALTER TABLE a OWNER TO y;"},
+         "refused": [{"file": "0001_a.up.sql", "rule": "GRANT"}, {"file": "0001_a.up.sql", "rule": "ROLE_SCHEMA"},
+                     {"file": "0001_a.up.sql", "rule": "ROLE_SCHEMA"},
+                     {"file": "0001_a.up.sql", "rule": "DEFAULT_PRIVILEGES"},
+                     {"file": "0001_a.up.sql", "rule": "DROP_OWNED"}, {"file": "0001_a.up.sql", "rule": "OWNER"}]},
+        {"id": "concurrently-and-own-schema", "schema": "sales", "files": {
+            "0001_a.up.sql": "CREATE INDEX CONCURRENTLY i ON a (id);\nCREATE TABLE sales.b (id int);\n"
+                             "CREATE TABLE \"sales\".c (id int);\nCREATE TABLE wholesales.d (id int);"},
+         "refused": [{"file": "0001_a.up.sql", "rule": "CONCURRENTLY"}, {"file": "0001_a.up.sql", "rule": "SCHEMA_NAME"},
+                     {"file": "0001_a.up.sql", "rule": "SCHEMA_NAME"}]},
+        {"id": "file-names", "schema": "sales", "files": {
+            "0001_a.down.sql": "DROP TABLE a;", "2_Bad-Name.up.sql": "SELECT 1;", "0003_x.up.sql": "SELECT 1;",
+            "3_y.up.sql": "SELECT 1;", "README.md": "not a migration"},
+         "refused": [{"file": "0001_a.down.sql", "rule": "DOWN"}, {"file": "2_Bad-Name.up.sql", "rule": "NAME"},
+                     {"file": "3_y.up.sql", "rule": "DUP_VERSION"}]},
+    ]
+    for c in cases:
+        for r in c["refused"]:
+            assert r["rule"] in LINT_RULES, r
+    write("migration-lint", ["P5.13"],
+          "Migration files and the refusals of the migrate entry's check. Statements are split on top-level semicolons; "
+          "comments, string literals and dollar-quoted bodies are not statements of their own; a double-quoted "
+          "identifier containing a dot is one name. Files are checked in name order, statements in file order, and "
+          "within one statement the rules in the order listed below. Files not ending in .sql are ignored. "
+          "Rules: " + "; ".join(f"{k}: {v}" for k, v in LINT_RULES.items()) + ".",
+          cases, {"schema": "the component's schema", "files": "file name to content",
+                  "refused": "expected refusals in order: file and rule"})
+
+
 def sums():
     lines = []
     for p in sorted(VEC.glob("*.json")):
@@ -369,5 +459,7 @@ if __name__ == "__main__":
     retry_budget_vectors()
     circuit_breaker_vectors()
     config_parse_vectors()
+    db_errors_vectors()
+    migration_lint_vectors()
     sums()
     print("\n".join(sorted(p.name for p in VEC.iterdir())))

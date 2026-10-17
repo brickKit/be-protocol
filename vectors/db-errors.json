@@ -1,0 +1,94 @@
+{
+  "topic": "db-errors",
+  "protocol": "3.0.0-alpha.1",
+  "rules": [
+    "P5.7",
+    "P5.8"
+  ],
+  "description": "Database errors that reach the transaction entry: which are retried (the whole transaction, at most 3 attempts) and which reason each one ends as. 'connect' stands for a failure before any SQLSTATE. A DEPENDENCY_UNAVAILABLE carries metadata dependency=db. Errors the module returns itself pass through.",
+  "fields": {
+    "sqlstate": "SQLSTATE, or 'connect'",
+    "reason": "reason in domain be",
+    "retried": "retried inside the transaction entry",
+    "note": "explanation"
+  },
+  "cases": [
+    {
+      "id": "db-40001",
+      "sqlstate": "40001",
+      "reason": "TX_CONFLICT",
+      "retried": true,
+      "note": "serialization failure; retried, then TX_CONFLICT"
+    },
+    {
+      "id": "db-40P01",
+      "sqlstate": "40P01",
+      "reason": "TX_CONFLICT",
+      "retried": true,
+      "note": "deadlock; retried, then TX_CONFLICT"
+    },
+    {
+      "id": "db-55P03",
+      "sqlstate": "55P03",
+      "reason": "LOCK_TIMEOUT",
+      "retried": false,
+      "note": "lock_timeout"
+    },
+    {
+      "id": "db-57014",
+      "sqlstate": "57014",
+      "reason": "STATEMENT_TIMEOUT",
+      "retried": false,
+      "note": "statement_timeout (query canceled)"
+    },
+    {
+      "id": "db-53300",
+      "sqlstate": "53300",
+      "reason": "DEPENDENCY_UNAVAILABLE",
+      "retried": false,
+      "note": "too many connections"
+    },
+    {
+      "id": "db-57P01",
+      "sqlstate": "57P01",
+      "reason": "DEPENDENCY_UNAVAILABLE",
+      "retried": false,
+      "note": "admin shutdown"
+    },
+    {
+      "id": "db-57P02",
+      "sqlstate": "57P02",
+      "reason": "DEPENDENCY_UNAVAILABLE",
+      "retried": false,
+      "note": "crash shutdown"
+    },
+    {
+      "id": "db-57P03",
+      "sqlstate": "57P03",
+      "reason": "DEPENDENCY_UNAVAILABLE",
+      "retried": false,
+      "note": "cannot connect now"
+    },
+    {
+      "id": "db-23505",
+      "sqlstate": "23505",
+      "reason": "INTERNAL",
+      "retried": false,
+      "note": "unique violation the module did not handle"
+    },
+    {
+      "id": "db-42P01",
+      "sqlstate": "42P01",
+      "reason": "INTERNAL",
+      "retried": false,
+      "note": "undefined table"
+    },
+    {
+      "id": "db-connect",
+      "sqlstate": "connect",
+      "reason": "DEPENDENCY_UNAVAILABLE",
+      "retried": false,
+      "note": "no connection could be made (not an SQLSTATE)"
+    }
+  ]
+}
