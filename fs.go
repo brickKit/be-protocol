@@ -31,7 +31,7 @@ var BusMigrations embed.FS
 var Data embed.FS
 
 // Version is the protocol version this tree describes.
-const Version = "3.0.0-alpha.1"
+const Version = "3.0.0-alpha.2"
 
 // Capabilities is capabilities.json: every rule of spec/ belongs to exactly one capability, and each SDK marks the
 // status of the SDK-owned ones in its own features.json (the feature matrix, protocol 18).
