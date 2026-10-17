@@ -17,6 +17,7 @@ import ch03_errors  # noqa: E402
 import ch04_calls  # noqa: E402
 import ch04_idempotency  # noqa: E402
 import ch05_database  # noqa: E402
+import ch05_money  # noqa: E402
 import ch06_events  # noqa: E402
 import ch07_work  # noqa: E402
 import ch08_authz  # noqa: E402
@@ -40,6 +41,8 @@ if __name__ == "__main__":
     ch07_work.cron_vectors()
     ch05_database.db_errors_vectors()
     ch05_database.migration_lint_vectors()
+    ch05_money.money_vectors()
+    ch05_money.business_date_vectors()
     ch08_canonical.canonical_vectors()
     ch08_authz.segment_eval_vectors()
     ch08_identity.jwt_vectors()

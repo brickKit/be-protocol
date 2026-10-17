@@ -105,7 +105,7 @@ func TestIdempotencyVectors(t *testing.T) {
 	for _, raw := range load(t, "idempotency").Cases {
 		var c struct {
 			ID, Kind, Key, Principal, Operation, Target, Body, Fingerprint string
-			Valid                                                         bool
+			Valid                                                          bool
 		}
 		_ = json.Unmarshal(raw, &c)
 		switch c.Kind {

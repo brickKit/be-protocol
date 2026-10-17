@@ -43,9 +43,9 @@ def idempotency_vectors():
         cases.append({"id": f"fp-{cid}", "kind": "fingerprint", "principal": principal, "operation": op,
                       "target": target, "body": body, "fingerprint": fingerprint(principal, op, target, body)})
     write("idempotency", ["P4.21", "P4.22"],
-          "Idempotency keys: a key is 1-255 visible ASCII characters (0x21-0x7E). The request fingerprint is the "
-          "canonical digest (P8.8) of record type be.idempotency.request, major 1, over principal, operation, target "
-          "and body_sha256 (SHA-256 of the body's raw bytes, here the UTF-8 bytes of 'body', lowercase hex). Bodies "
-          "are compared as bytes: reordered JSON keys are a different request.",
-          cases, {"key": "kind key: the key and whether it is valid",
-                  "fingerprint": "kind fingerprint: the request and its fingerprint"})
+          "命令的幂等键。kind=key：键是否合格（1–255 个可见 ASCII 字符，0x21–0x7E）。kind=fingerprint：请求指纹 = 规范摘要"
+          "（P8.8，记录类型 be.idempotency.request，主版本 1），内容为 principal、operation、target 与 body_sha256"
+          "（请求体原始字节的 SHA-256 小写十六进制；这里取 body 的 UTF-8 字节）；文本先做 NFC。请求体按字节比较，"
+          "换了 JSON 键的顺序就是另一个请求；concat-a 与 concat-b 直接拼接会相同，规范对象不相同。",
+          cases, {"key": "kind=key：键与是否合格",
+                  "fingerprint": "kind=fingerprint：请求与它的指纹"})
