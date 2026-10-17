@@ -25,5 +25,10 @@ var Migrations embed.FS
 //go:embed migrations-bus
 var BusMigrations embed.FS
 
+// Data holds shared data files: data/pinyin.tsv, the readings every SDK uses for search columns (chapter 09).
+//
+//go:embed data
+var Data embed.FS
+
 // Version is the protocol version this tree describes.
 const Version = "3.0.0-alpha.1"

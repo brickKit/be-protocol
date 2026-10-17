@@ -21,6 +21,7 @@ import ch07_work  # noqa: E402
 import ch08_authz  # noqa: E402
 import ch08_canonical  # noqa: E402
 import ch08_identity  # noqa: E402
+import ch09_list  # noqa: E402
 from common import VEC, sums  # noqa: E402
 
 if __name__ == "__main__":
@@ -40,5 +41,8 @@ if __name__ == "__main__":
     ch08_canonical.canonical_vectors()
     ch08_authz.segment_eval_vectors()
     ch08_identity.jwt_vectors()
+    ch09_list.search_vectors()
+    ch09_list.pages_vectors()
+    ch09_list.projection_vectors()
     sums()
     print("\n".join(sorted(p.name for p in VEC.iterdir())))
