@@ -87,6 +87,7 @@
 | `MEMBER_SWITCH_IN_PROGRESS` | `UNAVAILABLE` | 503 | 是 | 授权或身份成员切换中 |
 | `CAPABILITY_UNSUPPORTED` | `UNIMPLEMENTED` | 501 | 否 | 声明了不支持的能力；`metadata.capability` |
 | `RESULT_UNKNOWN` | `DEADLINE_EXCEEDED` | 504 | 查询后再定 | 用变更键或动作键查询，不换键重试 |
+| `AUDIT_CAPACITY_EXHAUSTED` | `UNAVAILABLE` | 503 | 是 | 本地审计表的积压超过容量上限，新的必需审计操作暂停（[08](08-identity-authz-audit.md) 的 P8.23） |
 | `INTERNAL` | `INTERNAL` | 500 | 否 | 任何内部错误；原始错误被隐藏 |
 
 `OUTBOUND_LIMIT` 的 HTTP 状态指定为 503 而不是 429：它表示调用方自己的出站预算用尽，不是被对方限流。

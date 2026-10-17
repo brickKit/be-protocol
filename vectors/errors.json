@@ -405,6 +405,17 @@
       "type": "urn:be:be:RESULT_UNKNOWN"
     },
     {
+      "id": "reason-audit_capacity_exhausted",
+      "kind": "reason",
+      "reason": "AUDIT_CAPACITY_EXHAUSTED",
+      "domain": "be",
+      "grpc_code": "UNAVAILABLE",
+      "http": 503,
+      "retryable": "yes",
+      "log_level": "warn",
+      "type": "urn:be:be:AUDIT_CAPACITY_EXHAUSTED"
+    },
+    {
       "id": "reason-internal",
       "kind": "reason",
       "reason": "INTERNAL",

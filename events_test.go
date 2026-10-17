@@ -68,7 +68,7 @@ func TestEnvelopeVectors(t *testing.T) {
 			"ce-type": e.Type, "ce-time": e.Time, "ce-subject": e.RecordID, "ce-datacontenttype": "application/json",
 			"ce-bestream": e.Stream, "ce-bepartition": strconv.Itoa(e.Partition), "ce-beimpl": e.Impl,
 			"ce-beepoch": strconv.FormatInt(e.Epoch[0], 10) + "." + strconv.FormatInt(e.Epoch[1], 10),
-			"ce-beseq": strconv.FormatInt(e.Seq, 10), "ce-beversion": strconv.FormatInt(e.Version, 10),
+			"ce-beseq":   strconv.FormatInt(e.Seq, 10), "ce-beversion": strconv.FormatInt(e.Version, 10),
 			"ce-beprojection": e.Projection, "ce-bedigest": digest, "ce-behops": strconv.Itoa(e.Hops)}
 		if e.Causation != "" {
 			h["ce-becausation"] = e.Causation
