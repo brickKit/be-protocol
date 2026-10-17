@@ -1,9 +1,14 @@
 package protocol
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"reflect"
 	"testing"
+
+	"golang.org/x/text/unicode/norm"
 )
 
 // refOutcome recomputes the call-outcomes expectations independently of the generator.
@@ -92,6 +97,36 @@ func TestCallOutcomesVectors(t *testing.T) {
 		got := c["expect"].(map[string]any)
 		if !reflect.DeepEqual(want, got) {
 			t.Errorf("%s: %v, recomputed %v", c["id"], got, want)
+		}
+	}
+}
+
+func TestIdempotencyVectors(t *testing.T) {
+	for _, raw := range load(t, "idempotency").Cases {
+		var c struct {
+			ID, Kind, Key, Principal, Operation, Target, Body, Fingerprint string
+			Valid                                                         bool
+		}
+		_ = json.Unmarshal(raw, &c)
+		switch c.Kind {
+		case "key":
+			valid := len(c.Key) >= 1 && len(c.Key) <= 255
+			for i := 0; i < len(c.Key); i++ {
+				valid = valid && c.Key[i] >= 0x21 && c.Key[i] <= 0x7e
+			}
+			if valid != c.Valid {
+				t.Errorf("%s: valid %v, the vector says %v", c.ID, valid, c.Valid)
+			}
+		case "fingerprint":
+			sum := sha256.Sum256([]byte(c.Body))
+			var buf bytes.Buffer
+			refCanonical(&buf, map[string]any{"principal": norm.NFC.String(c.Principal), "operation": norm.NFC.String(c.Operation),
+				"target": norm.NFC.String(c.Target), "body_sha256": hex.EncodeToString(sum[:])})
+			if got := refDigest("be.idempotency.request", 1, buf.Bytes()); got != c.Fingerprint {
+				t.Errorf("%s: fingerprint %s, the vector says %s", c.ID, got, c.Fingerprint)
+			}
+		default:
+			t.Errorf("%s: unknown kind %q", c.ID, c.Kind)
 		}
 	}
 }

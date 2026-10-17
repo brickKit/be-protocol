@@ -15,6 +15,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent / "vectors"))
 import ch02_config  # noqa: E402
 import ch03_errors  # noqa: E402
 import ch04_calls  # noqa: E402
+import ch04_idempotency  # noqa: E402
 import ch05_database  # noqa: E402
 import ch06_events  # noqa: E402
 import ch07_work  # noqa: E402
@@ -33,6 +34,7 @@ if __name__ == "__main__":
     ch04_calls.circuit_breaker_vectors()
     ch02_config.config_parse_vectors()
     ch04_calls.call_outcomes_vectors()
+    ch04_idempotency.idempotency_vectors()
     ch06_events.partition_vectors()
     ch06_events.envelope_vectors()
     ch07_work.cron_vectors()
