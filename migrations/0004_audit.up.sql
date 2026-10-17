@@ -38,12 +38,17 @@ CREATE TABLE be_audit_counter (
 );
 INSERT INTO be_audit_counter (single) VALUES (true);
 
--- denial details per principal, reason and minute; past the budget one summary row counts the rest (P8.23)
+-- denial details per principal, reason and minute (P8.23): within the budget each denial is its own row; past it
+-- the window only counts here, and once the minute is over one summary row with the count is appended
 CREATE TABLE be_audit_denial_budget (
     principal  text NOT NULL,
     reason     text NOT NULL,
     minute     timestamptz NOT NULL,
     detailed   integer NOT NULL DEFAULT 0,
-    summary_id uuid,
+    overflow   integer NOT NULL DEFAULT 0,
+    first_at   timestamptz,
+    last_at    timestamptz,
+    summarized boolean NOT NULL DEFAULT false,
     PRIMARY KEY (principal, reason, minute)
 );
+CREATE INDEX be_audit_denial_unsummarized ON be_audit_denial_budget (minute) WHERE overflow > 0 AND NOT summarized;
