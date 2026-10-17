@@ -12,10 +12,11 @@
 | `vectors/` | 语义向量：JSON，一个文件一个主题；`SHA256SUMS` 记录每个文件的摘要 |
 | `schemas/` | JSON Schema（错误体等） |
 | `migrations/` | SDK 自己的表与函数（单号序列、发件表与纪元、工作项、审计、投影、按月分区）的迁移文件：三种语言的 SDK 执行同一份（第 5 章 P5.12） |
+| `capabilities.json` | 能力清单：每条规则归入恰好一项能力；各 SDK 的 `features.json` 按它标出状态（功能矩阵，见[阅读说明](spec/00-reading.md#能力清单与功能矩阵)） |
 | `data/` | 共享数据：`pinyin.tsv`（搜索列用的每字首选读音，第 9 章 P9.6；来源与许可见 `PINYIN-LICENSE`） |
 | `migrations-bus/` | PostgreSQL 队列运输的表，建在总线库自己的 schema（第 6 章 P6.23） |
 
-本模块同时是一个 Go 模块（`github.com/brickKit/be-protocol/v3`），用 `embed` 交出 `vectors/`、`schemas/`、`migrations/`、`migrations-bus/` 与 `data/`。SDK 按精确版本引用它，在 L1 测试中逐条运行向量；其他语言按同一版本的标签读取这些目录。
+本模块同时是一个 Go 模块（`github.com/brickKit/be-protocol/v3`），用 `embed` 交出 `vectors/`、`schemas/`、`migrations/`、`migrations-bus/`、`data/` 与 `capabilities.json`。SDK 按精确版本引用它，在 L1 测试中逐条运行向量；其他语言按同一版本的标签读取这些目录。
 
 ## 当前范围
 
