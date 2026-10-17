@@ -49,7 +49,8 @@
 | `PG_POOLER_PREPARED` | boolean | 否 | 按目标 | 目标是事务模式的连接池代理、并且代理**不**支持协议层的预编译语句时设为 `false`；缺省 `true`（直连或代理已开启） |
 | `PG_STATEMENT_TIMEOUT`、`PG_LOCK_TIMEOUT`、`PG_IDLE_IN_TX_TIMEOUT` | duration | 否 | 成员级 | 每个事务设置的超时，缺省 `5s`、`2s`、`10s`（[05](05-database.md) 的 P5.6） |
 | `PG_POOL_FOREGROUND`、`PG_POOL_BACKGROUND` | integer | 否 | 成员级 | 成员的连接预算：前台与后台各自最多同时持有的连接，缺省 `8`、`4`（P5.2） |
-| `BUS_URL` | string | 否 | 进程级 | 消息运输；scheme 选择适配器：`nats://` 为 JetStream，`pgqueue://` 为 PostgreSQL 队列（随事件章节加入） |
+| `BUS_URL` | string | 否 | 进程级 | 消息运输；scheme 选择适配器：`nats://` 为 JetStream，`pgqueue://` 为 PostgreSQL 队列（[06](06-events.md) 的 P6.16）；产生或订阅事件的组件必填 |
+| `IMPLEMENTATION_INSTANCE` | string（UUID） | 否 | 成员级 | 实现实例：安装时生成的随机身份，事件与读取响应用它声明来源（P6.9）；产生事件的组件必填 |
 | `OTEL_URL` | string | 否 | 进程级 | 遥测的 OTLP/HTTP 导出地址；未设置时不导出（基本观测档只写本地日志与指标）。不用 OpenTelemetry 惯用的 `OTEL_EXPORTER_OTLP_ENDPOINT`：以 `_ENDPOINT` 结尾的键属于平台（P2.3），组件拿不到它的值 |
 | `LOG_LEVEL` | enum（`debug`、`info`、`warn`、`error`） | 否 | 成员级 | 缺省 `info` |
 
