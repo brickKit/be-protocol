@@ -55,6 +55,9 @@
 | `IAM_ISSUER`、`IAM_JWKS_URL` | string、string | 否 | 进程级 | 身份成员的签发方与公钥地址（P8.1、P8.2）；有受保护路由的组件必填 |
 | `AUTHZ_GRPC_URL` | string | 否 | 进程级 | 授权成员的系统面地址（`$endpoint:` 引用，P8.9）；有受保护路由的组件必填 |
 | `SERVICE_TLS_CERT_FILE`、`SERVICE_TLS_KEY_FILE`、`SERVICE_TLS_CA_FILE` | string | 否 | 成员级 | 服务身份的证书、私钥与部署的信任根文件（P8.5），按文件重读；有受保护路由、系统面或系统调用的组件必填 |
+| `OBJECT_STORE_URL`、`OBJECT_STORE_REGION` | string、string | 否 | 成员级 | 对象存储的 S3 接口地址与区域（缺省 `us-east-1`）；SDK 的存储端口用它，组件代码不读对象存储产品专属的配置（装配项目协议 12、D53）。载荷可能超过 64 KiB 的事件生产者必填（[06](06-events.md) 的 P6.14） |
+| `OBJECT_STORE_BUCKET`、`OBJECT_STORE_PREFIX` | string、string | 否 | 成员级 | 属主组件自己的桶，与桶内属于它的前缀（独占一个桶时为空）；凭据只能访问它们（协议 12） |
+| `OBJECT_STORE_ACCESS_KEY`、`OBJECT_STORE_SECRET_KEY` | string、string | `OBJECT_STORE_SECRET_KEY` 是 | 成员级 | 属主组件自己的存储凭据，由装配时的初始化创建 |
 | `OTEL_URL` | string | 否 | 进程级 | 遥测的 OTLP/HTTP 导出地址；未设置时不导出（基本观测档只写本地日志与指标）。不用 OpenTelemetry 惯用的 `OTEL_EXPORTER_OTLP_ENDPOINT`：以 `_ENDPOINT` 结尾的键属于平台（P2.3），组件拿不到它的值 |
 | `LOG_LEVEL` | enum（`debug`、`info`、`warn`、`error`） | 否 | 成员级 | 缺省 `info` |
 
@@ -64,4 +67,4 @@
 | --- | --- | --- | --- |
 | `PG_SHELL_USER`、`PG_SHELL_PASSWORD` | string、string | `PG_SHELL_PASSWORD` 是 | 外壳共享池的登录角色（P5.1）；外壳承载的成员中有组件拥有数据库时必填，缺少时外壳不启动 |
 
-身份与授权的地址、对象存储的键随相应章节加入本表。
+附件组件的存储端口（上传会话、预签名上传、复制到最终键）随附件组件加入。
