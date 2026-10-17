@@ -1,5 +1,0 @@
-lifecycle: v1
-tables:
-  movements:
-    class: ledger
-    pii: [operator_phone]
