@@ -48,7 +48,7 @@
 | `PG_OWNER_USER`、`PG_OWNER_PASSWORD` | string、string | `PG_OWNER_PASSWORD` 是 | 成员级 | 属主角色；**只有** `migrate` 入口读取，`serve` 读到它是错误（服务进程不使用属主角色） |
 | `PG_POOLER_PREPARED` | boolean | 否 | 按目标 | 目标是事务模式的连接池代理、并且代理**不**支持协议层的预编译语句时设为 `false`；缺省 `true`（直连或代理已开启） |
 | `BUS_URL` | string | 否 | 进程级 | 消息运输；scheme 选择适配器：`nats://` 为 JetStream，`pgqueue://` 为 PostgreSQL 队列（随事件章节加入） |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | string | 否 | 进程级 | 遥测导出地址；未设置时不导出（基本观测档只写本地日志与指标） |
+| `OTEL_URL` | string | 否 | 进程级 | 遥测的 OTLP/HTTP 导出地址；未设置时不导出（基本观测档只写本地日志与指标）。不用 OpenTelemetry 惯用的 `OTEL_EXPORTER_OTLP_ENDPOINT`：以 `_ENDPOINT` 结尾的键属于平台（P2.3），组件拿不到它的值 |
 | `LOG_LEVEL` | enum（`debug`、`info`、`warn`、`error`） | 否 | 成员级 | 缺省 `info` |
 
 身份与授权的地址、对象存储的键随相应章节加入本表。
