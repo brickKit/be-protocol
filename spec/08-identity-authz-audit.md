@@ -15,7 +15,7 @@
 | 编号 | 层级 | 规则 | 检验 |
 | --- | --- | --- | --- |
 | P8.4 | 必须 | 每条路由与每个系统方法声明唯一的调用模式：用户面 `user`（缺省）、`public`（显式声明，不返回受保护数据）、`service_proxy`（已认证的服务代表用户，同时转发原用户凭据）；系统面 `system`。模式不按“有没有某个头”猜。用户凭据不能调用系统方法，服务凭据不能代替用户访问用户面 | CK-ID-03 |
-| P8.5 | 必须 | 服务身份用部署的 mTLS：证书由部署的信任根签发，URI SAN 为 `spiffe://<部署身份>/component/<组件 ID>`；配置键 `SERVICE_TLS_CERT_FILE`、`SERVICE_TLS_KEY_FILE`、`SERVICE_TLS_CA_FILE`（成员级，文件可轮换，按文件重读）。系统面只接受带合格客户端证书的连接；客户端也核对服务端证书的身份就是目标组件。不退回明文 | CK-ID-04 |
+| P8.5 | 必须 | 服务身份用部署的 mTLS：证书由部署的信任根签发，URI SAN 为 `spiffe://<部署身份>/component/<组件 ID>`，同时带由它派生的 DNS SAN `<组件 ID 中的 / 换成 .>.component.<部署身份>`（例如 `infra.authz.component.<部署身份>`；有的 gRPC 实现的客户端只能按主机名核对服务端，用这个名字核对，与按 URI 核对等价）；成员加载证书时两者都核对；配置键 `SERVICE_TLS_CERT_FILE`、`SERVICE_TLS_KEY_FILE`、`SERVICE_TLS_CA_FILE`（成员级，文件可轮换，按文件重读）。系统面只接受带合格客户端证书的连接；客户端也核对服务端证书的身份就是目标组件。不退回明文 | CK-ID-04 |
 | P8.6 | 必须 | 系统方法声明允许调用它的组件；调用者不在其中答 `PERMISSION_DENIED`。请求里的 `be-caller` 之类的标签至多与证书身份核对，不能代替它 | CK-ID-04 |
 
 ## 资源与操作的声明
