@@ -48,7 +48,7 @@
 ```json
 {
   "topic": "outbound-timeout",
-  "protocol": "3.0.0-alpha.6",
+  "protocol": "3.0.0-alpha.7",
   "rules": ["P4.3"],
   "description": "…",
   "cases": [ { "id": "…", "…": "…" } ]
