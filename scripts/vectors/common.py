@@ -4,7 +4,7 @@ import json
 import pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-PROTOCOL = "3.0.0-alpha.2"
+PROTOCOL = "3.0.0-alpha.3"
 VEC = ROOT / "vectors"
 
 

@@ -49,6 +49,7 @@
 | P4.18 | 必须 | **转述**：依赖答的 `DEPENDENCY_UNAVAILABLE`、`CIRCUIT_OPEN`、`DEADLINE_BUDGET_EXHAUSTED`、`RESULT_UNKNOWN`（`domain` 为 `be`）说的是它更下游的情况，下面一层已经按自己的预算重试过：不重试、不计入熔断、不改变重试预算，原样向上传。这样故障注入下整条调用链只有一层重试 | 向量 `call-outcomes` |
 | P4.19 | 必须 | 一次调用最终失败时，调用方向它自己的调用方答：依赖自己不可用或连接失败 → `DEPENDENCY_UNAVAILABLE`；尝试超时或依赖答 `DEADLINE_EXCEEDED` → 幂等方法 `DEADLINE_EXCEEDED`、非幂等方法 `RESULT_UNKNOWN`（结果要先查询）；以上都带 `metadata` `dependency=<依赖的组件 ID>`。发出之前就拒绝的 `DEADLINE_BUDGET_EXHAUSTED`、`OUTBOUND_LIMIT`、`CIRCUIT_OPEN` 同样带它。业务错误与转述原样（P3.3）；调用方自己被取消 → `REQUEST_CANCELLED` | 向量 `call-outcomes` |
 | P4.20 | 内部 | 事务内不发出调用：SDK 的客户端在事务内拒绝，答 `INTERNAL`，日志写 `NETWORK_IN_TX`（[05](05-database.md) 的 P5.9） | SDK 测试 |
+| P4.26 | 必须 | 不构成依赖边的调用（授权、身份的地址；由部署组合的组件链，例如验收探针的“下一个”）：组件声明一个配置键，部署用 `$endpoint:` 引用填入另一个组件的地址（主端口或 `:grpc`）；运行时按“组件 ID + 这个地址”给出与依赖相同的客户端（同一份调用策略，限流、熔断与预算按组件 ID 计，系统面同样只走 mTLS）。地址不进启动顺序，可以成环 | SDK 测试 |
 
 ## 命令的幂等键
 
