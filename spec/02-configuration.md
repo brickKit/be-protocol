@@ -51,6 +51,7 @@
 | `PG_POOL_FOREGROUND`、`PG_POOL_BACKGROUND` | integer | 否 | 成员级 | 成员的连接预算：前台与后台各自最多同时持有的连接，缺省 `8`、`4`（P5.2） |
 | `BUS_URL` | string | 否 | 进程级 | 消息运输；scheme 选择适配器：`nats://` 为 JetStream，`pgqueue://` 为 PostgreSQL 队列（[06](06-events.md) 的 P6.16）；产生或订阅事件的组件必填 |
 | `IMPLEMENTATION_INSTANCE` | string（UUID） | 否 | 成员级 | 实现实例：安装时生成的随机身份，事件与读取响应用它声明来源（P6.9）；产生事件的组件必填 |
+| `BUS_SUBSCRIPTION_CONCURRENCY` | integer（1–64） | 否 | 成员级 | 这个成员的每个订阅同时处理的消息条数（[06](06-events.md) 的 P6.31）；未设置时用组件在订阅声明里给的值，再缺省为 1；组件声明为按顺序处理的订阅不受它影响；订阅事件的组件才有 |
 | `DEPLOYMENT_ID` | string（UUID） | 否 | 进程级 | 部署身份：用户凭据的受众 `be:deployment:<它>`、服务证书的信任域（[08](08-identity-authz-audit.md) 的 P8.2、P8.5）；有受保护路由或系统面的组件必填 |
 | `IAM_ISSUER`、`IAM_JWKS_URL` | string、string | 否 | 进程级 | 身份成员的签发方与公钥地址（P8.1、P8.2）；有受保护路由的组件必填 |
 | `AUTHZ_GRPC_URL` | string | 否 | 进程级 | 授权成员的系统面地址（`$endpoint:` 引用，P8.9）；有受保护路由的组件必填 |
