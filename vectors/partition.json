@@ -1,6 +1,6 @@
 {
   "topic": "partition",
-  "protocol": "3.0.0-alpha.16",
+  "protocol": "3.0.0-alpha.17",
   "rules": [
     "P6.1"
   ],
