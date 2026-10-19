@@ -16,6 +16,7 @@
 | 编号 | 层级 | 规则 | 检验 |
 | --- | --- | --- | --- |
 | P5.5 | 必须 | 模块只经运行时的事务入口访问数据库。每个事务开始时在事务内设置：角色（成员的运行角色）、`search_path`（成员的 schema）、`statement_timeout`、`lock_timeout`、`idle_in_transaction_session_timeout`、`application_name`（成员的组件 ID）；全部用事务级设置（`SET LOCAL` 或 `set_config(…, true)`），事务结束后连接上不留下任何设置 | CK-DB-03 |
+| P5.30 | 应当 | 运行时的事务入口拒绝会把状态留在池中连接上的语句，报错而不执行：不带 `LOCAL` 的 `SET`（`SET TRANSACTION`、`SET CONSTRAINTS` 只作用于本事务，除外）、`RESET`、`DISCARD`、`LISTEN`、`UNLISTEN`、会话级的咨询锁（`pg_advisory_lock`、`pg_try_advisory_lock` 及其共享版本；事务级的 `pg_advisory_xact_lock` 允许）。违规在写错的那一刻暴露，不靠连接归还时的会话重置悄悄清掉；也因此连接归还连接池时不做会话重置。Python 的 asyncpg 默认在每次归还时执行一组重置语句，短事务每个多一次往返，实测占 PostgreSQL 每个短事务约 27% 的 CPU | SDK 测试 |
 | P5.6 | 必须 | 超时取成员的配置，缺省：语句 5 秒（`PG_STATEMENT_TIMEOUT`）、锁等待 2 秒（`PG_LOCK_TIMEOUT`）、事务内空闲 10 秒（`PG_IDLE_IN_TX_TIMEOUT`）。超时从不按角色设置（`SET ROLE` 之后 PostgreSQL 不应用角色级设置）；单个事务可以声明更长的语句超时（报表、后台） | CK-DB-03 |
 | P5.7 | 必须 | 隔离级别缺省读已提交，事务可以声明可串行化。只有 SQLSTATE `40001` 与 `40P01` 重试，重做整个事务，每个事务最多 3 次尝试；其他错误不重试 | 向量 `db-errors` |
 | P5.8 | 必须 | 数据库错误按向量 `db-errors` 映射成原因（[03](03-errors.md)）；模块自己返回的错误原样传出 | 向量 `db-errors` |
