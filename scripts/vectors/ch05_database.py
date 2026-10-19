@@ -39,6 +39,10 @@ LINT_RULES = {
     "DROP_OWNED": "DROP OWNED",
     "OWNER": "语句中任何位置的 OWNER TO",
     "CONCURRENTLY": "语句中任何位置的 CONCURRENTLY（不能在文件的事务中执行）",
+    "SESSION_IN_BODY": "以 CREATE [OR REPLACE] FUNCTION、CREATE [OR REPLACE] PROCEDURE 或 DO 开头的语句，其美元引号正文（去掉注释）"
+                       "里有会留在连接上的会话状态：在正文开头、分号之后或 BEGIN、DECLARE、THEN、ELSE、LOOP 之后紧接着的 "
+                       "SET（下一个词不是 LOCAL、TRANSACTION、CONSTRAINTS）或 RESET；set_config(参数, 参数, false)，参数是单引号字面量"
+                       "或 $n；pg_advisory_lock 或 pg_try_advisory_lock（含共享版本）。动态 EXECUTE 的字符串不检查",
     "SCHEMA_NAME": "用组件自己的 schema 名限定名字（<schema>. 或带双引号的 \"<schema>\".）",
 }
 
@@ -72,6 +76,19 @@ def migration_lint_vectors():
                              "CREATE TABLE \"sales\".c (id int);\nCREATE TABLE wholesales.d (id int);"},
          "refused": [{"file": "0001_a.up.sql", "rule": "CONCURRENTLY"}, {"file": "0001_a.up.sql", "rule": "SCHEMA_NAME"},
                      {"file": "0001_a.up.sql", "rule": "SCHEMA_NAME"}]},
+        {"id": "session-state-in-function-and-do-bodies", "schema": "sales", "files": {
+            "0001_a.up.sql": "CREATE FUNCTION a() RETURNS void LANGUAGE plpgsql AS $$ BEGIN SET search_path = x; END $$;\n"
+                             "CREATE OR REPLACE FUNCTION b() RETURNS void LANGUAGE plpgsql AS $f$\nBEGIN\n"
+                             "  PERFORM set_config('TimeZone', 'Asia/Tokyo', false);\nEND $f$;\n"
+                             "CREATE PROCEDURE c() LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_advisory_lock(1); END $$;\n"
+                             "DO $$ BEGIN RESET ALL; END $$;\n"
+                             "CREATE FUNCTION d() RETURNS void LANGUAGE plpgsql AS $$\nBEGIN\n"
+                             "  -- SET search_path = commented_out;\n  SET LOCAL lock_timeout = '1s';\n  UPDATE t SET a = 1;\n"
+                             "  PERFORM set_config('x.y', 'z', true);\n  PERFORM pg_advisory_xact_lock(1);\nEND $$;\n"
+                             "CREATE FUNCTION e() RETURNS int LANGUAGE sql SET search_path = public AS $$ SELECT 1 $$;\n"
+                             "INSERT INTO notes (body) VALUES ($$BEGIN SET x = 1$$);"},
+         "refused": [{"file": "0001_a.up.sql", "rule": "SESSION_IN_BODY"}, {"file": "0001_a.up.sql", "rule": "SESSION_IN_BODY"},
+                     {"file": "0001_a.up.sql", "rule": "SESSION_IN_BODY"}, {"file": "0001_a.up.sql", "rule": "SESSION_IN_BODY"}]},
         {"id": "file-names", "schema": "sales", "files": {
             "0001_a.down.sql": "DROP TABLE a;", "2_Bad-Name.up.sql": "SELECT 1;", "0003_x.up.sql": "SELECT 1;",
             "3_y.up.sql": "SELECT 1;", "README.md": "not a migration"},
@@ -81,7 +98,7 @@ def migration_lint_vectors():
     for c in cases:
         for r in c["refused"]:
             assert r["rule"] in LINT_RULES, r
-    write("migration-lint", ["P5.13"],
+    write("migration-lint", ["P5.13", "P5.31"],
           "迁移文件与迁移入口检查的拒绝项。语句按顶层分号切分；注释、字符串字面量与美元引号包起来的正文不单独算语句；"
           "含点号的双引号标识符是一个名字。文件按名字排序检查，语句按文件中的顺序，同一语句内按下面规则列出的顺序。"
           "不以 .sql 结尾的文件忽略。规则：" + "；".join(f"{k}: {v}" for k, v in LINT_RULES.items()) + "。",
