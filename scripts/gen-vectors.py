@@ -20,9 +20,11 @@ import ch05_database  # noqa: E402
 import ch05_money  # noqa: E402
 import ch06_events  # noqa: E402
 import ch07_work  # noqa: E402
+import ch08_audit  # noqa: E402
 import ch08_authz  # noqa: E402
 import ch08_canonical  # noqa: E402
 import ch08_identity  # noqa: E402
+import ch08_view  # noqa: E402
 import ch09_list  # noqa: E402
 from common import VEC, sums  # noqa: E402
 
@@ -46,6 +48,8 @@ if __name__ == "__main__":
     ch08_canonical.canonical_vectors()
     ch08_authz.segment_eval_vectors()
     ch08_identity.jwt_vectors()
+    ch08_view.view_accept_vectors()
+    ch08_audit.audit_purge_vectors()
     ch09_list.search_vectors()
     ch09_list.pages_vectors()
     ch09_list.projection_vectors()
