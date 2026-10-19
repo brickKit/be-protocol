@@ -58,6 +58,14 @@ DENIAL = {"id": REC, "occurred_at": "2026-10-19T08:00:00.000000Z", "category": "
           "operation": "demo.order.read", "outcome": "denied", "reason": "PERMISSION_DENIED", "actor": "test/probe-go"}
 
 
+ACCOUNT = {**envelope("be.security.account_status", "infra/iam-casdoor", USER,
+                      rev("infra.iam.account_status", "3", "1.1", "iam-inst-a")),
+           "account": {"deployment": DEP, "kind": "user", "id": USER}, "status": "disabled", "security_mark": "compromised"}
+
+DEFINITION_SET = {"component": "demo/order", "version": "3.0.0",
+                  "definitions": sorted(["sha256:" + "a" * 64, "sha256:" + "b" * 64])}
+
+
 def with_(record, **changes):
     r = dict(record)
     for k, v in changes.items():
@@ -77,6 +85,8 @@ def records_vectors():
         ("audit-record", "be.audit.record", AUDIT),
         ("audit-denial", "be.audit.record", DENIAL),
         ("resource-no-dimensions", "be.security.resource_definition", with_(RESOURCE, dimensions={})),
+        ("account-status", "be.security.account_status", ACCOUNT),
+        ("definition-set", "be.security.definition_set", DEFINITION_SET),
     ]
     bad = [
         ("view-no-applicability", "be.security.view", with_(VIEW, applicability=None), "缺必填字段"),
@@ -103,6 +113,9 @@ def records_vectors():
         ("atom-unknown-kind", "be.security.segment",
          with_(SEGMENT, atoms={"legal_entity": {"kind": "any"}, "owner": {"kind": "self"}}), "未知的原子种类"),
         ("audit-outcome", "be.audit.record", with_(AUDIT, outcome="ok"), "未知的结果"),
+        ("account-status-unknown", "be.security.account_status", with_(ACCOUNT, status="locked"), "未知的账号状态"),
+        ("definition-set-not-digest", "be.security.definition_set", with_(DEFINITION_SET, definitions=["abc"]),
+         "集合里只能是摘要"),
     ]
     cases = []
     for cid, rt, rec in good:
