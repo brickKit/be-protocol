@@ -57,7 +57,7 @@
 | --- | --- | --- | --- |
 | P4.21 | 必须 | 有副作用的命令在契约中声明是否要求幂等键（P4.2 的头）；要求而缺少、或键不是 1–255 个可见 ASCII 字符（0x21–0x7E）时答 `REQUEST_INVALID`（字段 `Idempotency-Key`）。键的作用域是调用主体：用户面为凭据的 `sub`，系统面为调用组件的服务身份；不同主体的同一个键互不相干 | 向量 `idempotency`、CK-IDEM-01 |
 | P4.22 | 必须 | 请求指纹 = 规范摘要（[08](08-identity-authz-audit.md) 的 P8.8，记录类型 `be.idempotency.request`，主版本 1），内容为主体、操作、目标、`body_sha256`：目标在 HTTP 为“方法 空格 路径”（带原样的查询串），在 gRPC 为完整方法名；`body_sha256` 是请求体原始字节（gRPC 为消息的确定性序列化）的 SHA-256 小写十六进制。请求体按字节比较，换了键的顺序就是另一个请求 | 向量 `idempotency` |
-| P4.23 | 必须 | 认领、业务写入与结果在同一个本地事务中：以原子插入认领（主体，键）（`INSERT … ON CONFLICT DO NOTHING`）；已存在且指纹相同时不再执行，返回保存的结果；指纹不同答 `IDEMPOTENCY_KEY_REUSED`；同一键的第一次使用尚未提交、等它超过锁等待时限时答 `IDEMPOTENCY_IN_PROGRESS`（可重试）。命令失败（事务回滚）不留认领，同一键可以再试 | CK-IDEM-02 |
+| P4.23 | 必须 | 认领、业务写入与结果在同一个本地事务中：以原子插入认领（主体，键）（`INSERT … ON CONFLICT (principal, key) DO UPDATE … WHERE expires_at <= now()`：冲突时只接管已过期的记录，仍有效的不动，P4.25）；已存在且指纹相同时不再执行，返回保存的结果；指纹不同答 `IDEMPOTENCY_KEY_REUSED`；同一键的第一次使用尚未提交、等它超过锁等待时限时答 `IDEMPOTENCY_IN_PROGRESS`（可重试）。命令失败（事务回滚）不留认领，同一键可以再试 | CK-IDEM-02 |
 | P4.24 | 必须 | 保存的结果是命令的决定（状态码与结果，例如记录身份或过程身份与状态），不是渲染好的响应；重放时组件按调用者**当前**的授权重新读取、裁剪后回答（事务与消息的“返回旧结果前重新验证”） | CK-IDEM-03 |
 | P4.25 | 必须 | 认领表 `be_idempotency` 在组件 schema（本仓库 `migrations/0007_idempotency.up.sql`），不分区；记录保留 24 小时（装配项目协议 10 的参数），由 SDK 自带的 singleton 作业 `be.idempotency.cleanup`（每小时）删除过期行；过期而还没删除的记录按不存在处理，同一个键重新认领。长期的去重落在业务的唯一约束上（过程身份、分支身份、事实身份），不依赖这张表 | CK-IDEM-04 |
 
