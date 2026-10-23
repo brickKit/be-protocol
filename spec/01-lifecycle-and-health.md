@@ -18,7 +18,7 @@
 | 编号 | 层级 | 规则 | 检验 |
 | --- | --- | --- | --- |
 | P1.5 | 必须 | `GET` 与 `HEAD` `/healthz`（用户面端口）在进程存活期间回答 200，正文为空或 `ok`；**从不**检查数据库、消息系统、授权或其他组件；“启动中”“停止中”也回答 200 | CK-LC-05 |
-| P1.6 | 必须 | `GET` `/readyz` 在“就绪”时回答 200；其余状态回答 503 与错误对象（reason `NOT_READY`，[03](03-errors.md)），`metadata.state` 写当前状态（`starting`、`recovery_ready`、`stopping`）。外壳的 `/readyz` 在全部成员就绪后回答 200，否则 `metadata.waiting` 列出还在等的成员组件 ID（逗号分隔） | CK-LC-06 |
+| P1.6 | 必须 | `GET` 与 `HEAD` `/readyz` 在“就绪”时回答 200（探针可能用 `HEAD`，例如 GNU wget 的 `--spider`；RFC 9110 要求通用服务器在支持 `GET` 的地方支持 `HEAD`）；其余状态回答 503 与错误对象（reason `NOT_READY`，[03](03-errors.md)），`metadata.state` 写当前状态（`starting`、`recovery_ready`、`stopping`）。外壳的 `/readyz` 在全部成员就绪后回答 200，否则 `metadata.waiting` 列出还在等的成员组件 ID（逗号分隔） | CK-LC-06 |
 | P1.7 | 必须 | `/healthz`、`/readyz` 与自描述端点不经过认证、授权与限流，不写访问日志的 INFO 行（只计数） | CK-LC-07 |
 | P1.8 | 必须 | `GET` `/.well-known/be-component` 回答 JSON：`component_id`、`version`、`protocol`（本协议版本）、`sdk`（实现名与版本，非官方语言写自己的）、`capabilities`（声明的能力名列表，安全 09b）。外壳回答外壳自己的，另加 `members`：每个成员的同样字段 | CK-LC-08 |
 
