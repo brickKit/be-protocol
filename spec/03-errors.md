@@ -85,6 +85,7 @@
 | `AUTHORIZATION_VIEW_EXPIRED` | `UNAVAILABLE` | 503 | 是 | 授权视图超过有效期 |
 | `RECOVERY_IN_PROGRESS` | `UNAVAILABLE` | 503 | 是 | 部署待恢复 |
 | `MEMBER_SWITCH_IN_PROGRESS` | `UNAVAILABLE` | 503 | 是 | 授权或身份成员切换中 |
+| `DEFINITION_PENDING` | `UNAVAILABLE` | 503 | 是 | 安全变更引用的资源类型还没有已被接受的定义：组件就绪不等定义被接受（[08](08-identity-authz-audit.md) 的 P8.24），定义还在提交中；不占用变更键，同一个键稍后重新提交 |
 | `CAPABILITY_UNSUPPORTED` | `UNIMPLEMENTED` | 501 | 否 | 声明了不支持的能力；`metadata.capability` |
 | `RESULT_UNKNOWN` | `DEADLINE_EXCEEDED` | 504 | 查询后再定 | 用变更键或动作键查询，不换键重试 |
 | `AUDIT_CAPACITY_EXHAUSTED` | `UNAVAILABLE` | 503 | 是 | 本地审计表的积压超过容量上限，新的必需审计操作暂停（[08](08-identity-authz-audit.md) 的 P8.23） |
