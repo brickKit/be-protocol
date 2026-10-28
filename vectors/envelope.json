@@ -1,6 +1,6 @@
 {
   "topic": "envelope",
-  "protocol": "3.0.0-alpha.25",
+  "protocol": "3.0.0-alpha.26",
   "rules": [
     "P6.4",
     "P6.9",
