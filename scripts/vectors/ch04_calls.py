@@ -121,14 +121,15 @@ def retry_budget_vectors():
 
 # ---------------------------------------------------------------- circuit breaker (P4.11-P4.14)
 class Breaker:
-    WINDOW, OPEN_MS, CLOSE_AFTER = 20, 30000, 3
+    WINDOW, OPEN_FIRST_MS, OPEN_MAX_MS, CLOSE_AFTER = 20, 5000, 30000, 3
 
     def __init__(self):
         self.state, self.results, self.opened_at, self.trial, self.trial_ok = "closed", [], None, None, 0
+        self.open_ms = self.OPEN_FIRST_MS  # the open period: doubles on a failed trial, resets on closing (P4.13)
 
     def start(self, now, call):
         if self.state == "open":
-            if now - self.opened_at >= self.OPEN_MS:
+            if now - self.opened_at >= self.open_ms:
                 self.state, self.trial, self.trial_ok = "half_open", None, 0
             else:
                 return "rejected"
@@ -150,10 +151,11 @@ class Breaker:
             self.trial = None
             if outcome == "failure":
                 self.state, self.opened_at, self.trial_ok = "open", now, 0
+                self.open_ms = min(self.open_ms * 2, self.OPEN_MAX_MS)
             else:
                 self.trial_ok += 1
                 if self.trial_ok >= self.CLOSE_AFTER:
-                    self.state, self.results = "closed", []
+                    self.state, self.results, self.open_ms = "closed", [], self.OPEN_FIRST_MS
             return
         if self.state == "open":
             return  # late result of a call sent before opening
@@ -194,19 +196,29 @@ def circuit_breaker_vectors():
         "nineteen-failures-not-yet-full": calls("c", 0, [f] * 19),
         "ignored-results-do-not-count": calls("c", 0, [f] * 19 + [ig] * 5),
         "sliding-window": calls("c", 0, [s] * 10 + [f] * 10 + [f]),
-        "open-rejects-before-cooldown": calls("c", 0, [f] * 20) + [{"at_ms": 29999, "kind": "start", "call": "x"}],
+        "open-rejects-before-cooldown": calls("c", 0, [f] * 20) + [{"at_ms": 4999, "kind": "start", "call": "x"}],
         "half-open-after-cooldown-one-trial": calls("c", 0, [f] * 20) + [
-            {"at_ms": 30000, "kind": "start", "call": "t1"}, {"at_ms": 30001, "kind": "start", "call": "t2"}],
-        "three-trial-successes-close": calls("c", 0, [f] * 20) + calls("t", 30000, [s, s, s]),
-        "two-trial-successes-stay-half-open": calls("c", 0, [f] * 20) + calls("t", 30000, [s, s]),
-        "trial-failure-reopens-and-restarts-timer": calls("c", 0, [f] * 20) + calls("t", 30000, [s, f]) + [
-            {"at_ms": 59999, "kind": "start", "call": "y"}, {"at_ms": 60000, "kind": "start", "call": "z"}],
+            {"at_ms": 5000, "kind": "start", "call": "t1"}, {"at_ms": 5001, "kind": "start", "call": "t2"}],
+        "three-trial-successes-close": calls("c", 0, [f] * 20) + calls("t", 5000, [s, s, s]),
+        "two-trial-successes-stay-half-open": calls("c", 0, [f] * 20) + calls("t", 5000, [s, s]),
+        # a failed trial reopens for twice the period: 10 s after the trial, not 5
+        "trial-failure-reopens-and-restarts-timer": calls("c", 0, [f] * 20) + calls("t", 5000, [s, f]) + [
+            {"at_ms": 14999, "kind": "start", "call": "y"}, {"at_ms": 15000, "kind": "start", "call": "z"}],
+        # each failed trial doubles the period up to 30 s: 5, 10, 20, then 30 and 30
+        "failed-trials-double-up-to-thirty-seconds": calls("c", 0, [f] * 20) + calls("a", 5000, [f]) + [
+            {"at_ms": 14999, "kind": "start", "call": "a1"}] + calls("b", 15000, [f]) + [
+            {"at_ms": 34999, "kind": "start", "call": "b1"}] + calls("e", 35000, [f]) + [
+            {"at_ms": 64999, "kind": "start", "call": "e1"}] + calls("g", 65000, [f]) + [
+            {"at_ms": 94999, "kind": "start", "call": "g1"}] + calls("h", 95000, [s, s, s]),
+        # closing resets the period: the next opening is 5 s again, though the last one was 10 s
+        "closing-resets-the-open-period": calls("c", 0, [f] * 20) + calls("a", 5000, [f]) + calls("t", 15000, [s, s, s]) +
+            calls("d", 15001, [f] * 20) + [{"at_ms": 20000, "kind": "start", "call": "x"}, {"at_ms": 20001, "kind": "start", "call": "y"}],
         "ignored-trial-frees-the-slot": calls("c", 0, [f] * 20) + [
-            {"at_ms": 30000, "kind": "start", "call": "t1"}, {"at_ms": 30001, "kind": "end", "call": "t1", "outcome": ig},
-            {"at_ms": 30002, "kind": "start", "call": "t2"}],
+            {"at_ms": 5000, "kind": "start", "call": "t1"}, {"at_ms": 5001, "kind": "end", "call": "t1", "outcome": ig},
+            {"at_ms": 5002, "kind": "start", "call": "t2"}],
         "late-result-while-open-is-dropped": [{"at_ms": 0, "kind": "start", "call": "slow"}] + calls("c", 0, [f] * 20) + [
             {"at_ms": 100, "kind": "end", "call": "slow", "outcome": s}],
-        "closed-again-starts-empty": calls("c", 0, [f] * 20) + calls("t", 30000, [s, s, s]) + calls("d", 30001, [f] * 19),
+        "closed-again-starts-empty": calls("c", 0, [f] * 20) + calls("t", 5000, [s, s, s]) + calls("d", 5001, [f] * 19),
     }
     cases = [{"id": name, "steps": run(steps)} for name, steps in scen.items()]
     write("circuit-breaker", ["P4.11", "P4.12", "P4.13", "P4.14"],

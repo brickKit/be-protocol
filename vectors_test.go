@@ -259,13 +259,14 @@ type refBreaker struct {
 	state    string
 	results  []bool // true = dependency failure
 	openedAt int
+	openFor  int // 0 until the first opening: 5000, doubled by a failed trial up to 30000, reset on closing (P4.13)
 	trial    string
 	trialOK  int
 }
 
 func (b *refBreaker) start(now int, call string) string {
 	if b.state == "open" {
-		if now-b.openedAt < 30000 {
+		if now-b.openedAt < b.openFor {
 			return "rejected"
 		}
 		b.state, b.trial, b.trialOK = "half_open", "", 0
@@ -291,11 +292,11 @@ func (b *refBreaker) end(now int, call, outcome string) {
 		}
 		b.trial = ""
 		if outcome == "failure" {
-			b.state, b.openedAt, b.trialOK = "open", now, 0
+			b.state, b.openedAt, b.trialOK, b.openFor = "open", now, 0, min(b.openFor*2, 30000)
 			return
 		}
 		if b.trialOK++; b.trialOK >= 3 {
-			b.state, b.results = "closed", nil
+			b.state, b.results, b.openFor = "closed", nil, 5000
 		}
 	case b.state == "closed":
 		b.results = append(b.results, outcome == "failure")
@@ -310,6 +311,9 @@ func (b *refBreaker) end(now int, call, outcome string) {
 		}
 		if len(b.results) == 20 && failures*2 > 20 {
 			b.state, b.openedAt, b.results = "open", now, nil
+			if b.openFor == 0 {
+				b.openFor = 5000
+			}
 		}
 	}
 }
