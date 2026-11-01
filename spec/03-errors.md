@@ -45,6 +45,7 @@
 | 编号 | 层级 | 规则 | 检验 |
 | --- | --- | --- | --- |
 | P3.9 | 必须 | 日志级别按 gRPC 码：`INTERNAL`、`UNKNOWN`、`DATA_LOSS` 为 ERROR；`UNAVAILABLE`、`DEADLINE_EXCEEDED` 为 WARN；`CANCELLED` 不按错误记；其余（调用方的错误）为 INFO。访问日志按 HTTP 状态：500 为 ERROR，503 与 504 为 WARN，其余为 INFO | 向量 `errors` |
+| P3.10 | 必须 | 系统面收到没有注册的方法、用户面收到没有注册的路由（路径不匹配任何路由）时，答 `CAPABILITY_UNSUPPORTED`（`UNIMPLEMENTED`，501；`metadata.method` 是 gRPC 方法，或 `metadata.route` 是 HTTP 方法与路径），不答 `NOT_FOUND`：调用方用到了被调方这个版本还没有的操作，与“记录看不见”（P3.5）分开 | CK-ERR-07 |
 
 ## 平台原因目录（`domain` 为 `be`）
 

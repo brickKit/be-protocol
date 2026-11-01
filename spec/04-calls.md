@@ -69,6 +69,7 @@
 | P4.16 | 必须 | 按身份批量读取的上限写在契约里（缺省 500）；超限答 `BATCH_TOO_LARGE`，不截断 | CK-CALL-05 |
 | P4.17 | 必须 | 基础组件不同步调用业务组件（D68） | 装配检查 |
 | P4.28 | 必须 | 出站连接按主机名连接；一次连接失败之后，下一次连接重新解析主机名，解析结果至多沿用 10 秒。依赖重启后换了地址（Docker 上的容器重启即换），调用方几秒内就连上新地址。gRPC 实现的名字解析默认两次之间至少隔 30 秒，不用它的间隔 | SDK 测试 |
+| P4.29 | 必须 | 依赖答 gRPC `UNIMPLEMENTED` 而不带 `ErrorInfo` 时（实现 P3.10 之前的版本），调用方按 `CAPABILITY_UNSUPPORTED` 处理（`domain` `be`，`metadata.dependency` 与 `metadata.method`），不当作内部错误；与其他 `UNIMPLEMENTED` 一样不重试、不计入熔断。用户面旧版本答的 404 `NOT_FOUND` 与“记录看不见”无法区分，不转换 | CK-CALL-06 |
 
 ## 检查编号
 
@@ -79,6 +80,7 @@
 | CK-CALL-03 | 截止时间一跳一跳只减不增 |
 | CK-CALL-04 | 出站并发已满时立即答 `OUTBOUND_LIMIT`，不排队 |
 | CK-CALL-05 | 批量读取超过上限答 `BATCH_TOO_LARGE`，不截断 |
+| CK-CALL-06 | 调用一个没有某个方法的旧版本（gRPC 答 `UNIMPLEMENTED`、不带 ErrorInfo）：调用方答 `CAPABILITY_UNSUPPORTED`，`metadata` 有依赖与方法；没有重试，熔断不计数 |
 | CK-IDEM-01 | 要求幂等键的命令缺键或键不合格答 `REQUEST_INVALID`；两个主体用同一个键互不影响 |
 | CK-IDEM-02 | 同一键并发两次只执行一次；同键不同请求答 `IDEMPOTENCY_KEY_REUSED`；第一次失败后同一键可以再试 |
 | CK-IDEM-03 | 重放返回同一个结果身份，内容按调用者当前的授权裁剪 |
