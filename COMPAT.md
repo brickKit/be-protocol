@@ -20,8 +20,9 @@
 | alpha.28 | P4.13 熔断的打开期从 5 秒起、试探失败加倍到 30 秒（原为固定 30 秒） | 否（调用方自己的熔断） | 兼容；实现旧版的调用方在依赖重启后多等到 30 秒 |
 | alpha.29 | P6.33 消费者忽略载荷里不认识的字段；读模型按聚合订阅，不认识的类型标为不完整并取回；本文件 | 否（消费者自己的处理） | 兼容；实现旧版的读模型按类型订阅，收不到来源新加的动作 |
 | alpha.30 | P5.32 迁移遇到被较新版本迁移过的库，什么也不做、按成功结束；P3.10 没有注册的方法或路由答 `CAPABILITY_UNSUPPORTED`（501）而不是 `NOT_FOUND`；P4.29 调用方把不带 ErrorInfo 的 `UNIMPLEMENTED` 当作 `CAPABILITY_UNSUPPORTED` | 是：没有的路由从 404 变成 501 | 兼容：调用方按码归类，`UNIMPLEMENTED` 不重试、不计入熔断，新旧都一样；实现旧版的组件的迁移遇到更新的库仍会失败，滚动升级与回退要等它们升到本版 |
+| alpha.31 | 只改本文件：第 2 节补上 alpha.30 的 SDK，第 3 节按协议 18 的 SK09 改写 | 否 | 兼容 |
 
-到 alpha.30 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.30 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
+到 alpha.31 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.31 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
 ## 2. 官方 SDK 实现的协议版本
 
@@ -33,15 +34,17 @@
 | `be-sdk-go` | alpha.34、alpha.35 | alpha.24 |
 | `be-sdk-go` | alpha.36 | alpha.27 |
 | `be-sdk-go` | alpha.37 | alpha.28 |
+| `be-sdk-go` | alpha.38 | alpha.30 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |
 | `be-sdk-python` | a30、a31 | alpha.24 |
 | `be-sdk-python` | a32 | alpha.27 |
 | `be-sdk-python` | a33 | alpha.28 |
+| `be-sdk-python` | a34 | alpha.30 |
 
 Go 取 SDK 的 `go.mod` 里 `be-protocol` 的版本；Python 取包里 `besdk/_protocol/capabilities.json` 的 `protocol`。只列 alpha.19 以来的版本（Go alpha.23 起、Python a20 起）。
 
 ## 3. 同一进程里
 
-一个外壳只承载同一语言、同一 SDK 版本的成员（装配项目协议 17、18 的 SK09）。Go 外壳的模块图对 `be-sdk-go` 只取一个版本（最小版本选择取各成员要求的最高版本），所以编进去的成员都跑在这个版本上，不论它们各自要求的是哪一版。
+一个外壳只承载同一语言的成员；进程里只有一个 SDK 版本，由外壳的构建决定，不早于任何成员要求的版本（装配项目协议 17、18 的 SK09）。Go 外壳的模块图对 `be-sdk-go` 只取一个版本（最小版本选择取各成员要求的最高版本），这一点由构建保证。Python 外壳用 `override-dependencies` 指定 `be-sdk-python` 的版本，可能比某个成员要求的旧，要由外壳的启动检查拒绝。成员按自己要求的版本测过，在外壳的版本上运行，靠 SDK 在同一主版本内向后兼容。
