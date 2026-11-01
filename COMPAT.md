@@ -23,8 +23,9 @@
 | alpha.31 | 只改本文件：第 2 节补上 alpha.30 的 SDK，第 3 节按协议 18 的 SK09 改写 | 否 | 兼容 |
 | alpha.32 | P1.21 进程里的 SDK 不早于外壳任何成员要求的最低版本；Python 外壳启动时按成员包元数据里的 `be-sdk>=` 核对，没有声明或不满足的拒绝启动 | 否（外壳自己的启动检查） | 兼容；Python 成员要在包元数据里声明最低 SDK，否则 a35 起的外壳拒绝承载它 |
 | alpha.33 | 只改文字：P6.14 写明凭证地址的主机名要求（部署里每个组件的 `OBJECT_STORE_URL` 用同一个主机名）与它在配置一章的指引 | 否 | 兼容 |
+| alpha.34 | P6.31 按顺序处理的订阅是整个订阅一次一条（所有实例合起来），一条等重投时后面的也等；原来只写“一次一条”，SDK 只做到每个实例一次一条 | 否（订阅方自己的处理） | 兼容；没有组件用到按顺序的订阅 |
 
-到 alpha.33 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.33 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
+到 alpha.34 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.34 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
 ## 2. 官方 SDK 实现的协议版本
 
@@ -37,6 +38,7 @@
 | `be-sdk-go` | alpha.36 | alpha.27 |
 | `be-sdk-go` | alpha.37 | alpha.28 |
 | `be-sdk-go` | alpha.38 | alpha.30 |
+| `be-sdk-go` | alpha.39 | alpha.34 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |
@@ -45,6 +47,7 @@
 | `be-sdk-python` | a33 | alpha.28 |
 | `be-sdk-python` | a34 | alpha.30 |
 | `be-sdk-python` | a35 | alpha.32 |
+| `be-sdk-python` | a36 | alpha.34 |
 
 Go 取 SDK 的 `go.mod` 里 `be-protocol` 的版本；Python 取包里 `besdk/_protocol/capabilities.json` 的 `protocol`。只列 alpha.19 以来的版本（Go alpha.23 起、Python a20 起）。
 
