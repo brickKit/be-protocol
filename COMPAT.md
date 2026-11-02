@@ -30,6 +30,7 @@
 | alpha.38 | COMPAT.md 补写 `be-sdk-go` alpha.42、`be-sdk-python` a39 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
 | alpha.39 | 本表加“装配项目的正式文档”一列，检查要求每一行写明正式文档改在哪里，或为什么不用改 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
 | alpha.40 | P6.34 启动时连不上运输不退出，每秒重试，与 P5.10 的数据库一样；凭据或 scheme 不对 78、PostgreSQL 队列的库不存在 69；检查 CK-BUS-10 | 否（组件自己的启动） | 兼容；实现旧版的组件（`be-sdk-go` alpha.42、`be-sdk-python` a39 及以前）启动时连不上运输就以 69 退出，靠平台重启；同机开机、运输晚到时会退出一次 | 部署模式指南的已知风险（组件随下次连锁发布换上之前仍会退出一次）；交接 |
+| alpha.41 | COMPAT.md 补写 `be-sdk-go` alpha.43、`be-sdk-python` a40 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
@@ -48,6 +49,7 @@
 | `be-sdk-go` | alpha.40 | alpha.35 |
 | `be-sdk-go` | alpha.41 | alpha.36 |
 | `be-sdk-go` | alpha.42 | alpha.37 |
+| `be-sdk-go` | alpha.43 | alpha.40 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |
@@ -60,6 +62,7 @@
 | `be-sdk-python` | a37 | alpha.35 |
 | `be-sdk-python` | a38 | alpha.36 |
 | `be-sdk-python` | a39 | alpha.37 |
+| `be-sdk-python` | a40 | alpha.40 |
 
 Go 取 SDK 的 `go.mod` 里 `be-protocol` 的版本；Python 取包里 `besdk/_protocol/capabilities.json` 的 `protocol`。只列 alpha.19 以来的版本（Go alpha.23 起、Python a20 起）。
 
