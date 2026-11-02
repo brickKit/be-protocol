@@ -27,8 +27,9 @@
 | alpha.35 | P4.30 系统面的服务器给每条连接设最长寿命（30 秒起，到时体面关闭），调用方重连后连接分到各个副本 | 否（服务器自己的连接管理；HTTP/2 的 GOAWAY 是标准行为，旧调用方照常重连） | 兼容；旧版本的服务器不关连接，调它的调用方仍只落在一个副本上 |
 | alpha.36 | P8.2 不认识的 `kid` 引起的刷新进行中时，其余遇到不认识的 `kid` 的请求等它结束，不先答失败 | 否（核验方自己的处理） | 兼容；实现旧版的核验方（`be-sdk-go` alpha.40 及以前）在启动时没取到公钥、或签发方换密钥后的第一阵并发请求里，除第一个外答 `DEPENDENCY_UNAVAILABLE`（可重试） |
 | alpha.37 | CK-ID-01 加上 P8.2 刷新进行中的并发情形（只改检查的条文；规则在 alpha.36 已改） | 否 | 兼容；没有行为变化 |
+| alpha.38 | COMPAT.md 补写 `be-sdk-go` alpha.42、`be-sdk-python` a39 所实现的协议版本 | 否 | 兼容；没有行为变化 |
 
-到 alpha.37 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.37 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
+到 alpha.38 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.38 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
 ## 2. 官方 SDK 实现的协议版本
 
@@ -44,6 +45,7 @@
 | `be-sdk-go` | alpha.39 | alpha.34 |
 | `be-sdk-go` | alpha.40 | alpha.35 |
 | `be-sdk-go` | alpha.41 | alpha.36 |
+| `be-sdk-go` | alpha.42 | alpha.37 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |
@@ -55,6 +57,7 @@
 | `be-sdk-python` | a36 | alpha.34 |
 | `be-sdk-python` | a37 | alpha.35 |
 | `be-sdk-python` | a38 | alpha.36 |
+| `be-sdk-python` | a39 | alpha.37 |
 
 Go 取 SDK 的 `go.mod` 里 `be-protocol` 的版本；Python 取包里 `besdk/_protocol/capabilities.json` 的 `protocol`。只列 alpha.19 以来的版本（Go alpha.23 起、Python a20 起）。
 
