@@ -33,6 +33,7 @@
 | alpha.41 | COMPAT.md 补写 `be-sdk-go` alpha.43、`be-sdk-python` a40 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
 | alpha.42 | P6.28 写明领取的两条路各沿按位置排序的部分索引、领取语句按每次的参数规划；`migrations-bus` 的 0003 用在途投递的 `(durable, seq)` 部分索引替换按 `lease_until` 的租约索引 | 否（总线库的索引） | 兼容；旧版 SDK 照常工作，迁移由新版的 `migrate` 跑一次；在从没 analyze 过的表上，旧的索引让租约过期那条路逐行走整个积压 | 无：SDK 与总线库的实现细节，正式文档不涉及 |
 | alpha.43 | COMPAT.md 补写 `be-sdk-go` alpha.44、alpha.45 与 `be-sdk-python` a41 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
+| alpha.44 | COMPAT.md 补写 `be-sdk-go` alpha.46–alpha.48 与 `be-sdk-python` a42、a43 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
@@ -52,7 +53,7 @@
 | `be-sdk-go` | alpha.41 | alpha.36 |
 | `be-sdk-go` | alpha.42 | alpha.37 |
 | `be-sdk-go` | alpha.43、alpha.44 | alpha.40 |
-| `be-sdk-go` | alpha.45 | alpha.42 |
+| `be-sdk-go` | alpha.45–alpha.48 | alpha.42 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |
@@ -66,7 +67,7 @@
 | `be-sdk-python` | a38 | alpha.36 |
 | `be-sdk-python` | a39 | alpha.37 |
 | `be-sdk-python` | a40 | alpha.40 |
-| `be-sdk-python` | a41 | alpha.42 |
+| `be-sdk-python` | a41–a43 | alpha.42 |
 
 Go 取 SDK 的 `go.mod` 里 `be-protocol` 的版本；Python 取包里 `besdk/_protocol/capabilities.json` 的 `protocol`。只列 alpha.19 以来的版本（Go alpha.23 起、Python a20 起）。
 
