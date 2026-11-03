@@ -1,6 +1,6 @@
 {
   "topic": "circuit-breaker",
-  "protocol": "3.0.0-alpha.53",
+  "protocol": "3.0.0-alpha.54",
   "rules": [
     "P4.11",
     "P4.12",
