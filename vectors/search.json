@@ -1,6 +1,6 @@
 {
   "topic": "search",
-  "protocol": "3.0.0-alpha.46",
+  "protocol": "3.0.0-alpha.47",
   "rules": [
     "P9.6",
     "P9.7"
