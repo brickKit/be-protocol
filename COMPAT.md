@@ -41,6 +41,7 @@
 | alpha.49 | 第 09 章加入水位来源：P9.13–P9.18 来源一侧（按流声明并列出可补取的组件、标准系统方法 `be.source.v1.WatermarkService/Pull`，消息在 `proto/`；核对连续位置上的行、回声与锁内编号、页标记绑定实例与纪元、响应的声明），P9.19–P9.25 消费者一侧（连续位置、时钟、补取的触发与响应的处理、水位、判断、隔离），P9.26–P9.29 来源身份与对齐状态（协议 02 的对齐状态表，第一次采用、`stalled` 与 `blocked` 的出口）、纪元、对齐（P0、对齐代次、重启）与绊线；P9.11 别的实现实例与别的部署的输入改为按状态表转 `blocked`（原来只是不应用），P9.11、P9.12 加上“已清理”墓碑的 `min_read_position` 与同版本摘要不同的绊线；P6.1 注明回声行的分区例外；检查 CK-WM-01…10；向量 `watermark-pull-check`、`watermark-pull-outcome`、`watermark-epoch`、`watermark-value`、`watermark-judge`、`watermark-source-state`；`make check` 加上 `proto/` 的 buf STANDARD 检查 | 是：水位来源多了一个系统方法，信封多了回声类型 `be.source.echo.v1` | 兼容：只做加法；不声明水位来源的流行为不变，按类型订阅的消费者收不到回声（P6.33）；实现旧版的投影消费者对别的实现实例的输入只是不应用、不转 `blocked` | 无：协议 02 的“来源水位”第 1–11 步与对齐状态表落成线协议，设计不变 |
 | alpha.50 | 迁移 0012：水位消费者的表（来源状态、各分区的连续位置与 P0、补取记录、失败计数、隔离）与投影行的 `min_read_seq`；P9.13 写明补取方法要有一个登记的操作；P9.16 续页失效答 `QUERY_PLAN_CHANGED`（原写 `FAILED_PRECONDITION`，错误目录里没有这个通用原因）；P9.19、P9.25 写明表与失败计数的方式 | 否（消费者自己的表；补取的错误原因只给续页） | 兼容；迁移只加表与可空列，旧版 SDK 照常工作 | 无：表与错误原因是实现细节 |
 | alpha.51 | COMPAT.md 补写 `be-sdk-go` alpha.51 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
+| alpha.52 | COMPAT.md 补写 `be-sdk-go` alpha.52、alpha.53 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
@@ -63,7 +64,7 @@
 | `be-sdk-go` | alpha.45–alpha.48 | alpha.42 |
 | `be-sdk-go` | alpha.49 | alpha.45 |
 | `be-sdk-go` | alpha.50 | alpha.47 |
-| `be-sdk-go` | alpha.51 | alpha.50 |
+| `be-sdk-go` | alpha.51–alpha.53 | alpha.50 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |
