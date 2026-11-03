@@ -38,6 +38,7 @@
 | alpha.46 | COMPAT.md 补写 `be-sdk-go` alpha.49 与 `be-sdk-python` a44 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
 | alpha.47 | P7.23 空闲的成员每个轮询间隔只认领一次（轮询叫醒的工作者领到项再叫醒下一个），cron 在下一个槽之前不开事务；P5.33 的 `be_analyze_stale()` 改为按 oid 读统计函数（组件 `migrations/` 0011、`migrations-bus/` 0005，判断不变） | 否（SDK 自己的轮询与它的表的实现细节） | 兼容；旧版 SDK 照旧每个工作者各自轮询；迁移由新版的 `migrate` 跑一次，旧版 SDK 调用的是同一个函数 | 无：SDK 内部的轮询节奏与统计维护，正式文档不涉及 |
 | alpha.48 | COMPAT.md 补写 `be-sdk-go` alpha.50 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
+| alpha.49 | 第 09 章加入水位来源：P9.13–P9.18 来源一侧（按流声明并列出可补取的组件、标准系统方法 `be.source.v1.WatermarkService/Pull`，消息在 `proto/`；核对连续位置上的行、回声与锁内编号、页标记绑定实例与纪元、响应的声明），P9.19–P9.25 消费者一侧（连续位置、时钟、补取的触发与响应的处理、水位、判断、隔离），P9.26–P9.29 来源身份与对齐状态（协议 02 的对齐状态表，第一次采用、`stalled` 与 `blocked` 的出口）、纪元、对齐（P0、对齐代次、重启）与绊线；P9.11 别的实现实例与别的部署的输入改为按状态表转 `blocked`（原来只是不应用），P9.11、P9.12 加上“已清理”墓碑的 `min_read_position` 与同版本摘要不同的绊线；P6.1 注明回声行的分区例外；检查 CK-WM-01…10；向量 `watermark-pull-check`、`watermark-pull-outcome`、`watermark-epoch`、`watermark-value`、`watermark-judge`、`watermark-source-state`；`make check` 加上 `proto/` 的 buf STANDARD 检查 | 是：水位来源多了一个系统方法，信封多了回声类型 `be.source.echo.v1` | 兼容：只做加法；不声明水位来源的流行为不变，按类型订阅的消费者收不到回声（P6.33）；实现旧版的投影消费者对别的实现实例的输入只是不应用、不转 `blocked` | 无：协议 02 的“来源水位”第 1–11 步与对齐状态表落成线协议，设计不变 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 

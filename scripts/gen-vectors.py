@@ -27,6 +27,7 @@ import ch08_identity  # noqa: E402
 import ch08_records  # noqa: E402
 import ch08_view  # noqa: E402
 import ch09_list  # noqa: E402
+import ch09_watermark  # noqa: E402
 from common import VEC, sums  # noqa: E402
 
 if __name__ == "__main__":
@@ -55,5 +56,6 @@ if __name__ == "__main__":
     ch09_list.search_vectors()
     ch09_list.pages_vectors()
     ch09_list.projection_vectors()
+    ch09_watermark.all_vectors()
     sums()
     print("\n".join(sorted(p.name for p in VEC.iterdir())))

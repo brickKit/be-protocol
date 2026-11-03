@@ -1,5 +1,5 @@
-// Package protocol hands out the component protocol's machine-readable parts: the semantic vectors, the JSON Schemas and
-// the SDK's own migration files.
+// Package protocol hands out the component protocol's machine-readable parts: the semantic vectors, the JSON Schemas,
+// the SDK's own migration files and the protobuf definitions of its own system methods.
 // SDKs import this module at an exact version and run their L1 tests against the vectors (protocol 18).
 package protocol
 
@@ -25,13 +25,19 @@ var Migrations embed.FS
 //go:embed migrations-bus
 var BusMigrations embed.FS
 
+// Protos holds the protobuf definitions of the SDK's own system methods under proto/ (chapter 09: the watermark
+// source's pull); each SDK generates its code from them.
+//
+//go:embed proto
+var Protos embed.FS
+
 // Data holds shared data files: data/pinyin.tsv, the readings every SDK uses for search columns (chapter 09).
 //
 //go:embed data
 var Data embed.FS
 
 // Version is the protocol version this tree describes.
-const Version = "3.0.0-alpha.48"
+const Version = "3.0.0-alpha.49"
 
 // Capabilities is capabilities.json: every rule of spec/ belongs to exactly one capability, and each SDK marks the
 // status of the SDK-owned ones in its own features.json (the feature matrix, protocol 18).

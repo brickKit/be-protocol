@@ -1,5 +1,5 @@
 {
-  "protocol": "3.0.0-alpha.48",
+  "protocol": "3.0.0-alpha.49",
   "description": "能力清单：spec/ 中每条规则恰好属于一项能力（rules 为空的能力只留形状，规则随后续章节加入）。owner 为 sdk 的能力由每个 SDK 在自己仓库的 features.json 中标出状态；component 与 assembly 的能力由组件与装配检查负责。",
   "capabilities": [
     {
@@ -447,7 +447,25 @@
       "id": "projection-watermarks",
       "title": "水位来源的回声、补取与连续位置",
       "owner": "sdk",
-      "rules": []
+      "rules": [
+        "P9.13",
+        "P9.14",
+        "P9.15",
+        "P9.16",
+        "P9.17",
+        "P9.18",
+        "P9.19",
+        "P9.20",
+        "P9.21",
+        "P9.22",
+        "P9.23",
+        "P9.24",
+        "P9.25",
+        "P9.26",
+        "P9.27",
+        "P9.28",
+        "P9.29"
+      ]
     },
     {
       "id": "projection-shadow",

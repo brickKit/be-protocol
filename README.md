@@ -16,12 +16,13 @@
 | `capabilities.json` | 能力清单：每条规则归入恰好一项能力；各 SDK 的 `features.json` 按它标出状态（功能矩阵，见[阅读说明](spec/00-reading.md#能力清单与功能矩阵)） |
 | `data/` | 共享数据：`pinyin.tsv`（搜索列用的每字首选读音，第 9 章 P9.6；来源与许可见 `PINYIN-LICENSE`） |
 | `migrations-bus/` | PostgreSQL 队列运输的表，建在总线库自己的 schema（第 6 章 P6.23） |
+| `proto/` | SDK 自带的系统方法的消息定义（protobuf）：`be/source/v1/watermark.proto` 是水位来源的补取（第 9 章 P9.13）；每个 SDK 自己从它生成代码；`make check` 用容器里的 buf 按 STANDARD 检查它 |
 
-本模块同时是一个 Go 模块（`github.com/brickKit/be-protocol/v3`），用 `embed` 交出 `vectors/`、`schemas/`、`migrations/`、`migrations-bus/`、`data/` 与 `capabilities.json`。SDK 按精确版本引用它，在 L1 测试中逐条运行向量；其他语言按同一版本的标签读取这些目录。
+本模块同时是一个 Go 模块（`github.com/brickKit/be-protocol/v3`），用 `embed` 交出 `vectors/`、`schemas/`、`migrations/`、`migrations-bus/`、`proto/`（SDK 自带的系统方法的消息定义，目前是水位来源的补取）、`data/` 与 `capabilities.json`。SDK 按精确版本引用它，在 L1 测试中逐条运行向量；其他语言按同一版本的标签读取这些目录。
 
 ## 当前范围
 
-代表部署实验（装配项目的实验计划第 2 步）写到第 9 章：生命周期与健康、配置、错误、组件之间的调用、数据库与按月分区、事件与运输、后台工作项、身份授权与审计的组件一侧、列表搜索与投影。各章开头写明哪些部分随后续任务加入；其余规则在重建时按装配项目的 `be-protocol` 承接清单逐条重审写入。
+代表部署实验（装配项目的实验计划第 2 步）写到第 9 章：生命周期与健康、配置、错误、组件之间的调用、数据库与按月分区、事件与运输、后台工作项、身份授权与审计的组件一侧、列表搜索与投影（含水位来源）。各章开头写明哪些部分随后续任务加入；其余规则在重建时按装配项目的 `be-protocol` 承接清单逐条重审写入。
 
 ## 版本
 
