@@ -49,16 +49,19 @@ def accept(held, answer):
         out[k] = "stopped" if s.get("stopped") else "suspended" if s.get("suspended") else "kept"
     for a in answer["shards"]:
         k, s = a["shard"], shards.get(a["shard"])
+        ro = a.get("read_only", False)
         if a["status"] == "unchanged":
             if s is not None and not s.get("stopped"):
-                out[k] = "renewed"
+                out[k] = "renewed_read" if ro else "renewed"
         elif a["status"] == "changed":
             if s is not None and s.get("stopped"):
                 continue  # stays stopped until a higher recovery generation
             if not newer and s is not None and regressed(s["revisions"], a["view"]["security_revisions"]):
                 out[k] = "stopped"
-            else:
+            elif not ro:
                 out[k] = "replaced"
+            else:  # the high-risk validity carries over from the shard it replaces; a new one has none
+                out[k] = "replaced_read" if s is not None else "adopted_read"
         # closed: not renewed, runs out on its own
     return {"answer": "accepted", "instance": answer["instance"], "shards": out}
 
@@ -80,12 +83,18 @@ def answer(recovery, *shards, instance=A):
     return {"recovery": recovery, "instance": instance, "shards": list(shards)}
 
 
-def changed(name, *revisions):
-    return {"shard": name, "status": "changed", "view": {"security_revisions": list(revisions)}}
+def changed(name, *revisions, read_only=False):
+    a = {"shard": name, "status": "changed", "view": {"security_revisions": list(revisions)}}
+    if read_only:
+        a["read_only"] = True
+    return a
 
 
-def status(name, st):
-    return {"shard": name, "status": st}
+def status(name, st, read_only=False):
+    a = {"shard": name, "status": st}
+    if read_only:
+        a["read_only"] = True
+    return a
 
 
 def view_accept_vectors():
@@ -139,15 +148,35 @@ def view_accept_vectors():
          answer(1, changed("s1", rev(le, "1.1", 9)))),
         ("stopped-recovery-higher", "已停用的分片在恢复代次推进后：作废，采用新视图",
          held_state(1, A, s1=shard(rev(le, "1.1", 10), stopped=True)), answer(2, changed("s1", rev(le, "2.1", 1)))),
+        ("read-only-unchanged", "未变、只为普通读取续发：普通读取续期，高风险的有效期不动", h1,
+         answer(1, status("s1", "unchanged", read_only=True))),
+        ("read-only-changed", "换成新视图、只为普通读取续发：新视图沿用旧分片的高风险有效期", h1,
+         answer(1, changed("s1", rev(le, "1.1", 11), read_only=True))),
+        ("read-only-start", "进程启动后第一个回答只为普通读取续发：新分片对高风险操作无效", held_state(None, None),
+         answer(1, changed("s1", rev(le, "1.1", 10), read_only=True))),
+        ("read-only-recovery-higher", "恢复代次更高、只为普通读取续发：旧分片作废，新分片对高风险操作无效", h1,
+         answer(2, changed("s1", rev(le, "2.1", 1), read_only=True))),
+        ("read-only-lower-value", "只为普通读取续发也比较修订：更低判为回退、停用", h1,
+         answer(1, changed("s1", rev(le, "1.1", 9), read_only=True))),
+        ("read-only-suspended", "暂停的分片被只为普通读取续期：恢复使用，高风险的有效期不动",
+         held_state(1, A, s1=shard(rev(le, "1.1", 10), suspended=True)), answer(1, status("s1", "unchanged", read_only=True))),
+        ("read-only-stopped", "停用的分片答未变、只为普通读取续发：仍停用", held_state(1, A, s1=shard(rev(le, "1.1", 10), stopped=True)),
+         answer(1, status("s1", "unchanged", read_only=True))),
+        ("read-only-mixed", "一个分片完整续期、另一个只为普通读取续期：分别处理",
+         held_state(1, A, s1=shard(rev(le, "1.1", 10)), s2=shard(rev(org, "1.1", 3))),
+         answer(1, status("s1", "unchanged"), status("s2", "unchanged", read_only=True))),
     ]
     cases = [{"id": cid, "note": note, "held": h, "answer": a, "expect": accept(h, a)} for cid, note, h, a in scenarios]
     write("view-accept", ["P8.11"],
           "组件收到核验回答之后怎样处理（随机数已核对；安全 03 的接受表）。held 是组件持有的：恢复代次（null 表示进程启动后"
           "还没有视图）、已记下的成员实例、各分片的安全修订，以及是否停用（stopped）或暂停（suspended）。answer 是回答的恢复代次、作答的成员实例（instance）与各分片（status："
-          "unchanged、changed、closed；changed 带新视图的 security_revisions，每个 RevisionRef 带 instance 与 epoch）。纪元"
+          "unchanged、changed、closed；changed 带新视图的 security_revisions，每个 RevisionRef 带 instance 与 epoch；read_only 为真"
+          "表示只为普通读取续发）。纪元"
           "写作“部署恢复代次.时间线”，按两个整数的字典序比较。expect.answer：accepted 或 rollback（整个回答不采用，"
           "停用全部视图并告警）；expect.instance：之后记下的成员实例；expect.shards：每个分片的结果——renewed（续期）、"
-          "replaced（换成新视图并续期）、kept（不续期，到期自然失效）、suspended（整个回答判为回退时，持有的分片暂停使用、修订"
+          "replaced（换成新视图并续期）、renewed_read（只续普通读取，高风险的有效期不动）、replaced_read（换成新视图、只续"
+          "普通读取，高风险的有效期沿用旧分片的）、adopted_read（没有旧分片可沿用：新视图只对普通读取有效，直到一次不带"
+          "read_only 的续期）、kept（不续期，到期自然失效）、suspended（整个回答判为回退时，持有的分片暂停使用、修订"
           "留作比较；下一个被采用的回答续期或换掉它即恢复）、stopped（判为回退，停用并告警；只在更高的恢复代次"
           "之后解除）、dropped（恢复代次更高，旧分片作废）。判断的先后：恢复代次更低、作答的成员实例与记下的不同、或新视图"
           "的修订带着别的实例 → rollback；恢复代次更高 → 旧分片全部作废、不比较修订；同一恢复代次 → 逐分片、逐依赖域"

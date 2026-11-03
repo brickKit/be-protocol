@@ -62,6 +62,7 @@ func TestViewAcceptVectors(t *testing.T) {
 				Instance string
 				Shards   []struct {
 					Shard, Status string
+					ReadOnly      bool `json:"read_only"`
 					View          *struct {
 						SecurityRevisions []refRev `json:"security_revisions"`
 					}
@@ -113,11 +114,17 @@ func TestViewAcceptVectors(t *testing.T) {
 			for _, a := range c.Answer.Shards {
 				s, ok := held[a.Shard]
 				switch {
+				case a.Status == "unchanged" && ok && !s.Stopped && a.ReadOnly:
+					got[a.Shard] = "renewed_read"
 				case a.Status == "unchanged" && ok && !s.Stopped:
 					got[a.Shard] = "renewed"
 				case a.Status == "changed" && ok && s.Stopped:
 				case a.Status == "changed" && ok && refGoesBack(s.Revisions, a.View.SecurityRevisions):
 					got[a.Shard] = "stopped"
+				case a.Status == "changed" && a.ReadOnly && ok:
+					got[a.Shard] = "replaced_read"
+				case a.Status == "changed" && a.ReadOnly:
+					got[a.Shard] = "adopted_read"
 				case a.Status == "changed":
 					got[a.Shard] = "replaced"
 				}

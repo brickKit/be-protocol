@@ -45,6 +45,7 @@
 | alpha.53 | P8.1 访问令牌必带正整数的 `be_sv`；P8.25–P8.28 令牌陈旧（准入比较视图里账号的安全状态版本）、代表用户的调用被下游答 401 时按 `AUTHORIZATION_UNPROVABLE` 回答、身份成员的安全状态版本与标准系统方法 `be.session.v1.SessionService`（`proto/be/session/v1/session.proto`）；账号状态记录多必填的 `security_version`，视图的主体条目多可选的 `security_version`；新的第 11 章“边缘的会话层”；新原因 `SESSION_ENDED`、`CSRF_HEADER_REQUIRED`；`make check` 先查 gofmt | 是：令牌与两种安全记录的字段、新的系统方法与原因 | **要按顺序升级**：实现新版的组件拒绝不带 `be_sv` 的令牌，所以先升级身份成员（签发 `be_sv`），再升级组件；授权成员把版本写进视图之前 P8.25 按 0 处理，不会答 `TOKEN_STALE`；新原因按码归类（P3.2），旧调用方照常 | 协议 20 的登录与会话、安全 09a（账号状态、视图、错误）、底层选择的边缘入口、AI 决定 A117–A119 |
 | alpha.54 | COMPAT.md 补写 `be-sdk-go` alpha.54 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
 | alpha.55 | COMPAT.md 补写 `be-sdk-go` alpha.55、alpha.56 与 `be-sdk-python` a45 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
+| alpha.56 | P8.11 核验回答的分片项多可选的 `read_only`：为真时只续普通读取的有效期，高风险的有效期不动（安全 03 的续发与关闭：来源水位在 `D_src_high` 与 `D_src_read` 之间）；向量 `view-accept` 多 8 例与结果 `renewed_read`、`replaced_read`、`adopted_read` | 是：核验回答多一个字段 | **要按顺序升级**：组件先升到实现本版的 SDK，授权成员才开始答 `read_only`；实现旧版的组件不认识这个字段（契约 `be.authz.v3` 的 `ShardAnswer.read_only`，`contract-infra-authz` alpha.2 起），把高风险的有效期也续上：来源停滞时高风险操作不关闭 | 安全 09a（核验回答的字段） |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
