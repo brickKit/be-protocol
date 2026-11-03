@@ -125,9 +125,9 @@ func TestWatermarkEpochVectors(t *testing.T) {
 	}
 	for _, raw := range load(t, "watermark-epoch").Cases {
 		var c struct {
-			ID               string
+			ID                string
 			Adopted, Response identity
-			Expect           string
+			Expect            string
 		}
 		if err := json.Unmarshal(raw, &c); err != nil {
 			t.Fatal(err)
@@ -176,8 +176,8 @@ func TestWatermarkValueVectors(t *testing.T) {
 				Partitions    []struct {
 					Contiguous uint64
 					Echoes     []struct {
-						Seq uint64
-						MP  float64 `json:"m_p"`
+						Seq      uint64
+						MP       float64 `json:"m_p"`
 						Recorded bool
 					}
 				}
@@ -221,9 +221,9 @@ func TestWatermarkJudgeVectors(t *testing.T) {
 		var c struct {
 			ID    string
 			Query struct {
-				WatermarkSource bool     `json:"watermark_source"`
-				SourceState     string   `json:"source_state"`
-				ProjectionState string   `json:"projection_state"`
+				WatermarkSource bool   `json:"watermark_source"`
+				SourceState     string `json:"source_state"`
+				ProjectionState string `json:"projection_state"`
 				Quarantined     bool
 				Watermark       *float64
 				Now, Freshness  float64

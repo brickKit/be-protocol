@@ -58,9 +58,11 @@
 | `CURSOR_INVALID` | `INVALID_ARGUMENT` | 400 | 否 | 游标与请求不匹配或解不开 |
 | `BATCH_TOO_LARGE` | `INVALID_ARGUMENT` | 400 | 否 | 按身份批量读取超过契约上限；拒绝而不截断 |
 | `TOKEN_INVALID` | `UNAUTHENTICATED` | 401 | 否 | 没有令牌，或签名、签发方、受众、类型、有效期不符 |
-| `TOKEN_STALE` | `UNAUTHENTICATED` | 401 | 边缘换取新令牌后一次 | 身份侧的事实已变（会话代次、安全状态版本） |
+| `TOKEN_STALE` | `UNAUTHENTICATED` | 401 | 边缘换取新令牌后一次 | 账号的安全状态版本已高于令牌签发时的（P8.25）；只由入口组件在准入时答 |
+| `SESSION_ENDED` | `UNAUTHENTICATED` | 401 | 否 | 浏览器的会话已结束（登出、超时、改密码结束了其他会话、停用）；身份成员与边缘答它，前端只在这个原因上跳转登录（P8.28、P11.4） |
 | `SERVICE_CREDENTIAL_INVALID` | `UNAUTHENTICATED` | 401 | 否 | 系统面调用没有有效的服务身份 |
 | `PERMISSION_DENIED` | `PERMISSION_DENIED` | 403 | 否 | 可见但没有此操作的资格；命令的目标取值越界 |
+| `CSRF_HEADER_REQUIRED` | `PERMISSION_DENIED` | 403 | 否 | 带会话 Cookie 的改变状态的请求缺请求头 `BE-Request: 1`；边缘答它，不转发（P11.2） |
 | `CONTAINMENT_NOT_PROVEN` | `PERMISSION_DENIED` | 403 | 否 | 包含证明不成立（安全 09a） |
 | `NOT_FOUND` | `NOT_FOUND` | 404 | 否 | 不存在或不可见 |
 | `QUERY_NOT_COMPLETABLE` | `FAILED_PRECONDITION` | 422 | 否 | 有段不可下推、候选集超预算、冷层没有覆盖 |

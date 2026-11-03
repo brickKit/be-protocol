@@ -42,6 +42,7 @@
 | alpha.50 | 迁移 0012：水位消费者的表（来源状态、各分区的连续位置与 P0、补取记录、失败计数、隔离）与投影行的 `min_read_seq`；P9.13 写明补取方法要有一个登记的操作；P9.16 续页失效答 `QUERY_PLAN_CHANGED`（原写 `FAILED_PRECONDITION`，错误目录里没有这个通用原因）；P9.19、P9.25 写明表与失败计数的方式 | 否（消费者自己的表；补取的错误原因只给续页） | 兼容；迁移只加表与可空列，旧版 SDK 照常工作 | 无：表与错误原因是实现细节 |
 | alpha.51 | COMPAT.md 补写 `be-sdk-go` alpha.51 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
 | alpha.52 | COMPAT.md 补写 `be-sdk-go` alpha.52、alpha.53 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
+| alpha.53 | P8.1 访问令牌必带正整数的 `be_sv`；P8.25–P8.28 令牌陈旧（准入比较视图里账号的安全状态版本）、代表用户的调用被下游答 401 时按 `AUTHORIZATION_UNPROVABLE` 回答、身份成员的安全状态版本与标准系统方法 `be.session.v1.SessionService`（`proto/be/session/v1/session.proto`）；账号状态记录多必填的 `security_version`，视图的主体条目多可选的 `security_version`；新的第 11 章“边缘的会话层”；新原因 `SESSION_ENDED`、`CSRF_HEADER_REQUIRED`；`make check` 先查 gofmt | 是：令牌与两种安全记录的字段、新的系统方法与原因 | **要按顺序升级**：实现新版的组件拒绝不带 `be_sv` 的令牌，所以先升级身份成员（签发 `be_sv`），再升级组件；授权成员把版本写进视图之前 P8.25 按 0 处理，不会答 `TOKEN_STALE`；新原因按码归类（P3.2），旧调用方照常 | 协议 20 的登录与会话、安全 09a（账号状态、视图、错误）、底层选择的边缘入口、AI 决定 A117–A119 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 

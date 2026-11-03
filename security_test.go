@@ -13,6 +13,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/big"
 	"regexp"
 	"slices"
@@ -342,6 +343,9 @@ func refVerify(token string, keys map[string]jwk, issuer, audience string, now i
 	}
 	if sub, _ := c["sub"].(string); !regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`).MatchString(sub) {
 		return "sub"
+	}
+	if sv, ok := c["be_sv"].(float64); !ok || sv < 1 || sv != math.Trunc(sv) || sv > 1<<53 {
+		return "sv"
 	}
 	return ""
 }

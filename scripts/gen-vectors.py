@@ -25,9 +25,11 @@ import ch08_authz  # noqa: E402
 import ch08_canonical  # noqa: E402
 import ch08_identity  # noqa: E402
 import ch08_records  # noqa: E402
+import ch08_session  # noqa: E402
 import ch08_view  # noqa: E402
 import ch09_list  # noqa: E402
 import ch09_watermark  # noqa: E402
+import ch11_edge  # noqa: E402
 from common import VEC, sums  # noqa: E402
 
 if __name__ == "__main__":
@@ -50,6 +52,7 @@ if __name__ == "__main__":
     ch08_canonical.canonical_vectors()
     ch08_authz.segment_eval_vectors()
     ch08_identity.jwt_vectors()
+    ch08_session.token_stale_vectors()
     ch08_view.view_accept_vectors()
     ch08_audit.audit_purge_vectors()
     ch08_records.records_vectors()
@@ -57,5 +60,6 @@ if __name__ == "__main__":
     ch09_list.pages_vectors()
     ch09_list.projection_vectors()
     ch09_watermark.all_vectors()
+    ch11_edge.edge_flow_vectors()
     sums()
     print("\n".join(sorted(p.name for p in VEC.iterdir())))

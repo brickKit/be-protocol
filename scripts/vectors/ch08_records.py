@@ -35,7 +35,7 @@ VIEW = {**envelope("be.security.view", "infra/authz", REC, rev("authz.view.demo"
         "shard": "demo", "recovery_generation": rev("authz.recovery", "1"),
         "security_revisions": [rev("authz.security.legal_entity", "12", "1.1", "authz-inst-a")],
         "applicability": ["demo.order"],
-        "subjects": {USER: {"segments": [SEGMENT], "accounts_disabled": False}}, "capabilities": []}
+        "subjects": {USER: {"segments": [SEGMENT], "accounts_disabled": False, "security_version": 4}}, "capabilities": []}
 
 RESOURCE = {**envelope("be.security.resource_definition", "demo/order", REC, rev("demo.order.definition", "1")),
             "type": "demo.order", "view_operation": "demo.order.read",
@@ -60,7 +60,8 @@ DENIAL = {"id": REC, "occurred_at": "2026-10-19T08:00:00.000000Z", "category": "
 
 ACCOUNT = {**envelope("be.security.account_status", "infra/iam-casdoor", USER,
                       rev("infra.iam.account_status", "3", "1.1", "iam-inst-a")),
-           "account": {"deployment": DEP, "kind": "user", "id": USER}, "status": "disabled", "security_mark": "compromised"}
+           "account": {"deployment": DEP, "kind": "user", "id": USER}, "status": "disabled", "security_mark": "compromised",
+           "security_version": 4}
 
 DEFINITION_SET = {"component": "demo/order", "version": "3.0.0",
                   "definitions": sorted(["sha256:" + "a" * 64, "sha256:" + "b" * 64])}
@@ -114,6 +115,8 @@ def records_vectors():
          with_(SEGMENT, atoms={"legal_entity": {"kind": "any"}, "owner": {"kind": "self"}}), "未知的原子种类"),
         ("audit-outcome", "be.audit.record", with_(AUDIT, outcome="ok"), "未知的结果"),
         ("account-status-unknown", "be.security.account_status", with_(ACCOUNT, status="locked"), "未知的账号状态"),
+        ("account-status-without-version", "be.security.account_status", with_(ACCOUNT, security_version=None),
+         "缺安全状态版本"),
         ("definition-set-not-digest", "be.security.definition_set", with_(DEFINITION_SET, definitions=["abc"]),
          "集合里只能是摘要"),
     ]

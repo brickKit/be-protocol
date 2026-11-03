@@ -63,7 +63,7 @@ KEYS = {"RS256": ("rsa-1", RSA), "ES256": ("ec-1", EC), "EdDSA": ("ed-1", ED)}
 
 
 def claims(**over):
-    c = {"iss": ISSUER, "aud": AUDIENCE, "sub": SUBJECT, "iat": NOW - 30, "exp": NOW + 600, "jti": "t1"}
+    c = {"iss": ISSUER, "aud": AUDIENCE, "sub": SUBJECT, "iat": NOW - 30, "exp": NOW + 600, "jti": "t1", "be_sv": 1}
     for k, v in over.items():
         if v is None:
             c.pop(k, None)
@@ -120,14 +120,19 @@ def jwt_vectors():
         ("no-audience", token(body=claims(aud=None)), "aud"),
         ("subject-not-uuid", token(body=claims(sub="alice@example.test")), "sub"),
         ("subject-upper-case", token(body=claims(sub=SUBJECT.upper())), "sub"),
+        ("security-version-large", token(body=claims(be_sv=2 ** 40)), None),
+        ("security-version-missing", token(body=claims(be_sv=None)), "sv"),
+        ("security-version-zero", token(body=claims(be_sv=0)), "sv"),
+        ("security-version-fraction", token(body=claims(be_sv=1.5)), "sv"),
+        ("security-version-text", token(body=claims(be_sv="1")), "sv"),
         ("tampered-payload", tampered, "signature"),
         ("signed-by-another-key", token("EdDSA", key=OTHER_ED), "signature"),
         ("two-parts", head + "." + payload, "format"),
     ]
-    write("jwt-verify", ["P8.1", "P8.3"],
+    write("jwt-verify", ["P8.1", "P8.3", "P8.27"],
           "用户访问凭据的核验。jwks 是签发方公布的公钥（第一项 kind=keys），now 是核验时刻（UNIX 秒），容许 60 秒时钟偏差；其余各项是"
           "一个凭据与期望：problem 为空表示合格，否则是第一个不合格的检查（format、alg、typ、kid、kid_unknown、signature、iss、aud、exp、"
-          "nbf、iat、sub），对外一律答 TOKEN_INVALID。kid_unknown 表示刷新公钥之后仍不认识。每个用例只有一处缺陷。密钥只用于这些向量。",
+          "nbf、iat、sub、sv；sv 指 be_sv 不是正整数），对外一律答 TOKEN_INVALID。kid_unknown 表示刷新公钥之后仍不认识。每个用例只有一处缺陷。密钥只用于这些向量。",
           [{"id": "keys", "kind": "keys", "jwks": jwks(), "issuer": ISSUER, "audience": AUDIENCE, "now": NOW,
             "skew_seconds": SKEW}] +
           [{"id": cid, "kind": "token", "token": t, "expect": {"valid": p is None, "problem": p or ""}} for cid, t, p in cases],

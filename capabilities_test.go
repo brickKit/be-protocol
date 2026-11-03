@@ -46,7 +46,7 @@ func TestEveryRuleBelongsToExactlyOneCapability(t *testing.T) {
 			t.Errorf("capability %q: the ID must be unique lowercase-kebab and the title set", c.ID)
 		}
 		ids[c.ID] = true
-		if c.Owner != "sdk" && c.Owner != "component" && c.Owner != "assembly" {
+		if c.Owner != "sdk" && c.Owner != "component" && c.Owner != "assembly" && c.Owner != "edge" {
 			t.Errorf("%s: owner %q", c.ID, c.Owner)
 		}
 		for _, r := range c.Rules {
