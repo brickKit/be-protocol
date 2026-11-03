@@ -23,6 +23,7 @@ message Record {
   string record_id = 1;
   int64 version = 2;
   bytes payload = 3;
+  bool claim = 4;  // payload is a claim check {"claim": {uri, size, sha256}}, as an event's with beclaim (P6.14)
 }
 
 message ReadRequest {
@@ -42,6 +43,7 @@ message ReadResult {
   ReadState state = 2;
   int64 version = 3;   // EXISTS and TOMBSTONE
   bytes payload = 4;   // EXISTS
+  bool claim = 5;      // as Record.claim
 }
 
 message ReadResponse {
