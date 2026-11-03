@@ -46,6 +46,7 @@
 | alpha.54 | COMPAT.md 补写 `be-sdk-go` alpha.54 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
 | alpha.55 | COMPAT.md 补写 `be-sdk-go` alpha.55、alpha.56 与 `be-sdk-python` a45 所实现的协议版本 | 否 | 兼容；没有行为变化 | 无：只改本文件 |
 | alpha.56 | P8.11 核验回答的分片项多可选的 `read_only`：为真时只续普通读取的有效期，高风险的有效期不动（安全 03 的续发与关闭：来源水位在 `D_src_high` 与 `D_src_read` 之间）；向量 `view-accept` 多 8 例与结果 `renewed_read`、`replaced_read`、`adopted_read` | 是：核验回答多一个字段 | **要按顺序升级**：组件先升到实现本版的 SDK，授权成员才开始答 `read_only`；实现旧版的组件不认识这个字段（契约 `be.authz.v3` 的 `ShardAnswer.read_only`，`contract-infra-authz` alpha.2 起），把高风险的有效期也续上：来源停滞时高风险操作不关闭 | 安全 09a（核验回答的字段） |
+| alpha.57 | P9.30–P9.33 来源的快照与批量读取是 SDK 自带的标准系统方法 `be.source.v1.RecordService`（`Read`、`Snapshot`，`proto/be/source/v1/records.proto`）：来源按流声明读取的组件与读取函数，水位来源的流必须声明；回答按 P9.18 声明来源，消费者只用已采用的主库的回答；新能力 `projection-records` | 是：新的系统方法 | 兼容：新方法，没有旧的调用方；实现旧版的来源没有这两个方法，对它们答 `CAPABILITY_UNSUPPORTED`（P3.10），消费者的对齐不能完成 | 协议 02 的来源要提供什么（S3） |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
