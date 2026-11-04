@@ -1,6 +1,6 @@
 {
   "topic": "token-stale",
-  "protocol": "3.0.0-alpha.61",
+  "protocol": "3.0.0-alpha.62",
   "rules": [
     "P8.25"
   ],

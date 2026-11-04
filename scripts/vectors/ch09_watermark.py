@@ -212,16 +212,18 @@ def watermark_vectors():
 
 
 def judge(q):
-    """Protocol 02 step 9: usable, provably_absent or unprovable."""
+    """Protocol 02 step 9: usable, provably_absent or unprovable. basis last_applied (P9.34) asks by the last applied
+    facts: a stalled source is judged by its rows too, and the watermark's age does not count."""
+    applied = q["basis"] == "last_applied"
     if not q["watermark_source"]:
         return "query_the_source"
-    if q["source_state"] != "aligned":  # aligning, stalled, blocked, or a state outside the table
+    if q["source_state"] not in (("aligned", "stalled") if applied else ("aligned",)):  # aligning, blocked, outside
         return "unprovable"
     if q["projection_state"] != "serving":  # aligning (a new projection), untrusted, or outside the table
         return "unprovable"
     if q["quarantined"]:
         return "unprovable"
-    if q["watermark"] is None or q["watermark"] < q["now"] - q["freshness"]:
+    if not applied and (q["watermark"] is None or q["watermark"] < q["now"] - q["freshness"]):
         return "unprovable"
     row = q["row"]
     adopted = row is None or row.get("adopted", True)
@@ -234,7 +236,7 @@ def judge(q):
 
 def judge_vectors():
     def q(**kw):
-        base = {"watermark_source": True, "source_state": "aligned", "projection_state": "serving",
+        base = {"basis": "fresh", "watermark_source": True, "source_state": "aligned", "projection_state": "serving",
                 "quarantined": False, "watermark": 950, "now": 1000, "freshness": 60,
                 "row": {"state": "complete", "adopted": True}}
         return {**base, **kw}
@@ -259,9 +261,25 @@ def judge_vectors():
         ("expired-and-no-row", q(watermark=900, row=None)),
         ("a-source-state-outside-the-table", q(source_state="unknown")),
         ("a-projection-state-outside-the-table", q(projection_state="unknown")),
+        # P9.34: by the last applied facts
+        ("applied-an-old-watermark", q(basis="last_applied", watermark=100)),
+        ("applied-no-watermark", q(basis="last_applied", watermark=None)),
+        ("applied-the-source-stalled", q(basis="last_applied", source_state="stalled", watermark=100)),
+        ("applied-the-source-aligning", q(basis="last_applied", source_state="aligning")),
+        ("applied-the-source-blocked", q(basis="last_applied", source_state="blocked")),
+        ("applied-a-new-projection-aligning", q(basis="last_applied", projection_state="aligning")),
+        ("applied-an-untrusted-projection", q(basis="last_applied", projection_state="untrusted")),
+        ("applied-a-quarantined-subject", q(basis="last_applied", source_state="stalled", quarantined=True)),
+        ("applied-no-such-row", q(basis="last_applied", watermark=100, row=None)),
+        ("applied-a-tombstone", q(basis="last_applied", source_state="stalled", row={"state": "tombstone", "adopted": True})),
+        ("applied-an-incomplete-row", q(basis="last_applied", row={"state": "incomplete", "adopted": True})),
+        ("applied-a-row-of-an-older-epoch", q(basis="last_applied", source_state="stalled",
+                                              row={"state": "complete", "adopted": False})),
+        ("applied-a-source-state-outside-the-table", q(basis="last_applied", source_state="unknown")),
     ]
-    write("watermark-judge", ["P9.24"],
-          "能否依据本地投影做安全或资格判断（装配项目协议 02 第 9 步的判断表，按行序第一条命中）：watermark_source 是来源是否声明为水位来源，"
+    write("watermark-judge", ["P9.24", "P9.34"],
+          "能否依据本地投影做安全或资格判断（装配项目协议 02 第 9 步的判断表，按行序第一条命中）：basis 是问法，fresh 按声明的新鲜度（P9.24），"
+          "last_applied 按最后已应用的事实（P9.34：来源 stalled 也按行判断，不看水位的年龄）；watermark_source 是来源是否声明为水位来源，"
           "source_state 与 projection_state 是来源的对齐状态与投影级状态（serving、aligning、untrusted），quarantined 是所问的主体与读到的行的主体有没有被隔离，"
           "watermark、now、freshness 是水位、消费者主库的当前事务时间与声明的新鲜度（秒），row 是读到的行（null 为没有；adopted 表示"
           "属于已采用的实现实例与纪元）；expect：usable、provably_absent、unprovable，或 query_the_source（不用投影，同步查询来源）。",

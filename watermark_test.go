@@ -221,6 +221,7 @@ func TestWatermarkJudgeVectors(t *testing.T) {
 		var c struct {
 			ID    string
 			Query struct {
+				Basis           string
 				WatermarkSource bool   `json:"watermark_source"`
 				SourceState     string `json:"source_state"`
 				ProjectionState string `json:"projection_state"`
@@ -238,8 +239,10 @@ func TestWatermarkJudgeVectors(t *testing.T) {
 			t.Fatal(err)
 		}
 		q := c.Query
-		fresh := q.Watermark != nil && *q.Watermark >= q.Now-q.Freshness
-		trusted := q.SourceState == "aligned" && q.ProjectionState == "serving" && !q.Quarantined && fresh
+		applied := q.Basis == "last_applied" // P9.34: a stalled source by its rows, the watermark's age not counted
+		fresh := applied || q.Watermark != nil && *q.Watermark >= q.Now-q.Freshness
+		state := q.SourceState == "aligned" || applied && q.SourceState == "stalled"
+		trusted := state && q.ProjectionState == "serving" && !q.Quarantined && fresh
 		got := "unprovable"
 		switch {
 		case !q.WatermarkSource:
