@@ -49,6 +49,7 @@
 | alpha.57 | P9.30–P9.33 来源的快照与批量读取是 SDK 自带的标准系统方法 `be.source.v1.RecordService`（`Read`、`Snapshot`，`proto/be/source/v1/records.proto`）：来源按流声明读取的组件与读取函数，水位来源的流必须声明；回答按 P9.18 声明来源，消费者只用已采用的主库的回答；新能力 `projection-records` | 是：新的系统方法 | 兼容：新方法，没有旧的调用方；实现旧版的来源没有这两个方法，对它们答 `CAPABILITY_UNSUPPORTED`（P3.10），消费者的对齐不能完成 | 协议 02 的来源要提供什么（S3） |
 | alpha.58 | `records.proto` 的 `Record` 与 `ReadResult` 多 `claim`：内容是对象存储的引用（同事件的 `beclaim`）；P9.30 写明 | 是：新字段 | 兼容：alpha.57 没有 SDK 实现过 | 无：只补 alpha.57 的消息 |
 | alpha.59 | P7.24 queue 工作项排入时可以声明最早执行时刻 `run_at`，未到期的 `pending` 不被认领；P7.5 的认领条件随之写成 `pending` 或 `retry_wait` 且 `run_at <= now()` | 否：只在组件自己的表里 | 兼容：以前的 SDK 排入的项 `run_at` 都是排入的时刻；`be-sdk-go` 的认领一直核对 `pending` 的 `run_at`，`be-sdk-python` 还没有工作项的运行时 | 协议 01（工作项的字段、认领语句） |
+| alpha.60 | P7.13 业务等待的 `run_at` 按已等待的时长退避（再等与已等的一样久，1 秒起，上限 5 分钟） | 否：只在组件自己的表里 | 兼容：以前的 SDK 每次等待都是 1 秒，等一天要认领 86 400 次；改后约 300 次（加倍十来次到 5 分钟，之后 86 400 / 300 ≈ 288 次） | 协议 01（状态迁移的等待结果） |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
