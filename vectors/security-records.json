@@ -1,6 +1,6 @@
 {
   "topic": "security-records",
-  "protocol": "3.0.0-alpha.62",
+  "protocol": "3.0.0-alpha.63",
   "rules": [
     "P8.8",
     "P8.11",
