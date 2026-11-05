@@ -14,7 +14,7 @@
 | 编号 | 层级 | 规则 | 检验 |
 | --- | --- | --- | --- |
 | P13.3 | 必须 | 状态与转移按装配项目协议 10 的状态表，按行序第一条命中：`prepared`、`retry_wait`、`sending`、`unknown`、`accepted`、`manual`，终态 `succeeded`、`failed`、`rejected`。终态吸收之后的一切结果、不倒退；表外的组合不改状态、记错误日志。每次转移与它的原因写在命令上，尝试写在尝试表里 | 向量 `external-command` |
-| P13.4 | 必须 | 发送：工作项认领命令时，先以主库时间核对重发截止时刻（超过：转 `unknown`，P13.7）；否则在一个事务里转 `sending` 并提交，提交之后才发出。标为不可撤回的命令在发出之前再核对一次截止时刻，再把发出记录（证据类别 `external_command_issued`，阶段 `general`，带命令身份、业务参考号、操作与参数摘要）交给证据存储并等回执，不可达时写进告警渠道（[12](12-evidence-and-run-profile.md) 的 P12.16 同一时限）；两者都写不进时不发出，退避后再来 | 向量 `external-command`、SDK 测试 |
+| P13.4 | 必须 | 发送：工作项认领命令时，先以主库时间核对重发截止时刻（超过：转 `unknown`，P13.7）；否则在一个事务里转 `sending` 并提交，提交之后才发出。标为不可撤回的命令在发出之前再核对一次截止时刻，再把发出记录（证据类别 `external_command_issued`，阶段 `intent`：它不在业务事务里、没有提交序号（P12.9）；带命令身份、业务参考号、操作与参数摘要）交给证据存储并等回执，不可达时写进告警渠道（[12](12-evidence-and-run-profile.md) 的 P12.16 同一时限）；两者都写不进时不发出，退避后再来 | 向量 `external-command`、SDK 测试 |
 | P13.5 | 必须 | 适配器把一次发送的结果归为：`not_reached`（肯定没有被外部处理：连接失败、明确的限流）→ `retry_wait`；`maybe_reached`（读取超时、网关错误、响应前断开）→ `unknown`；`accepted` → `accepted`；`succeeded`、`failed` → 终态；`rejected`（外部明确拒绝，重试也一样）→ `rejected`。除 `not_reached` 外的每次发送都记为“可能已到达”，最早的一次就是最早一次可能到达外部的发送时刻。认领者失效（租约到期）时，`sending` 的命令由接管者转 `unknown`，不重发 | 向量 `external-command`、SDK 测试 |
 
 ## 结果未知时

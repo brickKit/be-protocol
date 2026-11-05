@@ -17,7 +17,8 @@ CREATE TABLE be_external_command (
     resend_deadline   timestamptz,                     -- P13.7
     first_reached_at  timestamptz,                     -- the earliest send that may have reached the external system
     last_reached_at   timestamptz,                     -- the latest one
-    unknown_since     timestamptz,
+    unknown_since     timestamptz,                     -- since when unknown (the alert and the manual limit)
+    accepted_since    timestamptz,                     -- since when accepted (the finality and the manual limit)
     outcome           jsonb,                           -- the terminal result (external status, amounts) as reported
     settled_at        timestamptz,
     next_at           timestamptz NOT NULL DEFAULT now(),
