@@ -1,4 +1,4 @@
-"""Chapter 06: partitions and the envelope (P6.1, P6.4, P6.9, P6.13)."""
+"""Chapter 06: partitions, the envelope and the progress (P6.1, P6.4, P6.9, P6.13, P6.37)."""
 import hashlib
 import json
 
@@ -78,3 +78,62 @@ def envelope_vectors():
           "与主题。event.payload 是载荷的确切字节（UTF-8）；epoch 是（代次，时间线）。besubjects 是紧凑 JSON（无空白）。"
           "消息头逐个相等，不多不少。",
           cases, {"event": "发件行的字段", "expect.headers": "消息头", "expect.digest": "行摘要", "expect.subject": "主题"})
+
+
+# ---------------------------------------------------------------- progress (P6.37)
+def progress(runs, rows, lifetime):
+    """A subscription's progress per source partition (P6.37). runs: start times; rows: inbox rows {key, pos, at}
+    (pos is [generation, timeline, seq] or None for a row written before positions were kept); times in seconds."""
+    starts = sorted(runs)
+    cut = None
+    for k in range(len(starts) - 1, -1, -1):
+        hi = starts[k + 1] if k + 1 < len(starts) else float("inf")
+        seg = [r["at"] for r in rows if starts[k] <= r["at"] < hi]
+        if seg and starts[k] <= max(seg) - lifetime:
+            cut = max(seg) - lifetime
+            break
+    out = {}
+    if cut is None:
+        return out
+    for r in rows:
+        if r["pos"] is not None and r["at"] <= cut:
+            out[r["key"]] = max(out.get(r["key"], r["pos"]), r["pos"])
+    return out
+
+
+def progress_vectors():
+    L = 600
+
+    def run_of(key, first_seq, first_at, n, step=100, epoch=(1, 1), skip=()):
+        return [{"key": key, "pos": [epoch[0], epoch[1], first_seq + i], "at": first_at + i * step}
+                for i in range(n) if first_seq + i not in skip]
+
+    cases = [
+        ("steady", "one run longer than L: everything handled up to L before the last handling",
+         [0], run_of("p0", 1, 100, 15)),
+        ("one-in-backoff", "seq 4 is still being redelivered: the largest handled (10) would skip it",
+         [0], run_of("p0", 1, 100, 3) + run_of("p0", 5, 1300, 6)),
+        ("short-last-run", "the last run is shorter than L: the previous run decides",
+         [0, 2500], run_of("p0", 1, 100, 20) + [{"key": "p0", "pos": [1, 1, 21], "at": 2600},
+                                                {"key": "p0", "pos": [1, 1, 22], "at": 2700}]),
+        ("too-short", "no run lasted L: no progress, redeliver from the first row kept",
+         [0], run_of("p0", 1, 100, 3)),
+        ("no-position", "rows written before positions were kept count for the time, never as a position",
+         [0], run_of("p0", 1, 100, 5) + [{"key": "p0", "pos": None, "at": 700}, {"key": "p0", "pos": None, "at": 1400}]),
+        ("partitions-and-epochs", "partitions apart; a later epoch is after every position of an earlier one",
+         [0], run_of("p0", 40, 100, 5) + run_of("p1", 50, 150, 3) + run_of("p1", 1, 450, 10, epoch=(2, 1))),
+    ]
+    out = []
+    for name, desc, runs, rows in cases:
+        out.append({"id": name, "description": desc, "input": {"runs": runs, "rows": rows, "lifetime": L},
+                    "expected": {"progress": progress(runs, rows, L)}})
+    want = {"steady": {"p0": [1, 1, 9]}, "one-in-backoff": {"p0": [1, 1, 3]}, "short-last-run": {"p0": [1, 1, 14]},
+            "too-short": {}, "no-position": {"p0": [1, 1, 5]},
+            "partitions-and-epochs": {"p0": [1, 1, 44], "p1": [2, 1, 4]}}
+    for c in out:
+        assert c["expected"]["progress"] == want[c["id"]], (c["id"], c["expected"]["progress"])
+    write("inbox-progress", ["P6.37"],
+          "订阅对每个来源分区的进度：按运行段求截止时刻（最后一次处理减投递寿命 L，这一段从启动起不足 L 时看上一段），"
+          "取处理时刻不晚于它的、带位置的收件表行的最大（代次，时间线，序号）。时刻以秒计；pos 为 null 的行是记位置之前写的",
+          out, {"input.runs": "启动时刻", "input.rows": "收件表行：key（来源分区）、pos、at（处理时刻）",
+                "input.lifetime": "L（秒）", "expected.progress": "按 key 的进度；没有的 key 表示进度为空"})

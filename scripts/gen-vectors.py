@@ -46,6 +46,7 @@ if __name__ == "__main__":
     ch04_idempotency.idempotency_vectors()
     ch06_events.partition_vectors()
     ch06_events.envelope_vectors()
+    ch06_events.progress_vectors()
     ch07_work.cron_vectors()
     ch05_database.db_errors_vectors()
     ch05_database.migration_lint_vectors()
