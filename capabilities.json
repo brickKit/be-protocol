@@ -1,5 +1,5 @@
 {
-  "protocol": "3.0.0-alpha.84",
+  "protocol": "3.0.0-alpha.85",
   "description": "能力清单：spec/ 中每条规则恰好属于一项能力（rules 为空的能力只留形状，规则随后续章节加入）。owner 为 sdk 的能力由每个 SDK 在自己仓库的 features.json 中标出状态；component 与 assembly 的能力由组件与装配检查负责；edge 的能力由 be-edge 的测试与一致性套件负责。",
   "capabilities": [
     {
@@ -643,7 +643,29 @@
         "P13.7",
         "P13.8",
         "P13.9",
-        "P13.10"
+        "P13.10",
+        "P13.11",
+        "P13.12",
+        "P13.13"
+      ]
+    },
+    {
+      "id": "recovery-checks",
+      "title": "整套恢复的核对：一致性检查的标准系统方法与 SDK 自带的检查、损失范围的对象查询、单号的已用最大值与提升",
+      "owner": "sdk",
+      "rules": [
+        "P14.1",
+        "P14.2",
+        "P14.3",
+        "P14.5"
+      ]
+    },
+    {
+      "id": "recovery-loss",
+      "title": "恢复工具求审计损失：每个来源恢复点之后的产生序号空位与最大序号之后的窗口",
+      "owner": "assembly",
+      "rules": [
+        "P14.4"
       ]
     }
   ]

@@ -68,5 +68,6 @@ if __name__ == "__main__":
     ch12_run_profile.run_profile_vectors()
     ch12_evidence.evidence_vectors()
     ch13_external.external_vectors()
+    ch13_external.reconcile_vectors()
     sums()
     print("\n".join(sorted(p.name for p in VEC.iterdir())))

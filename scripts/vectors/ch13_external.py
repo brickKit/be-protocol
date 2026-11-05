@@ -181,3 +181,65 @@ def external_vectors():
           "对外命令：状态转移（按行序第一条命中）、查询“不存在”之后是否重发、重发截止时刻的公式、请求按参考号与参数摘要的幂等",
           cases, {"input": "command, event, capabilities, now | command, capabilities | stored, incoming",
                   "expected": "state, reason | resend_deadline | digest, answer"})
+
+
+def reconcile(commands, external, issued, caps, T, now):
+    """P13.12: the step 7 matching, first matching row wins. commands: the local commands not final; external: the
+    external records by reference; issued: the issue records' references. Answers one conclusion per reference."""
+    out = {}
+    for c in commands:
+        ref = c["reference"]
+        if ref in external:
+            out[ref] = {"conclusion": "matched", "state": external[ref]}
+            continue
+        first = c.get("first_reached_at") or (c.get("sending_at") if c["state"] == "sending" else None) or \
+            (T if c["state"] == "prepared" else None)
+        facts = dict(c, first_reached_at=first)
+        d = deadline(facts, caps) if first else None
+        if d and t(now) <= t(d):
+            out[ref] = {"conclusion": "deadline", "resend_deadline": d}
+            continue
+        action, why = not_found(dict(facts, resend_deadline=None), {k: v for k, v in caps.items() if k != "dedupe_window"}, now)
+        out[ref] = {"conclusion": "unknown" if action == "resend" else "manual", "reason": why}
+    local = {c["reference"] for c in commands} | set(external.get("_final_local", []))
+    for ref in external:
+        if ref not in local and not ref.startswith("_"):
+            out[ref] = {"conclusion": "external_only"}
+    for ref in issued:
+        if ref not in local and ref not in external:
+            out[ref] = {"conclusion": "possibly_executed"}
+    return out
+
+
+def reconcile_vectors():
+    T, now = "2026-11-05T10:00:00.000000Z", "2026-11-05T14:00:00.000000Z"
+    cmds = [
+        {"reference": "p-matched", "state": "retry_wait", "first_reached_at": "2026-11-05T10:10:00.000000Z"},
+        {"reference": "p-prepared-dedupe", "state": "prepared"},
+        {"reference": "p-sending-dedupe", "state": "sending", "sending_at": "2026-11-05T09:00:00.000000Z"},
+        {"reference": "p-old", "state": "unknown", "first_reached_at": "2026-11-03T10:00:00.000000Z"},
+        {"reference": "p-expired", "state": "unknown", "first_reached_at": "2026-11-05T11:00:00.000000Z",
+         "last_reached_at": "2026-11-05T11:00:00.000000Z", "expires_at": "2026-11-05T12:00:00.000000Z"},
+    ]
+    external = {"p-matched": "succeeded", "p-external-only": "succeeded"}
+    issued = ["p-matched", "p-issued-lost"]
+    got = reconcile(cmds, external, issued, DEDUPE_24H, T, now)
+    want = {"p-matched": "matched", "p-prepared-dedupe": "deadline", "p-sending-dedupe": "deadline", "p-old": "manual",
+            "p-expired": "deadline", "p-external-only": "external_only", "p-issued-lost": "possibly_executed"}
+    assert {k: v["conclusion"] for k, v in got.items()} == want, got
+    no_dedupe = reconcile([{"reference": "p-x", "state": "prepared"}], {}, [], NO_DEDUPE, T, now)
+    assert no_dedupe["p-x"]["conclusion"] == "manual"
+    exp = [{"reference": "p-y", "state": "unknown", "first_reached_at": "2026-11-05T11:00:00.000000Z",
+            "last_reached_at": "2026-11-05T11:00:00.000000Z", "expires_at": "2026-11-05T12:00:00.000000Z"}]
+    expired = reconcile(exp, {}, [], NO_DEDUPE, T, now)
+    assert expired["p-y"]["conclusion"] == "unknown", expired
+    cases = [{"id": "step-7", "input": {"T": T, "now": now, "commands": cmds, "external": external, "issued": issued,
+                                        "capabilities": DEDUPE_24H}, "expected": got},
+             {"id": "no-dedupe-prepared", "input": {"T": T, "now": now, "commands": [{"reference": "p-x", "state": "prepared"}],
+                                                    "external": {}, "issued": [], "capabilities": NO_DEDUPE},
+              "expected": no_dedupe},
+             {"id": "no-dedupe-expired", "input": {"T": T, "now": now, "commands": exp, "external": {}, "issued": [],
+                                                   "capabilities": NO_DEDUPE}, "expected": expired}]
+    write("external-reconcile", ["P13.12"],
+          "整套恢复第 7 步的外部对账：对上而终结、写重发截止、unknown、manual、外部有本地无、可能已对外执行待核实",
+          cases, {"input": "T, now, commands, external, issued, capabilities", "expected": "reference -> conclusion"})
