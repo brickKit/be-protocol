@@ -87,6 +87,8 @@ def records_vectors():
         ("audit-denial", "be.audit.record", DENIAL),
         ("resource-no-dimensions", "be.security.resource_definition", with_(RESOURCE, dimensions={})),
         ("account-status", "be.security.account_status", ACCOUNT),
+        # a protected change of an administrator's account carries the confirmation it used (security 08)
+        ("account-status-confirmed", "be.security.account_status", with_(ACCOUNT, confirmation=SRC)),
         ("definition-set", "be.security.definition_set", DEFINITION_SET),
         # EN06: a minor version's optional extension: a reader that does not know it ignores it; the digest covers it
         ("view-with-ext", "be.security.view", with_(VIEW, ext={"demo_hint": "anything"})),
