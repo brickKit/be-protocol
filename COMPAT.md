@@ -56,6 +56,7 @@
 | alpha.64 | P8.14 组件按自己的资源定义核对视图里的每个段，不合格的（少一维、多一维、原子不合维度、写不可读、区间缺端）不参与求值；P8.15 对操作 K 可读的字段取 K 自己的段；P8.30 读者拒绝 `required_features` 含不认识功能名的记录、忽略 `ext`；P8.31 掩码的输出形状（不可读字段为 `null` 并列在 `_masked`）；P9.4 列表的 `readable_only`；向量 `segment-eval` 加 r10、八个场景、`action_fields` 与 `action_list`、每种维度的筛选、`check` 与 `mask` 两种例子，`security-records` 加 `read` 字段与三例 | 是：用户面的输出形状（被掩码的字段由删掉改为 `null` 加 `_masked`）；列表回答可带 `readable_only` | 兼容：调用方多看到一个 `_masked` 键与值为 `null` 的字段；实现旧版的 SDK 不核对段，缺维度的段在它那里等于这一维不限，授权成员先保证视图里没有这种段（`infra/authz` 3.0.23 起），组件再升级 | 安全 01 的 AE04、AE08；安全 06 的 SC10；安全 07 的 FX01、FX12；安全 09a 的 EN05、EN06、EN08–EN10 |
 | alpha.65 | `capabilities.json` 的 `protocol` 与 `fs.go` 的 `Version` 改正为本版（alpha.64 两处都漏改，仍写 alpha.63，SDK 的功能矩阵检查因此拒绝钉 alpha.64）；加检查：COMPAT 第 1 节最后一行就是 `capabilities.json` 的版本。条款与向量同 alpha.64 | 否 | 兼容；**不要用 alpha.64**，用本版 | 无：只改版本字段与检查 |
 | alpha.66 | 向量文件的 `protocol` 按本版重新生成（alpha.65 只改了 `fs.go` 与 `capabilities.json`，向量仍写 alpha.63，自己的检查不过）；生成器改为从 `fs.go` 读版本，版本号只剩两处手改，两处都有检查。条款与向量内容同 alpha.64 | 否 | 兼容；**不要用 alpha.64、alpha.65**，用本版 | 无：只改版本字段与生成器 |
+| alpha.67 | P8.17 写明命中位图的每一位都是布尔值：谓词因 NULL 的列为 NULL 时记为未命中（`COALESCE(谓词, FALSE)`）。套件的授权剖面在 Go 探针上发现：`be-sdk-go` alpha.71 的命中表达式对 NULL 的维度值得到 NULL，按布尔值扫描的组件整页答 500 | 否：组件内部的查询 | 兼容；实现旧版的 SDK 给出的命中表达式可能为 NULL，组件要自己当作未命中 | 无：查询的编译细节，线协议是权威 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
