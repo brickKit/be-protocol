@@ -57,6 +57,7 @@
 | alpha.65 | `capabilities.json` 的 `protocol` 与 `fs.go` 的 `Version` 改正为本版（alpha.64 两处都漏改，仍写 alpha.63，SDK 的功能矩阵检查因此拒绝钉 alpha.64）；加检查：COMPAT 第 1 节最后一行就是 `capabilities.json` 的版本。条款与向量同 alpha.64 | 否 | 兼容；**不要用 alpha.64**，用本版 | 无：只改版本字段与检查 |
 | alpha.66 | 向量文件的 `protocol` 按本版重新生成（alpha.65 只改了 `fs.go` 与 `capabilities.json`，向量仍写 alpha.63，自己的检查不过）；生成器改为从 `fs.go` 读版本，版本号只剩两处手改，两处都有检查。条款与向量内容同 alpha.64 | 否 | 兼容；**不要用 alpha.64、alpha.65**，用本版 | 无：只改版本字段与生成器 |
 | alpha.67 | P8.17 写明命中位图的每一位都是布尔值：谓词因 NULL 的列为 NULL 时记为未命中（`COALESCE(谓词, FALSE)`）。套件的授权剖面在 Go 探针上发现：`be-sdk-go` alpha.71 的命中表达式对 NULL 的维度值得到 NULL，按布尔值扫描的组件整页答 500 | 否：组件内部的查询 | 兼容；实现旧版的 SDK 给出的命中表达式可能为 NULL，组件要自己当作未命中 | 无：查询的编译细节，线协议是权威 |
+| alpha.68 | 向量 `segment-eval` 加记录 r11（法人 LE1、部门为 NULL）：经一段可见、另一段的列为 NULL 时命中位为假（P8.17 的 alpha.67 写明，向量此前没有这种行） | 否 | 兼容 | 无：只加向量 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 

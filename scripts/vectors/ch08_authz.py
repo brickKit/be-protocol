@@ -147,6 +147,8 @@ RECORDS = [
     rec("r5", NULL, val("org9"), val(U2), "50"),
     rec("r6", val("LE1"), val("org1/org22"), val(U2), "10", "USD"),
     rec("r7", val("LE1"), val(""), val(U2), "10"),
+    # listed through one segment while another's column is NULL: its hit bit is false, never NULL (P8.17)
+    rec("r11", val("LE1"), NULL, val(U2), "30"),
 ]
 UNKNOWN_RECORDS = [rec("r8", UNOBTAINED, val("org1/org2"), val(U2), "10"),
                    rec("r9", val("LE1"), val("org1/org2"), val(U1), "10")]
