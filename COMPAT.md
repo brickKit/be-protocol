@@ -65,6 +65,7 @@
 | alpha.73 | 第 12 章加记录者一侧（P12.15–P12.18）：本地证据发件表与 `be.evidence.transfer`、收紧两段写、变更历史与提交序号、“已体现”按记录身份；迁移 0013（`be_evidence_outbox`、`be_change_history`、`be_evidence_counter`）；能力 `evidence-writer` | 否：组件自己的表与对证据存储的调用 | 兼容：新表由迁移建立 | 协议 15 的证据的写入 |
 | alpha.74 | P12.9 改正：`position` 只在 `effective` 与 `general` 上（`cancelled` 的事务没有提交，没有序号；alpha.72 写成“只有意图没有”，记录者写不出合规的“已取消”）；向量 `evidence-record` 加 `position-by-phase`，`cancelled` 的例子去掉位置 | 是：证据存储的核对按新规则 | 不兼容的改正：按 alpha.72 核对的证据存储会拒绝不带位置的“已取消”，证据存储（`infra/audit` 3.0.16）先升 | 协议 15 的证据的写入 |
 | alpha.75 | 迁移 0013 改正：`be_evidence_outbox.ord` 用标识列（与 SDK 其余的表一样），alpha.73、74 写成 `bigserial`，运行角色没有那个序列的使用权限，插入被拒。0013 发布后还没有任何组件应用过（实现它的 `be-sdk-go` alpha.78 以本版为准），所以就地改正 | 否 | 兼容：不要用 alpha.73、74 的 0013 | — |
+| alpha.76 | P12.16 加：意图编码不成时记严重日志 `evidence_intent_unsealed`，由写入意图的 SDK 记（组织成员第一版的移动意图因此全部静默丢失，测试才发现） | 否（记录者自己的日志） | 兼容 | 无：SDK 的日志，设计层没有对应的选择 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
@@ -99,6 +100,8 @@
 | `be-sdk-go` | alpha.72、alpha.73 | alpha.68 |
 | `be-sdk-go` | alpha.74–alpha.76 | alpha.70 |
 | `be-sdk-go` | alpha.77 | alpha.71 |
+| `be-sdk-go` | alpha.78 | alpha.75 |
+| `be-sdk-go` | alpha.79 | alpha.76 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |
