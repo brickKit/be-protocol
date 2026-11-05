@@ -69,6 +69,7 @@
 | alpha.77 | 第 6 章加“进度与补发”（P6.36–P6.40）：收件表记来源位置、按运行段与投递寿命 L 求进度（向量 `inbox-progress`）、`be.source.v1.ResendService.Resend`（消息身份另起）、消费者库回退之后要补发、超出保留的修复与 `be_resend_gap`；P6.12 的清理记下删到的位置；迁移 0014；能力 `redelivery` | 是：新的标准系统方法（只增加，不改原有的线） | 兼容：实现旧版的生产者没有 `Resend`，调用方得到“未实现”并记错误日志；旧版的消费者不记位置，进度为空（从保留的开头补发） | 协议 15 的“发件表的保留与消费者进度” |
 | alpha.78 | 第 01 章加“恢复模式”（P1.22–P1.24）：`RECOVERY_PHASE`（第 02 章，进程级）、恢复就绪时 `/readyz` 答 200（P1.6 改）、`frozen` 与 `redelivering` 两个阶段运行什么；新的错误原因 `MAINTENANCE`（503，可重试）；能力 `recovery-mode` | 是：恢复中用户面答新的原因 | 兼容：不认识的原因按码归类，503 可重试；实现旧版的成员不认识 `RECOVERY_PHASE`，在恢复中照常运行，所以整套恢复前全部成员要先升到实现本版的 SDK | 协议 15 的恢复流程、协议 17 的启动与停止 |
 | alpha.79 | 第 12 章加“重放”（P12.19–P12.22）：`be.evidence.v1.ReplayService.Replay`（只有 `ops/recover` 调用）、已体现、按类别重新执行、不重做前置校验、恢复工具的顺序；第 01 章的恢复阶段加 `replaying`（身份成员在恢复阶段不签发、不发布公钥集合）；能力 `evidence-replay`、`replay-order` | 是：新的标准系统方法 | 兼容：实现旧版的组件没有 `ReplayService`，恢复工具得到“未实现”，把它的记录列入复核 | 协议 15 的第 6 步 |
+| alpha.80 | P9.35：水位“不早于某一时刻”与被问到时立即补取（整套恢复的 6.4）；安全处置的 `origin` 加 `recovery_review`（6.5 关闭复核中的主体） | 是：授权成员发出的处置可以带新的来源 | 兼容：按旧 schema 严格校验处置的读取方遇到新取值会拒绝，读取方先升级；P9.35 只在消费者内部 | 协议 15 的 6.4–6.5、安全 09a 的安全处置 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
@@ -105,6 +106,9 @@
 | `be-sdk-go` | alpha.77 | alpha.71 |
 | `be-sdk-go` | alpha.78 | alpha.75 |
 | `be-sdk-go` | alpha.79 | alpha.76 |
+| `be-sdk-go` | alpha.80 | alpha.77 |
+| `be-sdk-go` | alpha.81 | alpha.78 |
+| `be-sdk-go` | alpha.82、alpha.83 | alpha.79 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |
