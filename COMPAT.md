@@ -61,6 +61,7 @@
 | alpha.69 | 只改文字：第 2 节补上 `be-sdk-go` alpha.57–alpha.73、`be-sdk-python` a46–a51 所实现的协议版本（此前漏记）；P8.14、P8.15、P8.31 的检验一栏加上套件的 CK-AZ-05（授权剖面） | 否 | 兼容；没有行为变化 | 无：只改本文件与检验的条文 |
 | alpha.70 | 安全记录 `be.security.account_status` 加可选字段 `confirmation`（受保护的账号状态变更所用的确认记录）；P9.16 允许水位来源声明“回声之前”的一步（外部产品承载的来源先拉取产品的变更，失败不写回声、答 `UNAVAILABLE`） | 是：身份成员发出的账号状态可以带新字段 | 兼容：可选字段；按旧 schema 严格校验的读取方（授权成员）遇到它会拒绝，读取方先升级；回声之前的一步只在来源内部 | 安全 09a 的账号状态；安全 03 的“身份成员由外部产品承载时” |
 | alpha.71 | 新的第 12 章：运行档案（对象锁的桶、记录的形状与签名、类别与保留期、恢复代次的读取与推进）与告警渠道（P12.1–P12.8）；能力 `run-profile` | 否：组件之间的线不变，只有写运行档案与告警的执行者用到 | 兼容 | 协议 15、底层选择的不随恢复回退的存储 |
+| alpha.72 | 第 12 章加证据（P12.9–P12.14）：记录 `be.evidence.record` 的形状与摘要、按（id，phase）只收一次、记录者即调用者、回执、列出、证据存储不回退；向量 `evidence-record`；能力 `evidence-store`（组件）、`full-recovery`（装配） | 否：新的系统方法由审计组件提供，原有的线不变 | 兼容 | 协议 15 的证据表与证据的写入 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
@@ -93,6 +94,8 @@
 | `be-sdk-go` | alpha.67–alpha.70 | alpha.62 |
 | `be-sdk-go` | alpha.71 | alpha.66 |
 | `be-sdk-go` | alpha.72、alpha.73 | alpha.68 |
+| `be-sdk-go` | alpha.74–alpha.76 | alpha.70 |
+| `be-sdk-go` | alpha.77 | alpha.71 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |

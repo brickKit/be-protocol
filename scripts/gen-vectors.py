@@ -30,6 +30,7 @@ import ch08_view  # noqa: E402
 import ch09_list  # noqa: E402
 import ch09_watermark  # noqa: E402
 import ch11_edge  # noqa: E402
+import ch12_evidence  # noqa: E402
 import ch12_run_profile  # noqa: E402
 from common import VEC, sums  # noqa: E402
 
@@ -63,5 +64,6 @@ if __name__ == "__main__":
     ch09_watermark.all_vectors()
     ch11_edge.edge_flow_vectors()
     ch12_run_profile.run_profile_vectors()
+    ch12_evidence.evidence_vectors()
     sums()
     print("\n".join(sorted(p.name for p in VEC.iterdir())))
