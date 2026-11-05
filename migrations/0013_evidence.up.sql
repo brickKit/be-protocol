@@ -2,7 +2,7 @@
 -- evidence store, the change history every evidence-bearing change writes in its own transaction (a full restore's
 -- replay skips a record whose id is here), and the counter whose row lock orders the commit sequence.
 CREATE TABLE be_evidence_outbox (
-    ord        bigserial PRIMARY KEY,
+    ord        bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, -- an identity column, as every SDK table: no sequence to grant
     id         uuid NOT NULL,
     phase      text NOT NULL CHECK (phase IN ('intent', 'effective', 'cancelled', 'general')),
     record     bytea NOT NULL,                       -- be.evidence.record, canonical
