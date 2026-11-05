@@ -58,6 +58,7 @@
 | alpha.66 | 向量文件的 `protocol` 按本版重新生成（alpha.65 只改了 `fs.go` 与 `capabilities.json`，向量仍写 alpha.63，自己的检查不过）；生成器改为从 `fs.go` 读版本，版本号只剩两处手改，两处都有检查。条款与向量内容同 alpha.64 | 否 | 兼容；**不要用 alpha.64、alpha.65**，用本版 | 无：只改版本字段与生成器 |
 | alpha.67 | P8.17 写明命中位图的每一位都是布尔值：谓词因 NULL 的列为 NULL 时记为未命中（`COALESCE(谓词, FALSE)`）。套件的授权剖面在 Go 探针上发现：`be-sdk-go` alpha.71 的命中表达式对 NULL 的维度值得到 NULL，按布尔值扫描的组件整页答 500 | 否：组件内部的查询 | 兼容；实现旧版的 SDK 给出的命中表达式可能为 NULL，组件要自己当作未命中 | 无：查询的编译细节，线协议是权威 |
 | alpha.68 | 向量 `segment-eval` 加记录 r11（法人 LE1、部门为 NULL）：经一段可见、另一段的列为 NULL 时命中位为假（P8.17 的 alpha.67 写明，向量此前没有这种行） | 否 | 兼容 | 无：只加向量 |
+| alpha.69 | 只改文字：第 2 节补上 `be-sdk-go` alpha.57–alpha.73、`be-sdk-python` a46–a51 所实现的协议版本（此前漏记）；P8.14、P8.15、P8.31 的检验一栏加上套件的 CK-AZ-05（授权剖面） | 否 | 兼容；没有行为变化 | 无：只改本文件与检验的条文 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
@@ -82,6 +83,14 @@
 | `be-sdk-go` | alpha.50 | alpha.47 |
 | `be-sdk-go` | alpha.51–alpha.53 | alpha.50 |
 | `be-sdk-go` | alpha.54–alpha.56 | alpha.53 |
+| `be-sdk-go` | alpha.57 | alpha.56 |
+| `be-sdk-go` | alpha.58、alpha.59 | alpha.58 |
+| `be-sdk-go` | alpha.60 | alpha.59 |
+| `be-sdk-go` | alpha.61–alpha.65 | alpha.60 |
+| `be-sdk-go` | alpha.66 | alpha.61 |
+| `be-sdk-go` | alpha.67–alpha.70 | alpha.62 |
+| `be-sdk-go` | alpha.71 | alpha.66 |
+| `be-sdk-go` | alpha.72、alpha.73 | alpha.68 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |
@@ -97,6 +106,11 @@
 | `be-sdk-python` | a40 | alpha.40 |
 | `be-sdk-python` | a41–a43 | alpha.42 |
 | `be-sdk-python` | a44–a45 | alpha.45 |
+| `be-sdk-python` | a46 | alpha.55 |
+| `be-sdk-python` | a47 | alpha.56 |
+| `be-sdk-python` | a48 | alpha.61 |
+| `be-sdk-python` | a49 | alpha.66 |
+| `be-sdk-python` | a50、a51 | alpha.68 |
 
 Go 取 SDK 的 `go.mod` 里 `be-protocol` 的版本；Python 取包里 `besdk/_protocol/capabilities.json` 的 `protocol`。只列 alpha.19 以来的版本（Go alpha.23 起、Python a20 起）。
 
