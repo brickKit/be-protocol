@@ -30,7 +30,7 @@
 
 | 编号 | 层级 | 规则 | 检验 |
 | --- | --- | --- | --- |
-| P12.9 | 必须 | 证据记录是 `be.evidence.record`：`id`（UUIDv7，也写进属主的变更历史，“已体现”按它判断）、`recorder`（组件 ID 与实现实例）、`category`（装配项目协议 15 证据表的一行，取值见向量 `evidence-record`）、`phase`（`intent` 意图、`effective` 已生效、`cancelled` 已取消、`general` 一般）、`position`（属主库的纪元与提交序号；意图没有）、`subject`（主体，可缺）、`object`（类型、身份与提交前的版本）、`change`（变更本身，不是变更后的状态）、`at`。规范编码与摘要同安全记录（[08](08-identity-authz-audit.md) 的规范形式），摘要的前缀是 `be.evidence.record.v1` | 向量 `evidence-record` |
+| P12.9 | 必须 | 证据记录是 `be.evidence.record`：`id`（UUIDv7，也写进属主的变更历史，“已体现”按它判断）、`recorder`（组件 ID 与实现实例）、`category`（装配项目协议 15 证据表的一行，取值见向量 `evidence-record`）、`phase`（`intent` 意图、`effective` 已生效、`cancelled` 已取消、`general` 一般）、`position`（属主库的纪元与提交序号：只有 `effective` 与 `general` 有，它们随业务事务提交；`intent` 在事务之前，`cancelled` 的事务没有提交，都没有）、`subject`（主体，可缺）、`object`（类型、身份与提交前的版本）、`change`（变更本身，不是变更后的状态）、`at`。规范编码与摘要同安全记录（[08](08-identity-authz-audit.md) 的规范形式），摘要的前缀是 `be.evidence.record.v1` | 向量 `evidence-record` |
 | P12.10 | 必须 | 证据存储按（`id`，`phase`）只收一次：同一对再来、摘要相同，答“重复”和原来的回执；摘要不同，答“冲突”，不保存，并告警。结论（`effective`、`cancelled`）与同一 `id` 的意图要有相同的记录者、类别、主体与对象，否则答“冲突”；没有意图的结论照收（意图可能只进了告警渠道） | 向量 `evidence-record` |
 | P12.11 | 必须 | 记录者就是调用者：`recorder.component` 不是调用者的服务身份的，整批拒绝（`PERMISSION_DENIED`） | SDK 测试、组件测试 |
 | P12.12 | 必须 | 回执在记录持久之后给出，带证据存储自己的位置（纪元与存储序号，只增）；一批里逐条回答：已收下、重复、冲突 | 组件测试 |

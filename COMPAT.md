@@ -63,6 +63,7 @@
 | alpha.71 | 新的第 12 章：运行档案（对象锁的桶、记录的形状与签名、类别与保留期、恢复代次的读取与推进）与告警渠道（P12.1–P12.8）；能力 `run-profile` | 否：组件之间的线不变，只有写运行档案与告警的执行者用到 | 兼容 | 协议 15、底层选择的不随恢复回退的存储 |
 | alpha.72 | 第 12 章加证据（P12.9–P12.14）：记录 `be.evidence.record` 的形状与摘要、按（id，phase）只收一次、记录者即调用者、回执、列出、证据存储不回退；向量 `evidence-record`；能力 `evidence-store`（组件）、`full-recovery`（装配） | 否：新的系统方法由审计组件提供，原有的线不变 | 兼容 | 协议 15 的证据表与证据的写入 |
 | alpha.73 | 第 12 章加记录者一侧（P12.15–P12.18）：本地证据发件表与 `be.evidence.transfer`、收紧两段写、变更历史与提交序号、“已体现”按记录身份；迁移 0013（`be_evidence_outbox`、`be_change_history`、`be_evidence_counter`）；能力 `evidence-writer` | 否：组件自己的表与对证据存储的调用 | 兼容：新表由迁移建立 | 协议 15 的证据的写入 |
+| alpha.74 | P12.9 改正：`position` 只在 `effective` 与 `general` 上（`cancelled` 的事务没有提交，没有序号；alpha.72 写成“只有意图没有”，记录者写不出合规的“已取消”）；向量 `evidence-record` 加 `position-by-phase`，`cancelled` 的例子去掉位置 | 是：证据存储的核对按新规则 | 不兼容的改正：按 alpha.72 核对的证据存储会拒绝不带位置的“已取消”，证据存储（`infra/audit` 3.0.16）先升 | 协议 15 的证据的写入 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 

@@ -1,6 +1,6 @@
 {
   "topic": "evidence-record",
-  "protocol": "3.0.0-alpha.73",
+  "protocol": "3.0.0-alpha.74",
   "rules": [
     "P12.9",
     "P12.10"
@@ -34,6 +34,20 @@
           "trust_material",
           "deployment_generation",
           "authz_generation"
+        ]
+      }
+    },
+    {
+      "id": "position-by-phase",
+      "description": "only effective and general carry a position",
+      "expected": {
+        "with_position": [
+          "effective",
+          "general"
+        ],
+        "without_position": [
+          "intent",
+          "cancelled"
         ]
       }
     },
@@ -97,6 +111,35 @@
       },
       "expected": {
         "digest": "sha256:b76034c36b1a7b8f3477b5c6008fbd2825c257f55720c16da95c764e7ffa9d4b"
+      }
+    },
+    {
+      "id": "digest-cancelled",
+      "input": {
+        "record": {
+          "record_type": "be.evidence.record",
+          "schema": "1.0",
+          "id": "0190f3a1-0000-7000-8000-0000000000e7",
+          "recorder": {
+            "component": "infra/authz",
+            "instance": "authz-1"
+          },
+          "category": "security_tightening",
+          "phase": "cancelled",
+          "subject": "0190f3a1-0000-7000-8000-0000000000b2",
+          "object": {
+            "type": "infra.authz.security_record",
+            "id": "0190f3a1-0000-7000-8000-0000000000f1",
+            "version": "3"
+          },
+          "change": {
+            "termination": "revoke"
+          },
+          "at": "2026-11-05T10:20:00.000000Z"
+        }
+      },
+      "expected": {
+        "digest": "sha256:2cc4d46348919006694b783f9f8fa8d76613e449f911f02f7faec15cee25232e"
       }
     },
     {
@@ -457,11 +500,7 @@
           "change": {
             "termination": "revoke"
           },
-          "at": "2026-11-05T10:20:00.000000Z",
-          "position": {
-            "epoch": "1.1",
-            "commit_seq": 107
-          }
+          "at": "2026-11-05T10:20:00.000000Z"
         }
       },
       "expected": {

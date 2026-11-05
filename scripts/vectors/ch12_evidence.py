@@ -17,7 +17,7 @@ def ev(phase, **kw):
          "subject": "0190f3a1-0000-7000-8000-0000000000b2",
          "object": {"type": "infra.authz.security_record", "id": "0190f3a1-0000-7000-8000-0000000000f1", "version": "3"},
          "change": {"termination": "revoke"}, "at": "2026-11-05T10:20:00.000000Z"}
-    if phase != "intent":
+    if phase in ("effective", "general"):  # committed with the business transaction (P12.9)
         r["position"] = {"epoch": "1.1", "commit_seq": 107}
     r.update(kw)
     return r
@@ -37,8 +37,10 @@ def answer(stored, incoming):
 
 
 def evidence_vectors():
-    cases = [{"id": "categories", "expected": {"categories": CATEGORIES}}]
-    for phase in ("intent", "effective", "general"):
+    cases = [{"id": "categories", "expected": {"categories": CATEGORIES}},
+             {"id": "position-by-phase", "description": "only effective and general carry a position",
+              "expected": {"with_position": ["effective", "general"], "without_position": ["intent", "cancelled"]}}]
+    for phase in ("intent", "effective", "cancelled", "general"):
         r = ev(phase)
         cases.append({"id": f"digest-{phase}", "input": {"record": r},
                       "expected": {"digest": digest("be.evidence.record", 1, r)}})
