@@ -25,7 +25,8 @@ def deadline(cmd, caps):
     """P13.7: the resend deadline, or None (no dedupe, or no send that may have reached the external system)."""
     if not caps.get("dedupe_window"):
         return None
-    base = cmd.get("last_reached_at") if caps.get("window_from") == "last_use" else cmd.get("first_reached_at")
+    first = cmd.get("first_reached_at")
+    base = (cmd.get("last_reached_at") or first) if caps.get("window_from") == "last_use" else first
     if not base:
         return None
     w = timedelta(seconds=caps["dedupe_window"])
@@ -39,8 +40,8 @@ def not_found(cmd, caps, now):
         return "resend", "the external system deduplicates and the deadline has not passed"
     if cmd.get("expires_at") and t(now) > t(cmd["expires_at"]):
         return "resend", "the request's expiry has passed"
-    if caps.get("max_processing") and cmd.get("last_reached_at") and \
-            t(now) - t(cmd["last_reached_at"]) > timedelta(seconds=caps["max_processing"]):
+    latest = max((x for x in (cmd.get("last_reached_at"), cmd.get("unrecorded_until")) if x), key=t, default=None)
+    if caps.get("max_processing") and latest and t(now) - t(latest) > timedelta(seconds=caps["max_processing"]):
         return "resend", "the longest processing time has passed"
     return "manual", "the earlier request may still land"
 
@@ -141,6 +142,9 @@ def external_vectors():
          NO_DEDUPE, "2026-11-05T11:00:00.000000Z", "sending")
     case("longest-processing-passed", unk, {"kind": "query", "result": "not_found"}, dict(NO_DEDUPE, max_processing=3600),
          "2026-11-05T11:00:01.000000Z", "sending")
+    case("longest-processing-unrecorded", dict(unk, unrecorded_until="2026-11-05T10:30:00.000000Z"),
+         {"kind": "query", "result": "not_found"}, dict(NO_DEDUPE, max_processing=3600), "2026-11-05T11:00:01.000000Z",
+         "manual", "a full recovery: sends until the failure may be unrecorded; the longest processing time counts from it")
     case("found-succeeded", unk, {"kind": "query", "result": "found", "external_state": "succeeded"}, NO_DEDUPE, t0,
          "succeeded")
     case("ei08-late-in-progress", dict(sent, state="succeeded"), {"kind": "query", "result": "found",
@@ -183,19 +187,24 @@ def external_vectors():
                   "expected": "state, reason | resend_deadline | digest, answer"})
 
 
-def reconcile(commands, external, issued, caps, T, now):
-    """P13.12: the step 7 matching, first matching row wins. commands: the local commands not final; external: the
-    external records by reference; issued: the issue records' references. Answers one conclusion per reference."""
+def reconcile(commands, external, issued, caps, T, now, failed_at=None):
+    """P13.12: the step 7 matching, first matching row wins. commands: the local commands not final (sending_at: the
+    start of a send attempt that has not ended); external: the external records by reference; issued: the issue
+    records' references; failed_at: until when sends may have gone unrecorded (default now). Answers one conclusion
+    per reference."""
     out = {}
     for c in commands:
         ref = c["reference"]
         if ref in external:
-            out[ref] = {"conclusion": "matched", "state": external[ref]}
+            s = external[ref]
+            out[ref] = {"conclusion": "matched", "state": s if s in TERMINAL or s == "accepted" else "accepted"}
             continue
-        first = c.get("first_reached_at") or (c.get("sending_at") if c["state"] == "sending" else None) or \
-            (T if c["state"] == "prepared" else None)
-        facts = dict(c, first_reached_at=first)
-        d = deadline(facts, caps) if first else None
+        if c["state"] == "manual":
+            out[ref] = {"conclusion": "manual", "reason": "manual: only a person registers it"}
+            continue
+        first = c.get("first_reached_at") or c.get("sending_at") or T  # the earliest send that may have reached
+        facts = dict(c, first_reached_at=first, unrecorded_until=failed_at or now)
+        d = deadline(facts, caps)
         if d and t(now) <= t(d):
             out[ref] = {"conclusion": "deadline", "resend_deadline": d}
             continue
@@ -217,6 +226,7 @@ def reconcile_vectors():
         {"reference": "p-matched", "state": "retry_wait", "first_reached_at": "2026-11-05T10:10:00.000000Z"},
         {"reference": "p-prepared-dedupe", "state": "prepared"},
         {"reference": "p-sending-dedupe", "state": "sending", "sending_at": "2026-11-05T09:00:00.000000Z"},
+        {"reference": "p-sending-old", "state": "unknown", "sending_at": "2026-11-03T09:00:00.000000Z"},
         {"reference": "p-old", "state": "unknown", "first_reached_at": "2026-11-03T10:00:00.000000Z"},
         {"reference": "p-expired", "state": "unknown", "first_reached_at": "2026-11-05T11:00:00.000000Z",
          "last_reached_at": "2026-11-05T11:00:00.000000Z", "expires_at": "2026-11-05T12:00:00.000000Z"},
@@ -224,7 +234,8 @@ def reconcile_vectors():
     external = {"p-matched": "succeeded", "p-external-only": "succeeded"}
     issued = ["p-matched", "p-issued-lost"]
     got = reconcile(cmds, external, issued, DEDUPE_24H, T, now)
-    want = {"p-matched": "matched", "p-prepared-dedupe": "deadline", "p-sending-dedupe": "deadline", "p-old": "manual",
+    want = {"p-matched": "matched", "p-prepared-dedupe": "deadline", "p-sending-dedupe": "deadline",
+            "p-sending-old": "manual", "p-old": "manual",
             "p-expired": "deadline", "p-external-only": "external_only", "p-issued-lost": "possibly_executed"}
     assert {k: v["conclusion"] for k, v in got.items()} == want, got
     no_dedupe = reconcile([{"reference": "p-x", "state": "prepared"}], {}, [], NO_DEDUPE, T, now)
@@ -233,13 +244,33 @@ def reconcile_vectors():
             "last_reached_at": "2026-11-05T11:00:00.000000Z", "expires_at": "2026-11-05T12:00:00.000000Z"}]
     expired = reconcile(exp, {}, [], NO_DEDUPE, T, now)
     assert expired["p-y"]["conclusion"] == "unknown", expired
+    last_use = dict(DEDUPE_24H, window_from="last_use")
+    more = [{"reference": "p-last-use", "state": "prepared"}, {"reference": "p-manual", "state": "manual"},
+            {"reference": "p-manual-found", "state": "manual"}, {"reference": "p-pending", "state": "sending",
+                                                                 "sending_at": "2026-11-05T09:30:00.000000Z"}]
+    ext2 = {"p-manual-found": "failed", "p-pending": "processing"}
+    others = reconcile(more, ext2, [], last_use, T, now)
+    mp = dict(NO_DEDUPE, max_processing=3600)
+    fails = [{"reference": "p-mp", "state": "retry_wait"}]
+    after_failure = reconcile(fails, {}, [], mp, T, now, failed_at="2026-11-05T12:30:00.000000Z")
+    within = reconcile(fails, {}, [], mp, T, now, failed_at="2026-11-05T13:30:00.000000Z")
+    assert after_failure["p-mp"]["conclusion"] == "unknown" and within["p-mp"]["conclusion"] == "manual", (after_failure, within)
+    assert {k: (v["conclusion"], v.get("state")) for k, v in others.items()} == {
+        "p-last-use": ("deadline", None), "p-manual": ("manual", None), "p-manual-found": ("matched", "failed"),
+        "p-pending": ("matched", "accepted")}, others
     cases = [{"id": "step-7", "input": {"T": T, "now": now, "commands": cmds, "external": external, "issued": issued,
                                         "capabilities": DEDUPE_24H}, "expected": got},
              {"id": "no-dedupe-prepared", "input": {"T": T, "now": now, "commands": [{"reference": "p-x", "state": "prepared"}],
                                                     "external": {}, "issued": [], "capabilities": NO_DEDUPE},
               "expected": no_dedupe},
              {"id": "no-dedupe-expired", "input": {"T": T, "now": now, "commands": exp, "external": {}, "issued": [],
-                                                   "capabilities": NO_DEDUPE}, "expected": expired}]
+                                                   "capabilities": NO_DEDUPE}, "expected": expired},
+             {"id": "last-use-manual-not-final", "input": {"T": T, "now": now, "commands": more, "external": ext2,
+                                                           "issued": [], "capabilities": last_use}, "expected": others},
+             {"id": "longest-processing-after-the-failure", "input": {"T": T, "now": now, "commands": fails, "external": {},
+              "issued": [], "capabilities": mp, "failed_at": "2026-11-05T12:30:00.000000Z"}, "expected": after_failure},
+             {"id": "longest-processing-within", "input": {"T": T, "now": now, "commands": fails, "external": {},
+              "issued": [], "capabilities": mp, "failed_at": "2026-11-05T13:30:00.000000Z"}, "expected": within}]
     write("external-reconcile", ["P13.12"],
-          "整套恢复第 7 步的外部对账：对上而终结、写重发截止、unknown、manual、外部有本地无、可能已对外执行待核实",
-          cases, {"input": "T, now, commands, external, issued, capabilities", "expected": "reference -> conclusion"})
+          "整套恢复第 7 步的外部对账：对上而终结（外部未终结的取 accepted）、写重发截止（保留期从最近一次起算的也写）、unknown、manual（manual 不被降级）、外部有本地无、可能已对外执行待核实",
+          cases, {"input": "T, now, commands, external, issued, capabilities, failed_at", "expected": "reference -> conclusion"})

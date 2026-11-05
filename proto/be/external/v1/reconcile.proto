@@ -18,6 +18,9 @@ message ReconcileRequest {
   int64 window_before_seconds = 3;
   // The business references of this adapter's issue records the evidence store and the alert channel hold.
   repeated string issued = 4;
+  // The failure moment (RFC 3339, UTC): sends after T may have gone on until it without a record. Empty: the call's
+  // time.
+  string failed_at = 5;
 }
 
 message Conclusion {
