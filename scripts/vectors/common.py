@@ -2,9 +2,11 @@
 import hashlib
 import json
 import pathlib
+import re
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-PROTOCOL = "3.0.0-alpha.63"
+# one source for the version: fs.go's Version (capabilities.json and COMPAT.md are checked against it by the tests)
+PROTOCOL = re.search(r'^const Version = "([^"]+)"', (ROOT / "fs.go").read_text(), re.M).group(1)
 VEC = ROOT / "vectors"
 
 
