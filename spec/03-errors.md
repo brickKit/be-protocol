@@ -87,6 +87,7 @@
 | `AUTHORIZATION_UNPROVABLE` | `UNAVAILABLE` | 503 | 是 | 授权无法证明（来源不可得、超期、修订不相容） |
 | `AUTHORIZATION_VIEW_EXPIRED` | `UNAVAILABLE` | 503 | 是 | 授权视图超过有效期 |
 | `RECOVERY_IN_PROGRESS` | `UNAVAILABLE` | 503 | 是 | 部署待恢复 |
+| `MAINTENANCE` | `UNAVAILABLE` | 503 | 是 | 部署在整套恢复中（[01](01-lifecycle-and-health.md) 的 P1.23）：用户面暂不受理，恢复开放后重试；`metadata.phase` |
 | `MEMBER_SWITCH_IN_PROGRESS` | `UNAVAILABLE` | 503 | 是 | 授权或身份成员切换中 |
 | `DEFINITION_PENDING` | `UNAVAILABLE` | 503 | 是 | 安全变更引用的资源类型在注册表里有属主，还没有已被接受的定义：组件就绪不等定义被接受（[08](08-identity-authz-audit.md) 的 P8.24），定义还在提交中；不占用变更键，同一个键稍后重新提交。注册表里没有的资源类型答 `REQUEST_INVALID` |
 | `CAPABILITY_UNSUPPORTED` | `UNIMPLEMENTED` | 501 | 否 | 声明了不支持的能力；`metadata.capability` |

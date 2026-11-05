@@ -18,13 +18,13 @@
 | 编号 | 层级 | 规则 | 检验 |
 | --- | --- | --- | --- |
 | P1.5 | 必须 | `GET` 与 `HEAD` `/healthz`（用户面端口）在进程存活期间回答 200，正文为空或 `ok`；**从不**检查数据库、消息系统、授权或其他组件；“启动中”“停止中”也回答 200 | CK-LC-05 |
-| P1.6 | 必须 | `GET` 与 `HEAD` `/readyz` 在“就绪”时回答 200（探针可能用 `HEAD`，例如 GNU wget 的 `--spider`；RFC 9110 要求通用服务器在支持 `GET` 的地方支持 `HEAD`）；其余状态回答 503 与错误对象（reason `NOT_READY`，[03](03-errors.md)），`metadata.state` 写当前状态（`starting`、`recovery_ready`、`stopping`）。外壳的 `/readyz` 在全部成员就绪后回答 200，否则 `metadata.waiting` 列出还在等的成员组件 ID（逗号分隔） | CK-LC-06 |
+| P1.6 | 必须 | `GET` 与 `HEAD` `/readyz` 在“就绪”与“恢复就绪”时回答 200（探针可能用 `HEAD`，例如 GNU wget 的 `--spider`；RFC 9110 要求通用服务器在支持 `GET` 的地方支持 `HEAD`）；其余状态回答 503 与错误对象（reason `NOT_READY`，[03](03-errors.md)），`metadata.state` 写当前状态（`starting`、`stopping`）。外壳的 `/readyz` 在全部成员就绪后回答 200，否则 `metadata.waiting` 列出还在等的成员组件 ID（逗号分隔） | CK-LC-06 |
 | P1.7 | 必须 | `/healthz`、`/readyz` 与自描述端点不经过认证、授权与限流，不写访问日志的 INFO 行（只计数） | CK-LC-07 |
 | P1.8 | 必须 | `GET` `/.well-known/be-component` 回答 JSON：`component_id`、`version`、`protocol`（本协议版本）、`sdk`（实现名与版本，非官方语言写自己的）、`capabilities`（声明的能力名列表，安全 09b）。外壳回答外壳自己的，另加 `members`：每个成员的同样字段 | CK-LC-08 |
 
 ## 启动
 
-状态：`starting` → `ready`（或恢复模式下的 `recovery_ready`）→ `stopping` → 退出。
+状态：`starting` → `ready`（或恢复模式下的 `recovery_ready`，P1.22）→ `stopping` → 退出。
 
 | 编号 | 层级 | 规则 | 检验 |
 | --- | --- | --- | --- |
@@ -34,6 +34,16 @@
 | P1.12 | 必须 | 进入就绪时写一行日志，`event` 为 `ready`，带组件 ID、版本、协议版本与启动耗时（毫秒） | CK-LC-10 |
 | P1.13 | 内部 | 外壳中成员按依赖顺序初始化；任何成员初始化失败，外壳不进入就绪，按 P1.16 退出并点名成员 | SDK 测试 |
 | P1.21 | 内部 | 进程里的 SDK 版本不早于外壳任何成员要求的最低版本。由构建保证的语言（Go：模块图对 SDK 只取一个版本，取各成员要求的最高版本）不必在启动时再查；构建不保证的语言（Python：外壳用 `override-dependencies` 统一 SDK，可以指定得比成员的要求旧），外壳启动时核对每个成员在包元数据里声明的最低版本（`Requires-Dist: be-sdk>=<版本>`），没有声明或进程里的 SDK 不满足的，拒绝启动（退出码 78），点名成员、它的要求与进程里的版本 | SDK 测试 |
+
+## 恢复模式
+
+整套恢复（装配项目协议 15）期间，部署按阶段只运行允许的部分。阶段经部署级配置键下发，换阶段就重启（BrickKit 没有热加载：改配置再 `brickkit up`）。
+
+| 编号 | 层级 | 规则 | 检验 |
+| --- | --- | --- | --- |
+| P1.22 | 必须 | `RECOVERY_PHASE`（[02](02-configuration.md)，进程级）有值时，成员以恢复模式启动，进入“恢复就绪”（`recovery_ready`）而不是“就绪”：`/readyz` 回答 200，正文 `{"state":"recovery_ready","phase":"<阶段>"}`（就绪探针据此把它当作可以路由：恢复中系统面要能调用，例如补发）；自述（P1.8）多一个字段 `recovery_phase`；就绪日志（P1.12）带 `phase`。外壳的阶段是成员共同的那一个 | SDK 测试 |
+| P1.23 | 必须 | 各阶段运行什么（不在表里的取值按 [02](02-configuration.md) 的 P2.6 是配置错误）：<br>`frozen`（冻结，协议 15 的第 2–4 步）：用户面除健康、就绪与自述之外的请求答 `MAINTENANCE`（[03](03-errors.md)）；发件转发、订阅、后台工作（含 SDK 自带的作业）都不运行；系统面照常。<br>`redelivering`（重建消息流，第 5 步）：用户面同上；发件转发与订阅运行（补发与投影）；后台工作不运行；系统面照常。<br>第 6 步以后的阶段随那些步骤加入 | SDK 测试 |
+| P1.24 | 必须 | 恢复模式不改变一个成员“只读自己的库”的做法：阶段只决定哪些部分运行，不在库里留状态；所以第 3 步恢复数据库不会把阶段一起回退 | — |
 
 ## 停止
 

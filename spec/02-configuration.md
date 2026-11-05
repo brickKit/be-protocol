@@ -50,6 +50,7 @@
 | `PG_STATEMENT_TIMEOUT`、`PG_LOCK_TIMEOUT`、`PG_IDLE_IN_TX_TIMEOUT` | duration | 否 | 成员级 | 每个事务设置的超时，缺省 `5s`、`2s`、`10s`（[05](05-database.md) 的 P5.6） |
 | `PG_POOL_FOREGROUND`、`PG_POOL_BACKGROUND` | integer | 否 | 成员级 | 成员的连接预算：前台与后台各自最多同时持有的连接，缺省 `8`、`4`（P5.2） |
 | `BUS_URL` | string | 否 | 进程级 | 消息运输；scheme 选择适配器：`nats://` 为 JetStream，`pgqueue://` 为 PostgreSQL 队列（[06](06-events.md) 的 P6.16）；产生或订阅事件的组件必填 |
+| `RECOVERY_PHASE` | string | 否 | 进程级 | 整套恢复的阶段（[01](01-lifecycle-and-health.md) 的 P1.22、P1.23）：`frozen`、`redelivering`；不设为正常运行。由恢复工具在共用变量里设，换阶段重启 |
 | `IMPLEMENTATION_INSTANCE` | string（UUID） | 否 | 成员级 | 实现实例：安装时生成的随机身份，事件与读取响应用它声明来源（P6.9）；产生事件的组件必填 |
 | `BUS_SUBSCRIPTION_CONCURRENCY` | integer（1–64） | 否 | 成员级 | 这个成员的每个订阅同时处理的消息条数（[06](06-events.md) 的 P6.31）；未设置时用组件在订阅声明里给的值，再缺省为 1；组件声明为按顺序处理的订阅不受它影响；订阅事件的组件才有 |
 | `DEPLOYMENT_ID` | string（UUID） | 否 | 进程级 | 部署身份：用户凭据的受众 `be:deployment:<它>`、服务证书的信任域（[08](08-identity-authz-audit.md) 的 P8.2、P8.5）；有受保护路由或系统面的组件必填 |

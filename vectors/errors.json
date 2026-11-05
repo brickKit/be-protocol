@@ -1,6 +1,6 @@
 {
   "topic": "errors",
-  "protocol": "3.0.0-alpha.77",
+  "protocol": "3.0.0-alpha.78",
   "rules": [
     "P3.1",
     "P3.2",
@@ -392,6 +392,17 @@
       "retryable": "yes",
       "log_level": "warn",
       "type": "urn:be:be:RECOVERY_IN_PROGRESS"
+    },
+    {
+      "id": "reason-maintenance",
+      "kind": "reason",
+      "reason": "MAINTENANCE",
+      "domain": "be",
+      "grpc_code": "UNAVAILABLE",
+      "http": 503,
+      "retryable": "yes",
+      "log_level": "warn",
+      "type": "urn:be:be:MAINTENANCE"
     },
     {
       "id": "reason-member_switch_in_progress",
