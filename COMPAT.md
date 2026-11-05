@@ -80,6 +80,7 @@
 | alpha.88 | P14.5：签发连续单号的业务变更，审计记录的 `changes.document_number` 带所签的号（法人、序列代码、期间、号），恢复工具从审计存储取 T 之后的最大值（原先写的“证据类别 `document_number`”没有记录者，取消） | 否 | 兼容：不带的旧记录只是取不到，按属主的 `Numbers` | 协议 15 的第 10 步 |
 | alpha.89 | P2.11：恢复阶段是进程的状态，外壳里没有设置它的成员按设置了它的成员的阶段运行（原先按“没设置就不用这项资源”，清单不声明它的成员会在别的成员冻结时照常运行；T10e 演练发现） | 否 | 兼容：只改外壳里的成员怎样取阶段 | 协议 15 的冻结 |
 | alpha.90 | P1.23：`frozen` 以外的恢复阶段里审计转运照常运行（原先恢复阶段里一切后台工作都停，重放写下的审计到开放才送出，第 8 步的审计积压检查不会通过；T10e 演练发现） | 否 | 兼容：只多送出 | 协议 15 的第 6–10 步 |
+| alpha.91 | P12.20 加“核对”：效果在恢复组之外的类别（协议 15 的 6.7，身份产品不在恢复组内时的凭据收紧）由组件注册核对，在事务之外问那一方，答 `consistent` 或 `inconsistent`（列复核），不写变更历史 | 是：重放可以答两个新的结果 | 兼容：不认识新结果的旧恢复工具按“未知结果”列复核；旧组件对这些类别照旧答 `unsupported` | 协议 15 的 6.7 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
@@ -121,6 +122,13 @@
 | `be-sdk-go` | alpha.82、alpha.83 | alpha.79 |
 | `be-sdk-go` | alpha.84–alpha.86 | alpha.80 |
 | `be-sdk-go` | alpha.87 | alpha.81 |
+| `be-sdk-go` | alpha.88 | alpha.82 |
+| `be-sdk-go` | alpha.89 | alpha.84 |
+| `be-sdk-go` | alpha.90 | alpha.86 |
+| `be-sdk-go` | alpha.91、alpha.92 | alpha.87 |
+| `be-sdk-go` | alpha.93 | alpha.88 |
+| `be-sdk-go` | alpha.94 | alpha.89 |
+| `be-sdk-go` | alpha.95 | alpha.90 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |

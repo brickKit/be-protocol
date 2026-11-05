@@ -1,6 +1,6 @@
 {
   "topic": "evidence-record",
-  "protocol": "3.0.0-alpha.90",
+  "protocol": "3.0.0-alpha.91",
   "rules": [
     "P12.9",
     "P12.10"

@@ -1,6 +1,6 @@
 {
   "topic": "watermark-judge",
-  "protocol": "3.0.0-alpha.90",
+  "protocol": "3.0.0-alpha.91",
   "rules": [
     "P9.24",
     "P9.34"

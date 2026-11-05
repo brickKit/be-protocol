@@ -1,6 +1,6 @@
 {
   "topic": "edge-flow",
-  "protocol": "3.0.0-alpha.90",
+  "protocol": "3.0.0-alpha.91",
   "rules": [
     "P11.1",
     "P11.2",
