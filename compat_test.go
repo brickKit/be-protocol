@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -43,5 +44,33 @@ func TestCompatRowsNameTheFormalDocuments(t *testing.T) {
 	}
 	if rows == 0 {
 		t.Fatal("section 1 has no version rows")
+	}
+}
+
+// TestTheLatestCompatRowIsTheCapabilitiesVersion: capabilities.json's protocol is the version being released, the last
+// row of COMPAT.md section 1. alpha.64 shipped with alpha.63 in capabilities.json, and every SDK's feature matrix
+// check, which compares with it, refused the new pin.
+func TestTheLatestCompatRowIsTheCapabilitiesVersion(t *testing.T) {
+	b, err := os.ReadFile("COMPAT.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	section := strings.SplitN(strings.SplitN(string(b), "## 1. ", 2)[1], "\n## ", 2)[0]
+	last := ""
+	for _, line := range strings.Split(section, "\n") {
+		if strings.HasPrefix(line, "| alpha.") {
+			last = strings.TrimSpace(strings.Split(strings.Trim(line, "|"), "|")[0])
+		}
+	}
+	c, err := os.ReadFile("capabilities.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var caps struct{ Protocol string }
+	if err := json.Unmarshal(c, &caps); err != nil {
+		t.Fatal(err)
+	}
+	if want := "3.0.0-" + last; caps.Protocol != want {
+		t.Errorf("capabilities.json says protocol %s; the last COMPAT.md row is %s", caps.Protocol, want)
 	}
 }

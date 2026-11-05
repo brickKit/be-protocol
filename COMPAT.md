@@ -54,6 +54,7 @@
 | alpha.62 | P9.34 按最后已应用的事实判断：`stalled` 的来源也按行判断、不看水位的年龄，回答带对齐状态与水位年龄；向量 `watermark-judge` 加 `basis` 字段与 13 例 | 否：消费者本地的判断 | 兼容：新的一种问法，原来的判断（`basis` 缺省为 `fresh`）不变；只有按安全 03 办理只减少访问的操作的成员（授权成员）用它 | 协议 02 第 9 步的“按最后已应用的事实判断”；安全 03 的只减少访问的操作 |
 | alpha.63 | 安全记录 `be.security.change_result` 加可选字段 `basis`（`last_applied`：请求者按来源最后已应用的事实判断，依据未证明为最新） | 是：授权成员的用户面回答 | 兼容：可选字段；按旧 schema 严格校验（`additionalProperties: false`）的读取方遇到它会拒绝，读取方先升级 | 安全 09a 的变更结果；安全 03 的只减少访问的操作 |
 | alpha.64 | P8.14 组件按自己的资源定义核对视图里的每个段，不合格的（少一维、多一维、原子不合维度、写不可读、区间缺端）不参与求值；P8.15 对操作 K 可读的字段取 K 自己的段；P8.30 读者拒绝 `required_features` 含不认识功能名的记录、忽略 `ext`；P8.31 掩码的输出形状（不可读字段为 `null` 并列在 `_masked`）；P9.4 列表的 `readable_only`；向量 `segment-eval` 加 r10、八个场景、`action_fields` 与 `action_list`、每种维度的筛选、`check` 与 `mask` 两种例子，`security-records` 加 `read` 字段与三例 | 是：用户面的输出形状（被掩码的字段由删掉改为 `null` 加 `_masked`）；列表回答可带 `readable_only` | 兼容：调用方多看到一个 `_masked` 键与值为 `null` 的字段；实现旧版的 SDK 不核对段，缺维度的段在它那里等于这一维不限，授权成员先保证视图里没有这种段（`infra/authz` 3.0.23 起），组件再升级 | 安全 01 的 AE04、AE08；安全 06 的 SC10；安全 07 的 FX01、FX12；安全 09a 的 EN05、EN06、EN08–EN10 |
+| alpha.65 | `capabilities.json` 的 `protocol` 与 `fs.go` 的 `Version` 改正为本版（alpha.64 两处都漏改，仍写 alpha.63，SDK 的功能矩阵检查因此拒绝钉 alpha.64）；加检查：COMPAT 第 1 节最后一行就是 `capabilities.json` 的版本。条款与向量同 alpha.64 | 否 | 兼容；**不要用 alpha.64**，用本版 | 无：只改版本字段与检查 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
