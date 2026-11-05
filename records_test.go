@@ -45,11 +45,20 @@ func TestSecurityRecordVectors(t *testing.T) {
 			RecordType string `json:"record_type"`
 			Record     json.RawMessage
 			Valid      bool
+			Read       string
 			Canonical  string
 			Digest     string
 		}
 		if err := json.Unmarshal(raw, &c); err != nil {
 			t.Fatal(err)
+		}
+		// P8.30: this version's readers know no feature name, so any required feature refuses the record
+		var features struct {
+			Required []string `json:"required_features"`
+		}
+		_ = json.Unmarshal(c.Record, &features)
+		if want := map[bool]string{true: "accepted", false: "refused"}[c.Valid && len(features.Required) == 0]; c.Read != want {
+			t.Errorf("%s: read %q, the rules say %q", c.ID, c.Read, want)
 		}
 		s := schemas[c.RecordType]
 		if s == nil {

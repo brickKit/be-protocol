@@ -88,6 +88,15 @@ def records_vectors():
         ("resource-no-dimensions", "be.security.resource_definition", with_(RESOURCE, dimensions={})),
         ("account-status", "be.security.account_status", ACCOUNT),
         ("definition-set", "be.security.definition_set", DEFINITION_SET),
+        # EN06: a minor version's optional extension: a reader that does not know it ignores it; the digest covers it
+        ("view-with-ext", "be.security.view", with_(VIEW, ext={"demo_hint": "anything"})),
+    ]
+    # P8.30, EN05: schema-valid, refused by every reader of this protocol version (it knows no feature names)
+    refused = [
+        ("view-unknown-required-feature", "be.security.view", with_(VIEW, required_features=["authz.relation_atoms"]),
+         "required_features 含读者不认识的功能名：拒绝整条记录"),
+        ("resource-unknown-required-feature", "be.security.resource_definition",
+         with_(RESOURCE, required_features=["demo.future"]), "同上，定义也一样"),
     ]
     bad = [
         ("view-no-applicability", "be.security.view", with_(VIEW, applicability=None), "缺必填字段"),
@@ -122,15 +131,19 @@ def records_vectors():
     ]
     cases = []
     for cid, rt, rec in good:
-        cases.append({"id": cid, "record_type": rt, "record": rec, "valid": True,
+        cases.append({"id": cid, "record_type": rt, "record": rec, "valid": True, "read": "accepted",
+                      "canonical": canonical(rec).decode(), "digest": digest(rt, 1, rec)})
+    for cid, rt, rec, why in refused:
+        cases.append({"id": cid, "record_type": rt, "record": rec, "valid": True, "read": "refused", "why": why,
                       "canonical": canonical(rec).decode(), "digest": digest(rt, 1, rec)})
     for cid, rt, rec, why in bad:
-        cases.append({"id": cid, "record_type": rt, "record": rec, "valid": False, "why": why})
-    write("security-records", ["P8.8", "P8.11", "P8.20"],
+        cases.append({"id": cid, "record_type": rt, "record": rec, "valid": False, "read": "refused", "why": why})
+    write("security-records", ["P8.8", "P8.11", "P8.20", "P8.30"],
           "线上的安全记录与审计记录（D76：以规范 JSON 字节放在信封的 bytes 字段里）对 schemas/security/ 下生成的 JSON Schema"
           "（装配项目安全 09a 与本章的字段表生成）的校验。valid=true 的记录 schema 接受，并给出规范字节（canonical）与摘要"
-          "（记录类型取 record_type，主版本 1）；valid=false 的记录 schema 拒绝，why 说明原因。schema 只查结构与类型；"
-          "约束一列里的条件规则（例如 restricted 字段必有 read_key）由代码检查，不在这里。",
+          "（记录类型取 record_type，主版本 1）；valid=false 的记录 schema 拒绝，why 说明原因。read 是读者打开它的结果（accepted、refused）：schema 拒绝的一定 "
+          "refused；schema 接受而 required_features 含读者不认识的功能名的也 refused（P8.30，本版本的读者不认识任何功能名）。"
+          "schema 只查结构与类型；约束一列里的条件规则（例如 restricted 字段必有 read_key）由代码检查，不在这里。",
           cases, {"record_type": "记录类型，也是 schema 文件名（<record_type>.schema.json）",
                   "record": "记录内容（不含 digest）", "valid": "schema 是否接受",
-                  "canonical、digest": "valid=true：规范字节与摘要"})
+                  "canonical、digest": "valid=true：规范字节与摘要", "read": "读者打开的结果"})

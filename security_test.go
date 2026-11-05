@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"reflect"
 	"regexp"
 	"slices"
 	"sort"
@@ -392,16 +393,54 @@ func TestSegmentEvalVectorsAreConsistent(t *testing.T) {
 				Records map[string]struct {
 					Visible, Action string
 					Fields          []string
+					ActionFields    []string `json:"action_fields"`
 				}
 				List struct {
 					IDs    []string `json:"ids"`
 					Fields map[string][]string
 				}
+				ActionList struct {
+					IDs    []string `json:"ids"`
+					Fields map[string][]string
+				} `json:"action_list"`
 			}
+			Object   map[string]any
+			Readable []string
+			Why      string
 		}
 		_ = json.Unmarshal(raw, &c)
-		if c.Kind != "evaluate" {
+		switch c.Kind {
+		case "check":
+			if c.Why == "" {
+				t.Errorf("%s: a segment check without its reason", c.ID)
+			}
 			continue
+		case "mask":
+			var want map[string]any
+			var m struct{ Expect map[string]any }
+			_ = json.Unmarshal(raw, &m)
+			want = m.Expect
+			if got := refMask(c.Object, c.Readable); !reflect.DeepEqual(got, want) {
+				t.Errorf("%s: recomputed %v, vector %v", c.ID, got, want)
+			}
+			continue
+		case "evaluate":
+		default:
+			continue
+		}
+		for id, r := range c.Expect.Records {
+			if r.Visible != "true" && len(r.ActionFields) > 0 {
+				t.Errorf("%s/%s: an operation's fields on an invisible record", c.ID, id)
+			}
+			if slices.Contains(r.ActionFields, "note") {
+				t.Errorf("%s/%s: a secret field is output for the operation", c.ID, id)
+			}
+		}
+		for _, id := range c.Expect.ActionList.IDs {
+			r := c.Expect.Records[id]
+			if r.Action != "true" || !slices.Equal(r.ActionFields, c.Expect.ActionList.Fields[id]) {
+				t.Errorf("%s: %s in the operation's list disagrees with its single-object result", c.ID, id)
+			}
 		}
 		for id, r := range c.Expect.Records {
 			if r.Visible != "true" && len(r.Fields) > 0 {
@@ -423,4 +462,25 @@ func TestSegmentEvalVectorsAreConsistent(t *testing.T) {
 	if len(fixture.Records) < 9 {
 		t.Fatal("fixture missing")
 	}
+}
+
+// refMask is P8.31 over the fixture's fields (number, customer, cost ordinary or restricted; note secret): readable
+// fields as they are, the other declared ones null and named in _masked, secret and undeclared ones dropped.
+func refMask(obj map[string]any, readable []string) map[string]any {
+	declared := map[string]bool{"number": true, "customer": true, "cost": true}
+	out, masked := map[string]any{}, []any{}
+	for k, v := range obj {
+		switch {
+		case slices.Contains(readable, k):
+			out[k] = v
+		case declared[k]:
+			out[k] = nil
+			masked = append(masked, k)
+		}
+	}
+	if len(masked) > 0 {
+		slices.SortFunc(masked, func(a, b any) int { return strings.Compare(a.(string), b.(string)) })
+		out["_masked"] = masked
+	}
+	return out
 }
