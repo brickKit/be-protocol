@@ -1,6 +1,6 @@
 {
   "topic": "run-profile",
-  "protocol": "3.0.0-alpha.91",
+  "protocol": "3.0.0-alpha.92",
   "rules": [
     "P12.1",
     "P12.2",
