@@ -90,6 +90,7 @@
 | alpha.98 | 第 15 章：迁移 0018 给单元加阻塞原因与到期时刻（P15.12）；写屏障的 SQLSTATE `BE001` 进向量 `db-errors`，映射为 `RECORD_SEALED`（P15.13） | 否 | 兼容：只多两列与一行映射 | 协议 11 |
 | alpha.99 | 第 15 章：迁移 0019（单元的 `route_version`、解冻的 `be_tier_thaw`）；写屏障放行 SDK 自己对一个单元的写（事务级的 `be.tier_unit`）；释放按 `route_version` 比较租约；备份记录的 `finished_at`；解冻的副本与它的清理 | 否 | 兼容：只多一列、一张表与写屏障的一种放行 | 协议 11 |
 | alpha.100 | 第 15 章：P15.26 写全冷读的限度（并发上限 `TIERING_COLD_CONCURRENCY`、等名额计入时限、属主登记的读取器）；新条款 P15.38 异步导出（迁移 0020 的 `be_tier_export`、作业 `be.tiering.export`、NDJSON 对象、只答请求者、预签名地址、到期清理；不能导出时答 `QUERY_NOT_COMPLETABLE`） | 否 | 兼容：只多一张表 | 协议 11 |
+| alpha.101 | P15.38：导出的每行是与同步读答的对象相同的 JSON（被掩码的字段为 null，P8.31），不是规范 JSON（规范 JSON 不允许 null）；最后一次尝试仍失败的导出记为 `failed` | 否 | 兼容：alpha.100 没有实现 | 协议 11 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
