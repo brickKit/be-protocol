@@ -10,6 +10,7 @@ def db_errors_vectors():
         ("40P01", "TX_CONFLICT", True, "deadlock; retried, then TX_CONFLICT"),
         ("55P03", "LOCK_TIMEOUT", False, "lock_timeout"),
         ("57014", "STATEMENT_TIMEOUT", False, "statement_timeout (query canceled)"),
+        ("BE001", "RECORD_SEALED", False, "the tiering write barrier: the row belongs to a sealed unit (P15.13)"),
         ("53300", "DEPENDENCY_UNAVAILABLE", False, "too many connections"),
         ("57P01", "DEPENDENCY_UNAVAILABLE", False, "admin shutdown"),
         ("57P02", "DEPENDENCY_UNAVAILABLE", False, "crash shutdown"),
