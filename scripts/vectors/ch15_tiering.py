@@ -114,7 +114,7 @@ def digest_vectors():
     row_case("uuid-lower", "a UUID is lower case", {"id": "uuid"}, {"id": O2},
              '{"id":"0190f3a1-0000-7000-8000-0000000000a2"}')
     row_case("text-array", "a text array keeps its order, each element NFC", {"serials": "text[]"},
-             {"serials": ["B-2", "café", "A-1"]}, '{"serials":["B-2","café","A-1"]}')
+             {"serials": ["B-2", "cafe\u0301", "A-1"]}, '{"serials":["B-2","caf\u00e9","A-1"]}')
     row_case("text-array-null-element-refused", "an array with a null element", {"serials": "text[]"},
              {"serials": ["A-1", None]}, refused=True)
     row_case("numeric-nan-refused", "NaN is not a decimal", {"a": "numeric"}, {"a": "NaN"}, refused=True)

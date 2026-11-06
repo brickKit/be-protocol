@@ -1,6 +1,6 @@
 {
   "topic": "tier-digest",
-  "protocol": "3.0.0-alpha.109",
+  "protocol": "3.0.0-alpha.110",
   "rules": [
     "P15.8",
     "P15.9",
@@ -151,7 +151,7 @@
         "row": {
           "serials": [
             "B-2",
-            "café",
+            "café",
             "A-1"
           ]
         }
