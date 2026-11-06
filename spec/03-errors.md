@@ -67,7 +67,8 @@
 | `NOT_FOUND` | `NOT_FOUND` | 404 | 否 | 不存在或不可见 |
 | `QUERY_NOT_COMPLETABLE` | `FAILED_PRECONDITION` | 422 | 否 | 有段不可下推、候选集超预算、冷层没有覆盖 |
 | `FIELD_NOT_QUERYABLE` | `FAILED_PRECONDITION` | 422 | 否 | 受限字段不可用于此查询 |
-| `QUERY_PLAN_CHANGED` | `ABORTED` | 409 | 否（重新查询） | 游标的计划摘要不一致 |
+| `QUERY_PLAN_CHANGED` | `ABORTED` | 409 | 否（重新查询） | 游标的计划摘要或目录快照不一致（[15](15-tiering.md) 的 P15.24） |
+| `RECORD_SEALED` | `FAILED_PRECONDITION` | 409 | 否 | 写入的记录属于已封存的归档单元（[15](15-tiering.md) 的 P15.13）；业务按更正记录处理 |
 | `CHANGE_KEY_CONFLICT` | `ALREADY_EXISTS` | 409 | 否 | 同一变更键、不同的内容 |
 | `CHANGE_REVISION_STALE` | `ABORTED` | 409 | 否（重新预览） | 生效点发现修订已变 |
 | `LAST_ADMIN_PROTECTED` | `FAILED_PRECONDITION` | 409 | 否 | 最后管理员保护 |

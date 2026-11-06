@@ -6,7 +6,7 @@ from common import write
 CATEGORIES = ["security_tightening", "security_widening", "employment_end", "org_tightening", "account_status",
               "account_reenable", "identity_signing_key_revocation", "credential_tightening",
               "credential_tightening_in_product", "session_revocation", "recovery_credential_rotation",
-              "document_number", "member_switch_handover", "destruction", "external_command_issued",
+              "document_number", "member_switch_handover", "destruction", "erasure", "external_command_issued",
               "external_command_outcome", "deployment_generation", "authz_generation",
               "evidence_double_failure"]
 REC = {"component": "infra/authz", "instance": "authz-1"}

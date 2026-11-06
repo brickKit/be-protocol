@@ -1,6 +1,6 @@
 {
   "topic": "run-profile",
-  "protocol": "3.0.0-alpha.96",
+  "protocol": "3.0.0-alpha.97",
   "rules": [
     "P12.1",
     "P12.2",
@@ -71,6 +71,15 @@
       "id": "retention-alert",
       "input": {
         "kind": "alert"
+      },
+      "expected": {
+        "min_retention_days": 30
+      }
+    },
+    {
+      "id": "retention-backup",
+      "input": {
+        "kind": "backup"
       },
       "expected": {
         "min_retention_days": 30

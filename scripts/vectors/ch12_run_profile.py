@@ -4,7 +4,7 @@ from ch08_canonical import canonical
 from common import write
 
 RETENTION_DAYS = {"generation.deployment": 3650, "generation.authz": 3650, "trust.ca": 3650, "trust.credential": 3650,
-                  "alert": 30, "recovery.step": 30}
+                  "alert": 30, "recovery.step": 30, "backup": 30}
 DEP = "0190f3a1-0000-7000-8000-00000000d001"
 
 

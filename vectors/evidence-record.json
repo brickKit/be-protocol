@@ -1,6 +1,6 @@
 {
   "topic": "evidence-record",
-  "protocol": "3.0.0-alpha.96",
+  "protocol": "3.0.0-alpha.97",
   "rules": [
     "P12.9",
     "P12.10"
@@ -29,6 +29,7 @@
           "document_number",
           "member_switch_handover",
           "destruction",
+          "erasure",
           "external_command_issued",
           "external_command_outcome",
           "deployment_generation",
