@@ -1,14 +1,15 @@
 {
   "topic": "trust-history",
-  "protocol": "3.0.0-alpha.95",
+  "protocol": "3.0.0-alpha.96",
   "rules": [
+    "P12.4",
     "P12.24",
     "P12.25",
     "P12.26"
   ],
-  "description": "信任材料历史：受信的 CA（从配置的信任根沿双签的轮换往前）、一条记录在接收时刻是否可信（链到受信的 CA，链上没有在 t > r − 偏差时已吊销的证书）",
+  "description": "信任材料历史：受信的 CA（从配置的信任根沿双签的轮换往前）、一条记录在接收时刻是否可信（链到受信的 CA，链上没有在 t > r − 偏差时已吊销的证书，写入者就是签名证书的服务身份）",
   "fields": {
-    "input": "record, configured, rotations, revocations, skew",
+    "input": "record (chain, received; writer and signer: the component the record names and the one its certificate carries), configured, rotations, revocations, skew",
     "expected": "holds, reason"
   },
   "cases": [
@@ -294,6 +295,55 @@
       },
       "expected": {
         "holds": true
+      }
+    },
+    {
+      "id": "writer-is-signer",
+      "description": "a service credential's record names its own component as the writer",
+      "input": {
+        "record": {
+          "chain": [
+            "leaf-1",
+            "ca-a"
+          ],
+          "received": 50,
+          "writer": "infra/authz",
+          "signer": "infra/authz"
+        },
+        "configured": [
+          "ca-a"
+        ],
+        "rotations": [],
+        "revocations": [],
+        "skew": 2
+      },
+      "expected": {
+        "holds": true
+      }
+    },
+    {
+      "id": "writer-not-signer",
+      "description": "another component's credential (unrevoked) signs a record naming the authorization member",
+      "input": {
+        "record": {
+          "chain": [
+            "leaf-2",
+            "ca-a"
+          ],
+          "received": 50,
+          "writer": "infra/authz",
+          "signer": "infra/audit"
+        },
+        "configured": [
+          "ca-a"
+        ],
+        "rotations": [],
+        "revocations": [],
+        "skew": 2
+      },
+      "expected": {
+        "holds": false,
+        "reason": "writer_not_signer"
       }
     }
   ]

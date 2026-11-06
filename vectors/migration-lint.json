@@ -1,6 +1,6 @@
 {
   "topic": "migration-lint",
-  "protocol": "3.0.0-alpha.95",
+  "protocol": "3.0.0-alpha.96",
   "rules": [
     "P5.13",
     "P5.31"

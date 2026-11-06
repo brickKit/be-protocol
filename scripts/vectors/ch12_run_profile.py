@@ -85,6 +85,8 @@ def judge(record, configured, rotations, revocations):
         for rv in revocations:
             if rv["fingerprint"] == fp and rv["signer_trusted"] and record["received"] > rv["received"] - SKEW:
                 return {"holds": False, "reason": "revoked"}
+    if "writer" in record and record["writer"] != record["signer"]:  # P12.4: the writer is the signer's identity
+        return {"holds": False, "reason": "writer_not_signer"}
     return {"holds": True}
 
 
@@ -126,6 +128,12 @@ def trust_history_vectors():
     case("revocation-by-an-untrusted-signer", "a revocation whose own signer is not trusted does not count",
          {"chain": [L1, A], "received": 150}, [A], [], [{"fingerprint": L1, "received": 100, "signer_trusted": False}],
          {"holds": True})
-    write("trust-history", ["P12.24", "P12.25", "P12.26"],
-          "信任材料历史：受信的 CA（从配置的信任根沿双签的轮换往前）、一条记录在接收时刻是否可信（链到受信的 CA，链上没有在 t > r − 偏差时已吊销的证书）",
-          cases, {"input": "record, configured, rotations, revocations, skew", "expected": "holds, reason"})
+    case("writer-is-signer", "a service credential's record names its own component as the writer",
+         {"chain": [L1, A], "received": 50, "writer": "infra/authz", "signer": "infra/authz"}, [A], [], [],
+         {"holds": True})
+    case("writer-not-signer", "another component's credential (unrevoked) signs a record naming the authorization member",
+         {"chain": [L2, A], "received": 50, "writer": "infra/authz", "signer": "infra/audit"}, [A], [], [],
+         {"holds": False, "reason": "writer_not_signer"})
+    write("trust-history", ["P12.4", "P12.24", "P12.25", "P12.26"],
+          "信任材料历史：受信的 CA（从配置的信任根沿双签的轮换往前）、一条记录在接收时刻是否可信（链到受信的 CA，链上没有在 t > r − 偏差时已吊销的证书，写入者就是签名证书的服务身份）",
+          cases, {"input": "record (chain, received; writer and signer: the component the record names and the one its certificate carries), configured, rotations, revocations, skew", "expected": "holds, reason"})
