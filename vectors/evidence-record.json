@@ -1,6 +1,6 @@
 {
   "topic": "evidence-record",
-  "protocol": "3.0.0-alpha.92",
+  "protocol": "3.0.0-alpha.93",
   "rules": [
     "P12.9",
     "P12.10"
@@ -33,7 +33,8 @@
           "external_command_outcome",
           "trust_material",
           "deployment_generation",
-          "authz_generation"
+          "authz_generation",
+          "evidence_double_failure"
         ]
       }
     },

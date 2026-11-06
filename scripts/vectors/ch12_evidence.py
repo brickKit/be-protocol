@@ -7,7 +7,8 @@ CATEGORIES = ["security_tightening", "security_widening", "employment_end", "org
               "account_reenable", "identity_signing_key_revocation", "credential_tightening",
               "credential_tightening_in_product", "session_revocation", "recovery_credential_rotation",
               "document_number", "member_switch_handover", "destruction", "external_command_issued",
-              "external_command_outcome", "trust_material", "deployment_generation", "authz_generation"]
+              "external_command_outcome", "trust_material", "deployment_generation", "authz_generation",
+              "evidence_double_failure"]
 REC = {"component": "infra/authz", "instance": "authz-1"}
 
 
