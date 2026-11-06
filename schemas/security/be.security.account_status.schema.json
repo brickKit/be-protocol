@@ -60,6 +60,9 @@
     },
     "confirmation": {
       "$ref": "#/$defs/Id"
+    },
+    "evidence": {
+      "$ref": "#/$defs/Id"
     }
   },
   "additionalProperties": false,
