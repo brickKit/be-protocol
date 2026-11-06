@@ -1,6 +1,6 @@
 {
   "topic": "tier-digest",
-  "protocol": "3.0.0-alpha.108",
+  "protocol": "3.0.0-alpha.109",
   "rules": [
     "P15.8",
     "P15.9",
@@ -139,6 +139,43 @@
       },
       "expected": {
         "canonical_row": "{\"id\":\"0190f3a1-0000-7000-8000-0000000000a2\"}"
+      }
+    },
+    {
+      "id": "text-array",
+      "description": "a text array keeps its order, each element NFC",
+      "input": {
+        "columns": {
+          "serials": "text[]"
+        },
+        "row": {
+          "serials": [
+            "B-2",
+            "café",
+            "A-1"
+          ]
+        }
+      },
+      "expected": {
+        "canonical_row": "{\"serials\":[\"B-2\",\"café\",\"A-1\"]}"
+      }
+    },
+    {
+      "id": "text-array-null-element-refused",
+      "description": "an array with a null element",
+      "input": {
+        "columns": {
+          "serials": "text[]"
+        },
+        "row": {
+          "serials": [
+            "A-1",
+            null
+          ]
+        }
+      },
+      "expected": {
+        "refused": true
       }
     },
     {

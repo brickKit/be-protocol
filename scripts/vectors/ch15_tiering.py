@@ -42,6 +42,10 @@ def canon_value(typ, v):
         return v  # the source's text, as it came
     if typ == "bytea":
         return base64.b64encode(bytes.fromhex(v)).decode()
+    if typ == "text[]":
+        if not isinstance(v, list) or any(not isinstance(e, str) for e in v):
+            raise Refused("text[]")  # an element that is null (or not text) has no canonical form
+        return [unicodedata.normalize("NFC", e) for e in v]
     raise Refused("type")
 
 
@@ -109,6 +113,10 @@ def digest_vectors():
              {"t": "2026-03-01T08:00:00.5+01:00"}, '{"t":"2026-03-01T07:00:00.500000Z"}')
     row_case("uuid-lower", "a UUID is lower case", {"id": "uuid"}, {"id": O2},
              '{"id":"0190f3a1-0000-7000-8000-0000000000a2"}')
+    row_case("text-array", "a text array keeps its order, each element NFC", {"serials": "text[]"},
+             {"serials": ["B-2", "café", "A-1"]}, '{"serials":["B-2","café","A-1"]}')
+    row_case("text-array-null-element-refused", "an array with a null element", {"serials": "text[]"},
+             {"serials": ["A-1", None]}, refused=True)
     row_case("numeric-nan-refused", "NaN is not a decimal", {"a": "numeric"}, {"a": "NaN"}, refused=True)
     row_case("integer-fraction-refused", "an integer column with a fraction", {"q": "int4"}, {"q": "1.5"}, refused=True)
 

@@ -1,6 +1,6 @@
 {
   "topic": "tier-manifest",
-  "protocol": "3.0.0-alpha.108",
+  "protocol": "3.0.0-alpha.109",
   "rules": [
     "P15.15",
     "P15.16"

@@ -1,6 +1,6 @@
 {
   "topic": "external-command",
-  "protocol": "3.0.0-alpha.108",
+  "protocol": "3.0.0-alpha.109",
   "rules": [
     "P13.2",
     "P13.3",
