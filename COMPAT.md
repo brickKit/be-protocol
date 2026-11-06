@@ -92,6 +92,7 @@
 | alpha.100 | 第 15 章：P15.26 写全冷读的限度（并发上限 `TIERING_COLD_CONCURRENCY`、等名额计入时限、属主登记的读取器）；新条款 P15.38 异步导出（迁移 0020 的 `be_tier_export`、作业 `be.tiering.export`、NDJSON 对象、只答请求者、预签名地址、到期清理；不能导出时答 `QUERY_NOT_COMPLETABLE`） | 否 | 兼容：只多一张表 | 协议 11 |
 | alpha.101 | P15.38：导出的每行是与同步读答的对象相同的 JSON（被掩码的字段为 null，P8.31），不是规范 JSON（规范 JSON 不允许 null）；最后一次尝试仍失败的导出记为 `failed` | 否 | 兼容：alpha.100 没有实现 | 协议 11 |
 | alpha.102 | P15.28、P15.29：保全与销毁批准的操作由类别声明、SDK 检查；销毁批准记在 `be_tier_approval`（迁移 0021，单元的或类别常设的）；销毁的意图在决定事务之前、核对不过时取消；销毁后删解冻的副本，按身份读答 `NOT_FOUND`；作业 `be.tiering.destroy` | 否 | 兼容：只多一张表 | 协议 11 |
+| alpha.103 | P15.31：擦除的列、解冻副本在新版本发布时删除、两段写与发布事务里再核对保全、推迟时不写意图、重放的擦除由队列作业 `be.tiering.erase` 重写 | 否 | 兼容：只是写全 | 协议 11 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
@@ -150,6 +151,7 @@
 | `be-sdk-go` | alpha.104 | alpha.98 |
 | `be-sdk-go` | alpha.105 | alpha.99 |
 | `be-sdk-go` | alpha.106 | alpha.101 |
+| `be-sdk-go` | alpha.107 | alpha.102 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |
