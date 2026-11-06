@@ -56,3 +56,76 @@ def run_profile_vectors():
     write("run-profile", ["P12.1", "P12.2", "P12.3", "P12.4", "P12.5"],
           "运行档案：签名前的规范字节（去掉 signature 成员）、键名、各类别的最短保留期、恢复代次的当前值（签名成立的最大值）与推进（各处最大值加一）",
           cases, {"input": "record | kind | records | seen", "expected": "signed_bytes, key | min_retention_days | current | next"})
+
+
+# P12.24-P12.26: the trust material's history. A CA is trusted when the configured trust root is it, or when a rotation
+# from it to a trusted CA holds both signatures (the previous CA's and the next one's acceptance). A signed record
+# received at t holds when its chain ends at a trusted CA and no certificate of the chain was revoked at r with
+# t > r - skew (a revocation counts only when its own signer was trusted when it was received).
+SKEW = 2
+
+
+def trusted_cas(configured, rotations):
+    trusted = set(configured)
+    changed = True
+    while changed:
+        changed = False
+        for r in rotations:
+            if r["next"] in trusted and r["signed_by_previous"] and r["accepted_by_next"] and r["previous"] not in trusted:
+                trusted.add(r["previous"])
+                changed = True
+    return trusted
+
+
+def judge(record, configured, rotations, revocations):
+    trusted = trusted_cas(configured, rotations)
+    if record["chain"][-1] not in trusted:
+        return {"holds": False, "reason": "untrusted_ca"}
+    for fp in record["chain"]:
+        for rv in revocations:
+            if rv["fingerprint"] == fp and rv["signer_trusted"] and record["received"] > rv["received"] - SKEW:
+                return {"holds": False, "reason": "revoked"}
+    return {"holds": True}
+
+
+def trust_history_vectors():
+    A, B, F, L1, L2 = "ca-a", "ca-b", "ca-fake", "leaf-1", "leaf-2"
+    good = {"previous": A, "next": B, "signed_by_previous": True, "accepted_by_next": True}
+    cases = []
+
+    def case(cid, description, record, configured, rotations, revocations, want):
+        got = judge(record, configured, rotations, revocations)
+        assert got == want, (cid, got, want)
+        cases.append({"id": cid, "description": description,
+                      "input": {"record": record, "configured": configured, "rotations": rotations,
+                                "revocations": revocations, "skew": SKEW},
+                      "expected": want})
+
+    case("one-ca", "the configured CA, nothing revoked", {"chain": [L1, A], "received": 50}, [A], [], [], {"holds": True})
+    case("rotated-old-ca", "rotated A to B with both signatures: a record under A still holds",
+         {"chain": [L1, A], "received": 50}, [B], [good], [], {"holds": True})
+    case("rotation-without-acceptance", "the next CA did not accept: A is not trusted",
+         {"chain": [L1, A], "received": 50}, [B], [{**good, "accepted_by_next": False}], [],
+         {"holds": False, "reason": "untrusted_ca"})
+    case("forged-rotation", "a rotation from a fake CA to the trusted one, signed by the fake only",
+         {"chain": [L2, F], "received": 50}, [B], [{"previous": F, "next": B, "signed_by_previous": True,
+                                                     "accepted_by_next": False}], [],
+         {"holds": False, "reason": "untrusted_ca"})
+    case("not-on-the-chain", "a CA no rotation links to the configured root",
+         {"chain": [L2, F], "received": 50}, [A], [], [], {"holds": False, "reason": "untrusted_ca"})
+    rv = [{"fingerprint": L1, "received": 100, "signer_trusted": True}]
+    case("before-the-revocation", "received well before the revocation", {"chain": [L1, A], "received": 97}, [A], [], rv,
+         {"holds": True})
+    case("within-the-skew", "received less than the declared skew before the revocation: not trusted",
+         {"chain": [L1, A], "received": 99}, [A], [], rv, {"holds": False, "reason": "revoked"})
+    case("after-the-revocation", "received after the revocation", {"chain": [L1, A], "received": 150}, [A], [], rv,
+         {"holds": False, "reason": "revoked"})
+    case("ca-revoked", "the CA itself revoked: every chain under it after that",
+         {"chain": [L1, A], "received": 150}, [B], [good], [{"fingerprint": A, "received": 120, "signer_trusted": True}],
+         {"holds": False, "reason": "revoked"})
+    case("revocation-by-an-untrusted-signer", "a revocation whose own signer is not trusted does not count",
+         {"chain": [L1, A], "received": 150}, [A], [], [{"fingerprint": L1, "received": 100, "signer_trusted": False}],
+         {"holds": True})
+    write("trust-history", ["P12.24", "P12.25", "P12.26"],
+          "信任材料历史：受信的 CA（从配置的信任根沿双签的轮换往前）、一条记录在接收时刻是否可信（链到受信的 CA，链上没有在 t > r − 偏差时已吊销的证书）",
+          cases, {"input": "record, configured, rotations, revocations, skew", "expected": "holds, reason"})

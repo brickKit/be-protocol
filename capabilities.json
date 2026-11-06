@@ -1,5 +1,5 @@
 {
-  "protocol": "3.0.0-alpha.94",
+  "protocol": "3.0.0-alpha.95",
   "description": "能力清单：spec/ 中每条规则恰好属于一项能力（rules 为空的能力只留形状，规则随后续章节加入）。owner 为 sdk 的能力由每个 SDK 在自己仓库的 features.json 中标出状态；component 与 assembly 的能力由组件与装配检查负责；edge 的能力由 be-edge 的测试与一致性套件负责。",
   "capabilities": [
     {
@@ -577,7 +577,10 @@
         "P12.5",
         "P12.6",
         "P12.7",
-        "P12.8"
+        "P12.8",
+        "P12.24",
+        "P12.25",
+        "P12.26"
       ]
     },
     {
@@ -597,7 +600,8 @@
       "title": "整套恢复中证据存储不回退",
       "owner": "assembly",
       "rules": [
-        "P12.14"
+        "P12.14",
+        "P12.27"
       ]
     },
     {

@@ -66,6 +66,7 @@ if __name__ == "__main__":
     ch09_watermark.all_vectors()
     ch11_edge.edge_flow_vectors()
     ch12_run_profile.run_profile_vectors()
+    ch12_run_profile.trust_history_vectors()
     ch12_evidence.evidence_vectors()
     ch13_external.external_vectors()
     ch13_external.reconcile_vectors()
