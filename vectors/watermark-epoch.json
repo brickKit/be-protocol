@@ -1,6 +1,6 @@
 {
   "topic": "watermark-epoch",
-  "protocol": "3.0.0-alpha.107",
+  "protocol": "3.0.0-alpha.108",
   "rules": [
     "P9.26"
   ],
