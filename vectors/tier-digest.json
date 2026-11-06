@@ -1,6 +1,6 @@
 {
   "topic": "tier-digest",
-  "protocol": "3.0.0-alpha.98",
+  "protocol": "3.0.0-alpha.99",
   "rules": [
     "P15.8",
     "P15.9",

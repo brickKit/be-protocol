@@ -88,6 +88,7 @@
 | alpha.96 | P12.4：`writer` 的组件必须是签名证书的服务身份，否则记录不用（原先只核对签名与证书链，拿到一个组件的凭据能写出以另一个组件为写入者的告警）；P12.27：信任材料只记在运行档案，签发者留存写不进的吊销记录、可达后补写；证据类别去掉 `trust_material`（没有记录者，A148）；向量 `trust-history` 加写入者的两例，`evidence-record` 的类别少一个 | 否：组件之间的线不变 | 兼容：组件写的记录本来以自己为写入者；证据存储拒收 `trust_material`，没有组件写它 | 协议 15 的 6.2 与证据表的信任材料一行 |
 | alpha.97 | 新的一章 15“冷热转层”（P15.1–P15.37）：数据类别的声明、单元目录（SDK 的迁移 0017）、规范行与单元的摘要、候选与封存、写屏障（触发器）、认领与发布的代次与纪元、清单与对象的键、释放的条件、目录快照与读取租约、冷读的限度、解冻、保全与销毁、擦除的新清单版本、路线更换、恢复核对 `be.tiering`、规划函数；向量 `tier-digest`、`tier-manifest`、`tier-plan`。错误原因加 `RECORD_SEALED`；`QUERY_PLAN_CHANGED` 也用于目录快照变了。运行档案加类别 `backup`；证据类别加 `erasure` | 否：新的能力，组件声明了数据类别才用到 | 兼容：证据存储（审计组件）先升级才收 `erasure`；没有声明数据类别的组件不变 | 协议 11 |
 | alpha.98 | 第 15 章：迁移 0018 给单元加阻塞原因与到期时刻（P15.12）；写屏障的 SQLSTATE `BE001` 进向量 `db-errors`，映射为 `RECORD_SEALED`（P15.13） | 否 | 兼容：只多两列与一行映射 | 协议 11 |
+| alpha.99 | 第 15 章：迁移 0019（单元的 `route_version`、解冻的 `be_tier_thaw`）；写屏障放行 SDK 自己对一个单元的写（事务级的 `be.tier_unit`）；释放按 `route_version` 比较租约；备份记录的 `finished_at`；解冻的副本与它的清理 | 否 | 兼容：只多一列、一张表与写屏障的一种放行 | 协议 11 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
@@ -143,6 +144,8 @@
 | `be-sdk-go` | alpha.101 | alpha.95 |
 | `be-sdk-go` | alpha.102 | alpha.96 |
 | `be-sdk-go` | alpha.103 | alpha.98 |
+| `be-sdk-go` | alpha.104 | alpha.98 |
+| `be-sdk-go` | alpha.105 | alpha.99 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |
