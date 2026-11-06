@@ -1,6 +1,6 @@
 {
   "topic": "trust-history",
-  "protocol": "3.0.0-alpha.104",
+  "protocol": "3.0.0-alpha.105",
   "rules": [
     "P12.4",
     "P12.24",
