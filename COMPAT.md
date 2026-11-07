@@ -106,6 +106,7 @@
 | alpha.114 | P15.22：先按身份问归档、单元仍在线才读在线表；已销毁单元的成员从决定提交起答 `NOT_FOUND`；P15.24：在线的查询也排除已销毁单元的成员（长时间推演读到了销毁途中残缺的聚合） | 否 | 兼容：读法更严；先读在线表的组件要改顺序 | 协议 11 |
 | alpha.115 | 新的第 16 章“预占的参与方”（P16.1–P16.12）与向量 `reserve-participant`：协议 04 参与方的分支状态与迁移、幂等与墓碑、暂存期限与到期、消耗、锁的顺序，写成 SDK 的能力 `reserve-participant` | 否（参与方的契约不变，规则是现有参与方的行为） | 兼容 | 协议 04 |
 | alpha.116 | P16.13 与迁移 `0024_reserve`：参与方运行时的分支与消耗记录两张表 | 否（组件自己 schema 里的表） | 兼容 | 无：运行时的表，设计层在协议 04 |
+| alpha.117 | P6.20：处理最后一次投递之前先提交死信，成功或已应用时删掉，失败时改起因（最后一次投递在处理中途进程退出时，消息不再悄悄丢失）；向量 `cron-slots` 加“补跑策略 none、最后一个到期槽早于一分钟”的用例 | 否 | 兼容：多写一行死信、成功时删掉；按旧条款实现的消费者在最后一次投递中途退出时仍会丢消息 | 协议 02 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
@@ -174,6 +175,7 @@
 | `be-sdk-go` | alpha.114 | alpha.109 |
 | `be-sdk-go` | alpha.115 | alpha.110 |
 | `be-sdk-go` | alpha.116 | alpha.114 |
+| `be-sdk-go` | alpha.117、alpha.118 | alpha.116 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |
@@ -194,6 +196,7 @@
 | `be-sdk-python` | a48 | alpha.61 |
 | `be-sdk-python` | a49 | alpha.66 |
 | `be-sdk-python` | a50、a51 | alpha.68 |
+| `be-sdk-python` | a52–a54 | alpha.116 |
 
 Go 取 SDK 的 `go.mod` 里 `be-protocol` 的版本；Python 取包里 `besdk/_protocol/capabilities.json` 的 `protocol`。只列 alpha.19 以来的版本（Go alpha.23 起、Python a20 起）。
 

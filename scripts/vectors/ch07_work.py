@@ -106,11 +106,14 @@ def cron_vectors():
     # materialization after a stop: the due slots between the watermark and now, by backfill policy
     for name, policy, hours_down in [("latest-after-5h", "latest", 5), ("none-after-5h", "none", 5),
                                      ("all-after-5h", "all", 5), ("all-after-30h-over-backlog", "all", 30),
-                                     ("latest-nothing-missed", "latest", 0)]:
+                                     ("latest-nothing-missed", "latest", 0),
+                                     ("none-last-due-over-a-minute-ago", "none", -1)]:
         wm = U(2026, 10, 17, 6, 0, 30)
         now = U(2026, 10, 17, 6 + hours_down % 18, 0, 30) if hours_down < 18 else U(2026, 10, 18, 12, 0, 30)
         if hours_down == 0:
             now = U(2026, 10, 17, 6, 30, 0)
+        if hours_down == -1:  # the last due slot (11:00) is five minutes old: none runs nothing, the watermark moves on
+            now = U(2026, 10, 17, 11, 5, 0)
         due = cron_slots("0 * * * *", "UTC", wm, now)
         if policy == "latest":
             run, paused = due[-1:], []
