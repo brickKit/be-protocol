@@ -1,6 +1,6 @@
 {
   "topic": "retry-decision",
-  "protocol": "3.0.0-alpha.114",
+  "protocol": "3.0.0-alpha.115",
   "rules": [
     "P4.6",
     "P4.7"

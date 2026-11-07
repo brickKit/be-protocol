@@ -1,5 +1,5 @@
 {
-  "protocol": "3.0.0-alpha.114",
+  "protocol": "3.0.0-alpha.115",
   "description": "能力清单：spec/ 中每条规则恰好属于一项能力（rules 为空的能力只留形状，规则随后续章节加入）。owner 为 sdk 的能力由每个 SDK 在自己仓库的 features.json 中标出状态；component 与 assembly 的能力由组件与装配检查负责；edge 的能力由 be-edge 的测试与一致性套件负责。",
   "capabilities": [
     {
@@ -718,6 +718,25 @@
         "P15.35",
         "P15.36",
         "P15.37"
+      ]
+    },
+    {
+      "id": "reserve-participant",
+      "title": "预占的参与方：分支的状态与迁移、幂等与墓碑、暂存期限与到期、消耗、锁的顺序",
+      "owner": "sdk",
+      "rules": [
+        "P16.1",
+        "P16.2",
+        "P16.3",
+        "P16.4",
+        "P16.5",
+        "P16.6",
+        "P16.7",
+        "P16.8",
+        "P16.9",
+        "P16.10",
+        "P16.11",
+        "P16.12"
       ]
     }
   ]

@@ -34,6 +34,7 @@ import ch12_evidence  # noqa: E402
 import ch12_run_profile  # noqa: E402
 import ch13_external  # noqa: E402
 import ch15_tiering  # noqa: E402
+import ch16_reserve  # noqa: E402
 from common import VEC, sums  # noqa: E402
 
 if __name__ == "__main__":
@@ -74,5 +75,6 @@ if __name__ == "__main__":
     ch15_tiering.digest_vectors()
     ch15_tiering.manifest_vectors()
     ch15_tiering.plan_vectors()
+    ch16_reserve.participant_vectors()
     sums()
     print("\n".join(sorted(p.name for p in VEC.iterdir())))
