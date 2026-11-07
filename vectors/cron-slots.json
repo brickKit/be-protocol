@@ -1,6 +1,6 @@
 {
   "topic": "cron-slots",
-  "protocol": "3.0.0-alpha.110",
+  "protocol": "3.0.0-alpha.111",
   "rules": [
     "P7.15",
     "P7.16"
