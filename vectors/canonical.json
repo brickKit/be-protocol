@@ -1,6 +1,6 @@
 {
   "topic": "canonical",
-  "protocol": "3.0.0-alpha.112",
+  "protocol": "3.0.0-alpha.113",
   "rules": [
     "P8.8"
   ],

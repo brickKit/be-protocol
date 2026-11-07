@@ -102,6 +102,7 @@
 | alpha.110 | P15.35：部署时从类别允许的路线里选目标（`TIERING_ROUTE_<类别>`）；向量 `text-array` 的输入改成分解形式（合成形式测不到 NFC） | 否 | 兼容：只多了配置 | 协议 11 |
 | alpha.111 | P15.20：孤儿清理由属主每天的作业 `be.tiering.cleanup` 执行（一次列出类别的前缀），过期的解冻副本一并删除；整套恢复的阶段里不运行（原先没有作业调用它，中断的转层留下的对象与行一直不删） | 否 | 兼容：多一个作业 | 协议 11 |
 | alpha.112 | 向量 `tier-digest` 多一例 `table-hash-by-key-not-row`：有一列排在主键之前时，按整行与按主键排序不同（原先的例子两种排序恰好一致，第三方读取器按整行排序也能通过） | 否 | 兼容：只多了向量 | 协议 11 |
+| alpha.113 | P15.31：擦除作废同一类别的导出（完成的立即到期，未完成的标记后重写）；迁移 0023 给 `be_tier_export` 加 `erased_at` | 是（迁移 0023） | 兼容：只多了一列 | 协议 11 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
@@ -169,7 +170,7 @@
 | `be-sdk-go` | alpha.113 | alpha.108 |
 | `be-sdk-go` | alpha.114 | alpha.109 |
 | `be-sdk-go` | alpha.115 | alpha.110 |
-| `be-sdk-go` | alpha.116 | alpha.112 |
+| `be-sdk-go` | alpha.116 | alpha.113 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |
