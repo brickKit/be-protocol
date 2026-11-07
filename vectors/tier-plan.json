@@ -1,6 +1,6 @@
 {
   "topic": "tier-plan",
-  "protocol": "3.0.0-alpha.111",
+  "protocol": "3.0.0-alpha.112",
   "rules": [
     "P15.3",
     "P15.4",

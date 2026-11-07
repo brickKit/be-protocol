@@ -1,6 +1,6 @@
 {
   "topic": "tier-digest",
-  "protocol": "3.0.0-alpha.111",
+  "protocol": "3.0.0-alpha.112",
   "rules": [
     "P15.8",
     "P15.9",
@@ -266,6 +266,32 @@
       },
       "expected": {
         "sha256": "77a8f2d6735386d964698c15be15f40bdf69dc5e765ba39fafdebec13b84018e"
+      }
+    },
+    {
+      "id": "table-hash-by-key-not-row",
+      "description": "the order is the key's, not the row's: a column named before the key (\"a\") would put id 2 first",
+      "input": {
+        "columns": {
+          "a": "text",
+          "id": "int4"
+        },
+        "pk": [
+          "id"
+        ],
+        "rows": [
+          {
+            "id": 1,
+            "a": "z"
+          },
+          {
+            "id": 2,
+            "a": "a"
+          }
+        ]
+      },
+      "expected": {
+        "sha256": "e6a69dfa864f84865fbb02c03b4e7e94bd0baefc4945c3b67a0bf18451405cff"
       }
     },
     {

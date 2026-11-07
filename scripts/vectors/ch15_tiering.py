@@ -133,6 +133,15 @@ def digest_vectors():
     cases.append({"id": "table-hash", "description": "rows sorted by their canonical primary key's bytes (line 10 sorts "
                   "before line 2: \"10\" < \"2\"), each 8-byte big-endian length then the row; the input's order does not matter",
                   "input": {"columns": LINES, "pk": ["order_id", "line"], "rows": lines}, "expected": {"sha256": h}})
+    notes = {"a": "text", "id": "int4"}  # a column that sorts before the key: by row and by key are other orders
+    keyed = [{"id": 1, "a": "z"}, {"id": 2, "a": "a"}]
+    by_row = hashlib.sha256()
+    for b in sorted(canon_row(notes, r) for r in keyed):
+        by_row.update(struct.pack(">Q", len(b)) + b)
+    assert table_hash(notes, ["id"], keyed) != by_row.hexdigest()
+    cases.append({"id": "table-hash-by-key-not-row", "description": "the order is the key's, not the row's: a column "
+                  "named before the key (\"a\") would put id 2 first", "input": {"columns": notes, "pk": ["id"],
+                  "rows": keyed}, "expected": {"sha256": table_hash(notes, ["id"], keyed)}})
 
     orders = [{"id": O1, "legal_entity": LE, "code": "SO-1", "note": None, "total": "1250.5", "lines": 3,
                "closed_at": "2026-03-01T07:00:00Z", "day": "2026-03-01", "paid": True, "attrs": None, "blob": None}]
