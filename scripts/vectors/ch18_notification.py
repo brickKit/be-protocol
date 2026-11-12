@@ -81,7 +81,7 @@ def notification_vectors():
           "deliver 或 withdraw；shape_ok 是载荷是否合 schema（类别另算）；sender_is_source 是载荷里的发送方与信封的来源是否都等于意图所在的流的属主组件；category "
           "是类别（可能不在目录里）；expires_after_occurred 是到期是否晚于发生（撤回意图没有到期，不查）；seen 是同一“发送方 + 意图身份”"
           "是否已经收过；collapse_seq 是合并序号（null：没有合并键），max_seq 是这个合并键见过的最大序号（null：没见过）。expect：answer "
-          "是 accepted、duplicate、stale（不大于见过的最大序号，作废）或拒收的原因（按 P18.8 的顺序：not_the_sender、malformed、"
+          "是 accepted、duplicate、stale（不大于见过的最大序号，作废）或拒收的原因（按 P18.8 的顺序：malformed、not_the_sender、"
           "unknown_category，然后是到期不晚于发生的 malformed）；supersedes 是否取代这个合并键之前的意图与站内消息；delivers 是否投递。"
           "route 的 case：category、preference（unset、on、off：收件人对这个类别 × 渠道的偏好）、expired（到期已过）；expect 的 "
           "result 是 written、preference_off 或 expired。必须送达的类别（security_alert、legal_notice）不看偏好，到期也照写站内消息；没有偏好时 "

@@ -39,8 +39,8 @@ func admitRecompute(c admitCase) admitOutcome {
 		fails  bool
 		reason string
 	}{
-		{!c.SenderIsSource, "not_the_sender"},
 		{!c.ShapeOK, "malformed"},
+		{!c.SenderIsSource, "not_the_sender"},
 		{!slices.Contains(intentCategories, c.Category), "unknown_category"},
 		{c.Kind == "deliver" && !c.ExpiresAfterOccurred, "malformed"},
 		{c.Seen, "duplicate"},
