@@ -1,6 +1,6 @@
 {
   "topic": "flow-kernel",
-  "protocol": "3.0.0-alpha.121",
+  "protocol": "3.0.0-alpha.122",
   "rules": [
     "P17.2",
     "P17.6",
