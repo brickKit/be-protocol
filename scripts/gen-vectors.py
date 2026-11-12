@@ -36,6 +36,7 @@ import ch13_external  # noqa: E402
 import ch15_tiering  # noqa: E402
 import ch16_reserve  # noqa: E402
 import ch17_flow  # noqa: E402
+import ch18_notification  # noqa: E402
 from common import VEC, sums  # noqa: E402
 
 if __name__ == "__main__":
@@ -78,5 +79,6 @@ if __name__ == "__main__":
     ch15_tiering.plan_vectors()
     ch16_reserve.participant_vectors()
     ch17_flow.flow_vectors()
+    ch18_notification.notification_vectors()
     sums()
     print("\n".join(sorted(p.name for p in VEC.iterdir())))

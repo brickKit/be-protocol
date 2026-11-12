@@ -1,0 +1,612 @@
+{
+  "topic": "notification-intent",
+  "protocol": "3.0.0-alpha.124",
+  "rules": [
+    "P18.3",
+    "P18.6",
+    "P18.7",
+    "P18.8",
+    "P18.9"
+  ],
+  "description": "通知组件怎样收下一个意图（step=admit），与一个主体在一个渠道上的投递结果（step=route）。admit 的 case：kind 是 deliver 或 withdraw；sender_is_source 是载荷的发送方是否等于信封的来源组件；shape_ok 是载荷是否合 schema；category 是类别（可能不在目录里）；expires_after_occurred 是到期是否晚于发生（撤回意图没有到期，不查）；seen 是同一“发送方 + 意图身份”是否已经收过；collapse_seq 是合并序号（null：没有合并键），max_seq 是这个合并键见过的最大序号（null：没见过）。expect：answer 是 accepted、duplicate、stale（不大于见过的最大序号，作废）或拒收的原因（按 P18.8 的顺序：not_the_sender、malformed、unknown_category，然后是到期不晚于发生的 malformed）；supersedes 是否取代这个合并键之前的意图与站内消息；delivers 是否投递。route 的 case：category、preference（unset、on、off：收件人对这个类别 × 渠道的偏好）、expired（到期已过）；expect 的 result 是 written、preference_off 或 expired。必须送达的类别（security_alert、legal_notice）不看偏好；没有偏好时 marketing 默认关，其余默认开。",
+  "fields": {
+    "case": "到达时的情形",
+    "expect": "结果"
+  },
+  "cases": [
+    {
+      "id": "admit-plain",
+      "case": {
+        "step": "admit",
+        "kind": "deliver",
+        "sender_is_source": true,
+        "shape_ok": true,
+        "category": "approval_task",
+        "expires_after_occurred": true,
+        "seen": false,
+        "collapse_seq": null,
+        "max_seq": null
+      },
+      "expect": {
+        "answer": "accepted",
+        "supersedes": false,
+        "delivers": true
+      }
+    },
+    {
+      "id": "admit-not-the-sender",
+      "case": {
+        "step": "admit",
+        "kind": "deliver",
+        "sender_is_source": false,
+        "shape_ok": true,
+        "category": "approval_task",
+        "expires_after_occurred": true,
+        "seen": false,
+        "collapse_seq": null,
+        "max_seq": null
+      },
+      "expect": {
+        "answer": "not_the_sender",
+        "supersedes": false,
+        "delivers": false
+      }
+    },
+    {
+      "id": "admit-not-the-sender-and-malformed",
+      "case": {
+        "step": "admit",
+        "kind": "deliver",
+        "sender_is_source": false,
+        "shape_ok": false,
+        "category": "approval_task",
+        "expires_after_occurred": true,
+        "seen": false,
+        "collapse_seq": null,
+        "max_seq": null
+      },
+      "expect": {
+        "answer": "not_the_sender",
+        "supersedes": false,
+        "delivers": false
+      }
+    },
+    {
+      "id": "admit-malformed",
+      "case": {
+        "step": "admit",
+        "kind": "deliver",
+        "sender_is_source": true,
+        "shape_ok": false,
+        "category": "approval_task",
+        "expires_after_occurred": true,
+        "seen": false,
+        "collapse_seq": null,
+        "max_seq": null
+      },
+      "expect": {
+        "answer": "malformed",
+        "supersedes": false,
+        "delivers": false
+      }
+    },
+    {
+      "id": "admit-unknown-category",
+      "case": {
+        "step": "admit",
+        "kind": "deliver",
+        "sender_is_source": true,
+        "shape_ok": true,
+        "category": "newsletter",
+        "expires_after_occurred": true,
+        "seen": false,
+        "collapse_seq": null,
+        "max_seq": null
+      },
+      "expect": {
+        "answer": "unknown_category",
+        "supersedes": false,
+        "delivers": false
+      }
+    },
+    {
+      "id": "admit-unknown-category-and-malformed",
+      "case": {
+        "step": "admit",
+        "kind": "deliver",
+        "sender_is_source": true,
+        "shape_ok": false,
+        "category": "newsletter",
+        "expires_after_occurred": true,
+        "seen": false,
+        "collapse_seq": null,
+        "max_seq": null
+      },
+      "expect": {
+        "answer": "malformed",
+        "supersedes": false,
+        "delivers": false
+      }
+    },
+    {
+      "id": "admit-expires-not-after-occurred",
+      "case": {
+        "step": "admit",
+        "kind": "deliver",
+        "sender_is_source": true,
+        "shape_ok": true,
+        "category": "approval_task",
+        "expires_after_occurred": false,
+        "seen": false,
+        "collapse_seq": null,
+        "max_seq": null
+      },
+      "expect": {
+        "answer": "malformed",
+        "supersedes": false,
+        "delivers": false
+      }
+    },
+    {
+      "id": "admit-withdraw-has-no-expiry",
+      "case": {
+        "step": "admit",
+        "kind": "withdraw",
+        "sender_is_source": true,
+        "shape_ok": true,
+        "category": "approval_task",
+        "expires_after_occurred": false,
+        "seen": false,
+        "collapse_seq": 3,
+        "max_seq": 2
+      },
+      "expect": {
+        "answer": "accepted",
+        "supersedes": true,
+        "delivers": false
+      }
+    },
+    {
+      "id": "admit-duplicate",
+      "case": {
+        "step": "admit",
+        "kind": "deliver",
+        "sender_is_source": true,
+        "shape_ok": true,
+        "category": "approval_task",
+        "expires_after_occurred": true,
+        "seen": true,
+        "collapse_seq": null,
+        "max_seq": null
+      },
+      "expect": {
+        "answer": "duplicate",
+        "supersedes": false,
+        "delivers": false
+      }
+    },
+    {
+      "id": "admit-duplicate-of-a-stale-one",
+      "case": {
+        "step": "admit",
+        "kind": "deliver",
+        "sender_is_source": true,
+        "shape_ok": true,
+        "category": "approval_task",
+        "expires_after_occurred": true,
+        "seen": true,
+        "collapse_seq": 1,
+        "max_seq": 5
+      },
+      "expect": {
+        "answer": "duplicate",
+        "supersedes": false,
+        "delivers": false
+      }
+    },
+    {
+      "id": "admit-first-of-its-key",
+      "case": {
+        "step": "admit",
+        "kind": "deliver",
+        "sender_is_source": true,
+        "shape_ok": true,
+        "category": "approval_task",
+        "expires_after_occurred": true,
+        "seen": false,
+        "collapse_seq": 1,
+        "max_seq": null
+      },
+      "expect": {
+        "answer": "accepted",
+        "supersedes": true,
+        "delivers": true
+      }
+    },
+    {
+      "id": "admit-newer-of-its-key",
+      "case": {
+        "step": "admit",
+        "kind": "deliver",
+        "sender_is_source": true,
+        "shape_ok": true,
+        "category": "approval_task",
+        "expires_after_occurred": true,
+        "seen": false,
+        "collapse_seq": 4,
+        "max_seq": 3
+      },
+      "expect": {
+        "answer": "accepted",
+        "supersedes": true,
+        "delivers": true
+      }
+    },
+    {
+      "id": "admit-older-of-its-key",
+      "case": {
+        "step": "admit",
+        "kind": "deliver",
+        "sender_is_source": true,
+        "shape_ok": true,
+        "category": "approval_task",
+        "expires_after_occurred": true,
+        "seen": false,
+        "collapse_seq": 2,
+        "max_seq": 3
+      },
+      "expect": {
+        "answer": "stale",
+        "supersedes": false,
+        "delivers": false
+      }
+    },
+    {
+      "id": "admit-same-seq-of-its-key",
+      "case": {
+        "step": "admit",
+        "kind": "deliver",
+        "sender_is_source": true,
+        "shape_ok": true,
+        "category": "approval_task",
+        "expires_after_occurred": true,
+        "seen": false,
+        "collapse_seq": 3,
+        "max_seq": 3
+      },
+      "expect": {
+        "answer": "stale",
+        "supersedes": false,
+        "delivers": false
+      }
+    },
+    {
+      "id": "admit-withdraw-newer",
+      "case": {
+        "step": "admit",
+        "kind": "withdraw",
+        "sender_is_source": true,
+        "shape_ok": true,
+        "category": "approval_task",
+        "expires_after_occurred": true,
+        "seen": false,
+        "collapse_seq": 5,
+        "max_seq": 4
+      },
+      "expect": {
+        "answer": "accepted",
+        "supersedes": true,
+        "delivers": false
+      }
+    },
+    {
+      "id": "admit-withdraw-first",
+      "case": {
+        "step": "admit",
+        "kind": "withdraw",
+        "sender_is_source": true,
+        "shape_ok": true,
+        "category": "approval_task",
+        "expires_after_occurred": true,
+        "seen": false,
+        "collapse_seq": 5,
+        "max_seq": null
+      },
+      "expect": {
+        "answer": "accepted",
+        "supersedes": true,
+        "delivers": false
+      }
+    },
+    {
+      "id": "admit-withdraw-older",
+      "case": {
+        "step": "admit",
+        "kind": "withdraw",
+        "sender_is_source": true,
+        "shape_ok": true,
+        "category": "approval_task",
+        "expires_after_occurred": true,
+        "seen": false,
+        "collapse_seq": 3,
+        "max_seq": 4
+      },
+      "expect": {
+        "answer": "stale",
+        "supersedes": false,
+        "delivers": false
+      }
+    },
+    {
+      "id": "admit-security-alert",
+      "case": {
+        "step": "admit",
+        "kind": "deliver",
+        "sender_is_source": true,
+        "shape_ok": true,
+        "category": "security_alert",
+        "expires_after_occurred": true,
+        "seen": false,
+        "collapse_seq": null,
+        "max_seq": null
+      },
+      "expect": {
+        "answer": "accepted",
+        "supersedes": false,
+        "delivers": true
+      }
+    },
+    {
+      "id": "route-approval_task-unset",
+      "case": {
+        "step": "route",
+        "category": "approval_task",
+        "preference": "unset",
+        "expired": false
+      },
+      "expect": {
+        "result": "written"
+      }
+    },
+    {
+      "id": "route-approval_task-on",
+      "case": {
+        "step": "route",
+        "category": "approval_task",
+        "preference": "on",
+        "expired": false
+      },
+      "expect": {
+        "result": "written"
+      }
+    },
+    {
+      "id": "route-approval_task-off",
+      "case": {
+        "step": "route",
+        "category": "approval_task",
+        "preference": "off",
+        "expired": false
+      },
+      "expect": {
+        "result": "preference_off"
+      }
+    },
+    {
+      "id": "route-due_reminder-unset",
+      "case": {
+        "step": "route",
+        "category": "due_reminder",
+        "preference": "unset",
+        "expired": false
+      },
+      "expect": {
+        "result": "written"
+      }
+    },
+    {
+      "id": "route-due_reminder-on",
+      "case": {
+        "step": "route",
+        "category": "due_reminder",
+        "preference": "on",
+        "expired": false
+      },
+      "expect": {
+        "result": "written"
+      }
+    },
+    {
+      "id": "route-due_reminder-off",
+      "case": {
+        "step": "route",
+        "category": "due_reminder",
+        "preference": "off",
+        "expired": false
+      },
+      "expect": {
+        "result": "preference_off"
+      }
+    },
+    {
+      "id": "route-security_alert-unset",
+      "case": {
+        "step": "route",
+        "category": "security_alert",
+        "preference": "unset",
+        "expired": false
+      },
+      "expect": {
+        "result": "written"
+      }
+    },
+    {
+      "id": "route-security_alert-on",
+      "case": {
+        "step": "route",
+        "category": "security_alert",
+        "preference": "on",
+        "expired": false
+      },
+      "expect": {
+        "result": "written"
+      }
+    },
+    {
+      "id": "route-security_alert-off",
+      "case": {
+        "step": "route",
+        "category": "security_alert",
+        "preference": "off",
+        "expired": false
+      },
+      "expect": {
+        "result": "written"
+      }
+    },
+    {
+      "id": "route-legal_notice-unset",
+      "case": {
+        "step": "route",
+        "category": "legal_notice",
+        "preference": "unset",
+        "expired": false
+      },
+      "expect": {
+        "result": "written"
+      }
+    },
+    {
+      "id": "route-legal_notice-on",
+      "case": {
+        "step": "route",
+        "category": "legal_notice",
+        "preference": "on",
+        "expired": false
+      },
+      "expect": {
+        "result": "written"
+      }
+    },
+    {
+      "id": "route-legal_notice-off",
+      "case": {
+        "step": "route",
+        "category": "legal_notice",
+        "preference": "off",
+        "expired": false
+      },
+      "expect": {
+        "result": "written"
+      }
+    },
+    {
+      "id": "route-external_comm-unset",
+      "case": {
+        "step": "route",
+        "category": "external_comm",
+        "preference": "unset",
+        "expired": false
+      },
+      "expect": {
+        "result": "written"
+      }
+    },
+    {
+      "id": "route-external_comm-on",
+      "case": {
+        "step": "route",
+        "category": "external_comm",
+        "preference": "on",
+        "expired": false
+      },
+      "expect": {
+        "result": "written"
+      }
+    },
+    {
+      "id": "route-external_comm-off",
+      "case": {
+        "step": "route",
+        "category": "external_comm",
+        "preference": "off",
+        "expired": false
+      },
+      "expect": {
+        "result": "preference_off"
+      }
+    },
+    {
+      "id": "route-marketing-unset",
+      "case": {
+        "step": "route",
+        "category": "marketing",
+        "preference": "unset",
+        "expired": false
+      },
+      "expect": {
+        "result": "preference_off"
+      }
+    },
+    {
+      "id": "route-marketing-on",
+      "case": {
+        "step": "route",
+        "category": "marketing",
+        "preference": "on",
+        "expired": false
+      },
+      "expect": {
+        "result": "written"
+      }
+    },
+    {
+      "id": "route-marketing-off",
+      "case": {
+        "step": "route",
+        "category": "marketing",
+        "preference": "off",
+        "expired": false
+      },
+      "expect": {
+        "result": "preference_off"
+      }
+    },
+    {
+      "id": "route-expired",
+      "case": {
+        "step": "route",
+        "category": "approval_task",
+        "preference": "unset",
+        "expired": true
+      },
+      "expect": {
+        "result": "expired"
+      }
+    },
+    {
+      "id": "route-expired-mandatory",
+      "case": {
+        "step": "route",
+        "category": "security_alert",
+        "preference": "unset",
+        "expired": true
+      },
+      "expect": {
+        "result": "expired"
+      }
+    },
+    {
+      "id": "route-expired-off",
+      "case": {
+        "step": "route",
+        "category": "approval_task",
+        "preference": "off",
+        "expired": true
+      },
+      "expect": {
+        "result": "expired"
+      }
+    }
+  ]
+}
