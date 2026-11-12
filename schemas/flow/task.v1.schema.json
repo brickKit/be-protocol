@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brickkit.dev/be-protocol/schemas/flow/task.v1.schema.json",
+  "title": "be.flow.task.v1",
+  "description": "The shared task contract (be-protocol chapter 17, P17.15; assembly protocol 09's unified worklist): a task's complete state as its flow manager publishes it on its own stream, as <domain>.<component>_task.changed.v1 (overwrite by version; the record ID is the task's). infra/workflow accepts it only from the flow manager the deployment chose for the task type. The summary holds only fields the flow manager marks public to the candidates; the action entry is not in it: the worklist derives it from the publishing component.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "task_type",
+    "component",
+    "document",
+    "summary",
+    "candidates",
+    "state",
+    "paused_reason",
+    "decision",
+    "due_at",
+    "instance",
+    "legal_entity_id",
+    "version",
+    "updated_at"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "the task, unique within its flow manager"
+    },
+    "task_type": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+      "description": "registered and globally unique, e.g. erp.purchase.order.approval"
+    },
+    "component": {
+      "type": "string",
+      "description": "the flow manager (the publishing component's ID); its standard routes are the action entry (P17.14)"
+    },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "component",
+        "type",
+        "id",
+        "number"
+      ],
+      "properties": {
+        "component": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "number": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "fields"
+      ],
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "key",
+              "label",
+              "value"
+            ],
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "label": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "the principals who may decide now (empty when paused or ended)"
+    },
+    "state": {
+      "enum": [
+        "pending",
+        "decided",
+        "superseded",
+        "paused"
+      ]
+    },
+    "paused_reason": {
+      "oneOf": [
+        {
+          "enum": [
+            "projection_incomplete",
+            "no_assignee"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "decision": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "decision",
+            "by",
+            "at",
+            "comment"
+          ],
+          "properties": {
+            "decision": {
+              "enum": [
+                "approve",
+                "reject"
+              ]
+            },
+            "by": {
+              "type": "string"
+            },
+            "at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "comment": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "due_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time",
+      "description": "null in this version (deadlines come with infra/notification)"
+    },
+    "instance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "state",
+        "step"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "state": {
+          "enum": [
+            "running",
+            "approved",
+            "rejected",
+            "returned",
+            "withdrawn",
+            "superseded"
+          ]
+        },
+        "step": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "legal_entity_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    }
+  }
+}

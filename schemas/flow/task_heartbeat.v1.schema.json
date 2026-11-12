@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://brickkit.dev/be-protocol/schemas/flow/task_heartbeat.v1.schema.json",
+  "title": "be.flow.task_heartbeat.v1",
+  "description": "A flow manager's heartbeat (be-protocol P17.18), published as <domain>.<component>_task.heartbeat.v1 every 5 minutes while it has pending or paused tasks; the worklist marks a publisher's tasks possibly stale without it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "fact_id",
+    "component",
+    "at",
+    "pending",
+    "paused"
+  ],
+  "properties": {
+    "fact_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "component": {
+      "type": "string"
+    },
+    "at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "pending": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "paused": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}
