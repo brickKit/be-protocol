@@ -1,0 +1,693 @@
+{
+  "topic": "flow-kernel",
+  "protocol": "3.0.0-alpha.117",
+  "rules": [
+    "P17.2",
+    "P17.6",
+    "P17.10",
+    "P17.11",
+    "P17.13"
+  ],
+  "description": "流程内核的一次决定：case 是到达时的情形——task 与 instance 是任务与实例现在的状态，version 是任务版本是否相同，self 是决定者这个人是不是发起人这个人，candidate 是不是候选处理人，operation 是否有流程定义要的操作，qualification 是此刻按分配规则是否合格（qualified、not_qualified、unknown：投影不完整），revision 是实例的关键修订号是否等于单据现在的，replay 是同一个幂等键是否已有结果；decision 是 approve 或 reject，form 是步骤的形式（single、any），others 是这一步还有别的待处理任务，last_step 是不是最后一步，reject_outcome 是流程定义的拒绝结果（rejected、returned）。expect：answer 是 ok、replay（照答第一次的结果）或第一个不满足的检查的原因（按 P17.10 的顺序）；task、instance 是之后的状态；others 是这一步其余待处理任务之后的样子（superseded 或 unchanged）；next_step 是否为下一步建任务；changed 是否有改变（版本加一、发任务投影）。",
+  "fields": {
+    "case": "到达时的情形",
+    "expect": "结果"
+  },
+  "cases": [
+    {
+      "id": "task-decided",
+      "case": {
+        "task": "decided",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "TASK_NOT_PENDING",
+        "task": "decided",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "task-superseded",
+      "case": {
+        "task": "superseded",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "TASK_NOT_PENDING",
+        "task": "superseded",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "task-paused",
+      "case": {
+        "task": "paused",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "TASK_NOT_PENDING",
+        "task": "paused",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "instance-approved",
+      "case": {
+        "task": "pending",
+        "instance": "approved",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "TASK_NOT_PENDING",
+        "task": "pending",
+        "instance": "approved",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "instance-superseded",
+      "case": {
+        "task": "pending",
+        "instance": "superseded",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "TASK_NOT_PENDING",
+        "task": "pending",
+        "instance": "superseded",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "version-stale",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": false,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "VERSION_CONFLICT",
+        "task": "pending",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "self",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": true,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "SELF_APPROVAL",
+        "task": "pending",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "self-and-not-candidate",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": true,
+        "candidate": false,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "SELF_APPROVAL",
+        "task": "pending",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "not-candidate",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": false,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "NOT_ASSIGNEE",
+        "task": "pending",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "no-operation",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": false,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "PERMISSION_DENIED",
+        "task": "pending",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "not-qualified",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "not_qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "NOT_QUALIFIED",
+        "task": "pending",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "qualification-unknown",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "unknown",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "QUALIFICATION_UNKNOWN",
+        "task": "pending",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "revision-changed",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": false,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "REVISION_CHANGED",
+        "task": "pending",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "stale-and-self",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": false,
+        "self": true,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "VERSION_CONFLICT",
+        "task": "pending",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "decided-and-everything-wrong",
+      "case": {
+        "task": "decided",
+        "instance": "running",
+        "version": false,
+        "self": true,
+        "candidate": false,
+        "operation": false,
+        "qualification": "unknown",
+        "revision": false,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "TASK_NOT_PENDING",
+        "task": "decided",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "replay",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": true,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "replay",
+        "task": "pending",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "replay-of-a-decided-task",
+      "case": {
+        "task": "decided",
+        "instance": "running",
+        "version": false,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": true,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "replay",
+        "task": "decided",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": false
+      }
+    },
+    {
+      "id": "approve-last-single",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "ok",
+        "task": "decided",
+        "instance": "approved",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": true
+      }
+    },
+    {
+      "id": "approve-not-last",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "single",
+        "others": false,
+        "last_step": false,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "ok",
+        "task": "decided",
+        "instance": "running",
+        "others": "unchanged",
+        "next_step": true,
+        "changed": true
+      }
+    },
+    {
+      "id": "approve-any-others",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "any",
+        "others": true,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "ok",
+        "task": "decided",
+        "instance": "approved",
+        "others": "superseded",
+        "next_step": false,
+        "changed": true
+      }
+    },
+    {
+      "id": "approve-any-others-not-last",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "approve",
+        "form": "any",
+        "others": true,
+        "last_step": false,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "ok",
+        "task": "decided",
+        "instance": "running",
+        "others": "superseded",
+        "next_step": true,
+        "changed": true
+      }
+    },
+    {
+      "id": "reject-rejected",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "reject",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "ok",
+        "task": "decided",
+        "instance": "rejected",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": true
+      }
+    },
+    {
+      "id": "reject-returned",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "reject",
+        "form": "single",
+        "others": false,
+        "last_step": true,
+        "reject_outcome": "returned"
+      },
+      "expect": {
+        "answer": "ok",
+        "task": "decided",
+        "instance": "returned",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": true
+      }
+    },
+    {
+      "id": "reject-not-last",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "reject",
+        "form": "single",
+        "others": false,
+        "last_step": false,
+        "reject_outcome": "rejected"
+      },
+      "expect": {
+        "answer": "ok",
+        "task": "decided",
+        "instance": "rejected",
+        "others": "unchanged",
+        "next_step": false,
+        "changed": true
+      }
+    },
+    {
+      "id": "reject-any-others",
+      "case": {
+        "task": "pending",
+        "instance": "running",
+        "version": true,
+        "self": false,
+        "candidate": true,
+        "operation": true,
+        "qualification": "qualified",
+        "revision": true,
+        "replay": false,
+        "decision": "reject",
+        "form": "any",
+        "others": true,
+        "last_step": true,
+        "reject_outcome": "returned"
+      },
+      "expect": {
+        "answer": "ok",
+        "task": "decided",
+        "instance": "returned",
+        "others": "superseded",
+        "next_step": false,
+        "changed": true
+      }
+    }
+  ]
+}

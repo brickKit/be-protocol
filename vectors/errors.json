@@ -471,6 +471,83 @@
       "type": "urn:be:be:AUDIT_CAPACITY_EXHAUSTED"
     },
     {
+      "id": "reason-task_not_pending",
+      "kind": "reason",
+      "reason": "TASK_NOT_PENDING",
+      "domain": "be",
+      "grpc_code": "FAILED_PRECONDITION",
+      "http": 409,
+      "retryable": "no",
+      "log_level": "info",
+      "type": "urn:be:be:TASK_NOT_PENDING"
+    },
+    {
+      "id": "reason-version_conflict",
+      "kind": "reason",
+      "reason": "VERSION_CONFLICT",
+      "domain": "be",
+      "grpc_code": "ABORTED",
+      "http": 409,
+      "retryable": "no",
+      "log_level": "info",
+      "type": "urn:be:be:VERSION_CONFLICT"
+    },
+    {
+      "id": "reason-not_assignee",
+      "kind": "reason",
+      "reason": "NOT_ASSIGNEE",
+      "domain": "be",
+      "grpc_code": "PERMISSION_DENIED",
+      "http": 403,
+      "retryable": "no",
+      "log_level": "info",
+      "type": "urn:be:be:NOT_ASSIGNEE"
+    },
+    {
+      "id": "reason-self_approval",
+      "kind": "reason",
+      "reason": "SELF_APPROVAL",
+      "domain": "be",
+      "grpc_code": "PERMISSION_DENIED",
+      "http": 403,
+      "retryable": "no",
+      "log_level": "info",
+      "type": "urn:be:be:SELF_APPROVAL"
+    },
+    {
+      "id": "reason-not_qualified",
+      "kind": "reason",
+      "reason": "NOT_QUALIFIED",
+      "domain": "be",
+      "grpc_code": "PERMISSION_DENIED",
+      "http": 403,
+      "retryable": "no",
+      "log_level": "info",
+      "type": "urn:be:be:NOT_QUALIFIED"
+    },
+    {
+      "id": "reason-qualification_unknown",
+      "kind": "reason",
+      "reason": "QUALIFICATION_UNKNOWN",
+      "domain": "be",
+      "grpc_code": "UNAVAILABLE",
+      "http": 503,
+      "retryable": "yes",
+      "log_level": "warn",
+      "type": "urn:be:be:QUALIFICATION_UNKNOWN"
+    },
+    {
+      "id": "reason-revision_changed",
+      "kind": "reason",
+      "reason": "REVISION_CHANGED",
+      "domain": "be",
+      "grpc_code": "ABORTED",
+      "http": 409,
+      "retryable": "no",
+      "log_level": "info",
+      "type": "urn:be:be:REVISION_CHANGED"
+    },
+    {
       "id": "reason-internal",
       "kind": "reason",
       "reason": "INTERNAL",

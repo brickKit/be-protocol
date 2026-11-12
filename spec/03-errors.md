@@ -94,6 +94,13 @@
 | `CAPABILITY_UNSUPPORTED` | `UNIMPLEMENTED` | 501 | 否 | 声明了不支持的能力；`metadata.capability` |
 | `RESULT_UNKNOWN` | `DEADLINE_EXCEEDED` | 504 | 查询后再定 | 用变更键或动作键查询，不换键重试 |
 | `AUDIT_CAPACITY_EXHAUSTED` | `UNAVAILABLE` | 503 | 是 | 本地审计表的积压超过容量上限，新的必需审计操作暂停（[08](08-identity-authz-audit.md) 的 P8.23） |
+| `TASK_NOT_PENDING` | `FAILED_PRECONDITION` | 409 | 否 | 流程内核的任务不在待处理，或它的实例已结束（[17](17-flow-kernel.md) 的 P17.10） |
+| `VERSION_CONFLICT` | `ABORTED` | 409 | 否 | 命令带的版本不是记录现在的版本（流程内核的任务，P17.10；组件自己的记录用组件领域的同名原因） |
+| `NOT_ASSIGNEE` | `PERMISSION_DENIED` | 403 | 否 | 调用者不是任务的候选处理人（P17.10） |
+| `SELF_APPROVAL` | `PERMISSION_DENIED` | 403 | 否 | 决定者这个人是实例的发起人这个人（职责分离，D10，P17.10） |
+| `NOT_QUALIFIED` | `PERMISSION_DENIED` | 403 | 否 | 按分配规则调用者此刻不再合格（例如已不持有岗位，P17.10） |
+| `QUALIFICATION_UNKNOWN` | `UNAVAILABLE` | 503 | 是 | 员工投影不完整，资格无法证明（P17.8、P17.10） |
+| `REVISION_CHANGED` | `ABORTED` | 409 | 否 | 实例审的关键修订已不是单据现在的（P17.10） |
 | `INTERNAL` | `INTERNAL` | 500 | 否 | 任何内部错误；原始错误被隐藏 |
 
 `OUTBOUND_LIMIT` 的 HTTP 状态指定为 503 而不是 429：它表示调用方自己的出站预算用尽，不是被对方限流。

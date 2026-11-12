@@ -36,6 +36,11 @@ REASONS = [
     ("DEFINITION_PENDING", "UNAVAILABLE", None, "yes"),
     ("CAPABILITY_UNSUPPORTED", "UNIMPLEMENTED", None, "no"), ("RESULT_UNKNOWN", "DEADLINE_EXCEEDED", None, "query_first"),
     ("AUDIT_CAPACITY_EXHAUSTED", "UNAVAILABLE", None, "yes"),
+    # chapter 17, the flow kernel's decision (P17.10)
+    ("TASK_NOT_PENDING", "FAILED_PRECONDITION", 409, "no"), ("VERSION_CONFLICT", "ABORTED", None, "no"),
+    ("NOT_ASSIGNEE", "PERMISSION_DENIED", None, "no"), ("SELF_APPROVAL", "PERMISSION_DENIED", None, "no"),
+    ("NOT_QUALIFIED", "PERMISSION_DENIED", None, "no"), ("QUALIFICATION_UNKNOWN", "UNAVAILABLE", None, "yes"),
+    ("REVISION_CHANGED", "ABORTED", None, "no"),
     ("INTERNAL", "INTERNAL", None, "no"),
 ]
 
