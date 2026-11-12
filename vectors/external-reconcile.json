@@ -1,6 +1,6 @@
 {
   "topic": "external-reconcile",
-  "protocol": "3.0.0-alpha.122",
+  "protocol": "3.0.0-alpha.123",
   "rules": [
     "P13.12"
   ],
