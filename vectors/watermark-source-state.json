@@ -1,6 +1,6 @@
 {
   "topic": "watermark-source-state",
-  "protocol": "3.0.0-alpha.120",
+  "protocol": "3.0.0-alpha.121",
   "rules": [
     "P9.26"
   ],
