@@ -11,10 +11,10 @@ def admit(c):
     """The reference for one arriving intent: refused (with the reason), a duplicate, stale (an older sequence of its
     merge key), or accepted; whether it supersedes the earlier intents of its merge key, and whether it is delivered."""
     out = {"answer": None, "supersedes": False, "delivers": False}
+    if not c["shape_ok"]:  # first: a payload off the contract has no sender to trust
+        return {**out, "answer": "malformed"}
     if not c["sender_is_source"]:
         return {**out, "answer": "not_the_sender"}
-    if not c["shape_ok"]:
-        return {**out, "answer": "malformed"}
     if c["category"] not in CATEGORIES:
         return {**out, "answer": "unknown_category"}
     if c["kind"] == "deliver" and not c["expires_after_occurred"]:
@@ -30,10 +30,10 @@ def admit(c):
 
 def route(c):
     """The reference for one principal on one channel: written, preference_off or expired."""
+    if c["category"] in MANDATORY:  # written even when expired: in-app is where a mandatory one falls back to
+        return "written"
     if c["expired"]:
         return "expired"
-    if c["category"] in MANDATORY:
-        return "written"
     on = c["preference"] == "on" or (c["preference"] == "unset" and c["category"] not in DEFAULT_OFF)
     return "written" if on else "preference_off"
 
@@ -78,12 +78,12 @@ def notification_vectors():
     rt("expired-off", preference="off", expired=True)
     write("notification-intent", ["P18.3", "P18.6", "P18.7", "P18.8", "P18.9"],
           "通知组件怎样收下一个意图（step=admit），与一个主体在一个渠道上的投递结果（step=route）。admit 的 case：kind 是 "
-          "deliver 或 withdraw；sender_is_source 是载荷的发送方是否等于信封的来源组件；shape_ok 是载荷是否合 schema；category "
+          "deliver 或 withdraw；shape_ok 是载荷是否合 schema（类别另算）；sender_is_source 是载荷里的发送方与信封的来源是否都等于意图所在的流的属主组件；category "
           "是类别（可能不在目录里）；expires_after_occurred 是到期是否晚于发生（撤回意图没有到期，不查）；seen 是同一“发送方 + 意图身份”"
           "是否已经收过；collapse_seq 是合并序号（null：没有合并键），max_seq 是这个合并键见过的最大序号（null：没见过）。expect：answer "
           "是 accepted、duplicate、stale（不大于见过的最大序号，作废）或拒收的原因（按 P18.8 的顺序：not_the_sender、malformed、"
           "unknown_category，然后是到期不晚于发生的 malformed）；supersedes 是否取代这个合并键之前的意图与站内消息；delivers 是否投递。"
           "route 的 case：category、preference（unset、on、off：收件人对这个类别 × 渠道的偏好）、expired（到期已过）；expect 的 "
-          "result 是 written、preference_off 或 expired。必须送达的类别（security_alert、legal_notice）不看偏好；没有偏好时 "
+          "result 是 written、preference_off 或 expired。必须送达的类别（security_alert、legal_notice）不看偏好，到期也照写站内消息；没有偏好时 "
           "marketing 默认关，其余默认开。",
           cases, {"case": "到达时的情形", "expect": "结果"})

@@ -53,14 +53,14 @@ func admitRecompute(c admitCase) admitOutcome {
 	return admitOutcome{Answer: "accepted", Supersedes: c.CollapseSeq != nil, Delivers: c.Kind == "deliver"}
 }
 
-// routeRecompute: an expired delivery is never written, whatever the category (P18.6); a preference only counts for
-// a category that can be turned off (P18.3).
+// routeRecompute: a mandatory category is always written in-app, expired or not (P18.6); otherwise an expired
+// delivery is not, and a preference counts (P18.3).
 func routeRecompute(category, preference string, expired bool) string {
 	switch {
+	case category == "security_alert" || category == "legal_notice": // in-app is their fallback, expired or not
+		return "written"
 	case expired:
 		return "expired"
-	case category == "security_alert" || category == "legal_notice":
-		return "written"
 	case preference == "off", preference == "unset" && category == "marketing":
 		return "preference_off"
 	}
@@ -158,6 +158,9 @@ func TestTheIntentSchema(t *testing.T) {
 		{"deliver with no recipient", base + `,"kind":"deliver","recipients":[],"title":"t","link":"/x","expires_at":"2026-11-13T10:00:00Z"`, false},
 		{"1001 recipients", base + `,"kind":"deliver","recipients":[` + strings.Join(many, ",") + `],"title":"t","link":"/x","expires_at":"2026-11-13T10:00:00Z"`, false},
 		{"a link outside the system", base + "," + strings.Replace(deliver, `"/workflow/tasks/x"`, `"https://evil.example/x"`, 1), false},
+		{"a protocol-relative link", base + "," + strings.Replace(deliver, `"/workflow/tasks/x"`, `"//evil.example/x"`, 1), false},
+		{"a backslash link", base + "," + strings.Replace(deliver, `"/workflow/tasks/x"`, `"/\\evil.example/x"`, 1), false},
+		{"the root", base + "," + strings.Replace(deliver, `"/workflow/tasks/x"`, `"/"`, 1), true},
 		{"an unknown category", strings.Replace(base, "approval_task", "newsletter", 1) + "," + deliver, false},
 		{"a merge key without a sequence", base + "," + deliver + `,"collapse_key":"task:x"`, false},
 		{"params without a template", base + "," + deliver + `,"params":{"a":"b"}`, false},

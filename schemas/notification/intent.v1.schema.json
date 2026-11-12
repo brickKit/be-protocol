@@ -44,7 +44,7 @@
       }
     },
     "title": {"type": "string", "minLength": 1, "maxLength": 200},
-    "link": {"type": "string", "pattern": "^/", "maxLength": 2000},
+    "link": {"type": "string", "pattern": "^/([^/\\\\].*)?$", "maxLength": 2000},
     "template": {"type": "string", "minLength": 1, "maxLength": 200},
     "params": {"type": "object", "additionalProperties": {"type": "string", "maxLength": 2000}, "maxProperties": 50},
     "expires_at": {"type": "string", "format": "date-time"},
