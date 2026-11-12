@@ -1,6 +1,6 @@
 {
   "topic": "view-accept",
-  "protocol": "3.0.0-alpha.117",
+  "protocol": "3.0.0-alpha.118",
   "rules": [
     "P8.11"
   ],

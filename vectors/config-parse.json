@@ -1,6 +1,6 @@
 {
   "topic": "config-parse",
-  "protocol": "3.0.0-alpha.117",
+  "protocol": "3.0.0-alpha.118",
   "rules": [
     "P2.4",
     "P2.5"
