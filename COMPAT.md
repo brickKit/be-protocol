@@ -182,7 +182,7 @@
 | `be-sdk-go` | alpha.119–alpha.121 | alpha.117 |
 | `be-sdk-go` | alpha.122 | alpha.118 |
 | `be-sdk-go` | alpha.123 | alpha.119 |
-| `be-sdk-go` | alpha.124 | alpha.120 |
+| `be-sdk-go` | alpha.124、alpha.125 | alpha.120 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |
