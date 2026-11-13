@@ -43,6 +43,7 @@ REASONS = [
     ("REVISION_CHANGED", "ABORTED", None, "no"),
     # chapter 19's owners: an upload confirmed before the object is there (infra/attachment)
     ("UPLOAD_INCOMPLETE", "FAILED_PRECONDITION", 409, "yes"),
+    ("GRANT_USED", "FAILED_PRECONDITION", 409, "no"), ("GRANT_STALE", "FAILED_PRECONDITION", 409, "no"),
     ("INTERNAL", "INTERNAL", None, "no"),
 ]
 

@@ -1,0 +1,659 @@
+{
+  "topic": "channel-action",
+  "protocol": "3.0.0-alpha.129",
+  "rules": [
+    "P20.7",
+    "P20.8"
+  ],
+  "description": "所属组件怎样收下一个渠道成员的动作事件、结果是什么。case：shape_ok 是载荷是否合 `schemas/channel/action.v1`；audience_is_self 是受众是不是本组件；stream_is_source 是事件所在的流属于配置的渠道成员、信封的来源与载荷的渠道成员都等于它；grant_exists 是动作授权在本组件；principal_matches 是事件的主体等于授权绑定的主体；action_allowed 是动作在授权允许的动作里；prior 是授权上已记的结果（none、same_action：同一动作已有最终结果、other_action：另一动作已有最终结果）；clicked_in_time 是点击的时刻不晚于授权的到期，processed_in_time 是处理的时刻不晚于到期加 1 小时；security_version_newer 是主体此刻的安全版本大于授权记下的；decision 是第 17 章对授权的主体作决定的结果（approved，或拒绝的原因，或可重试的 view_unprovable、qualification_unknown、database_error）。expect：answer 是 ignored（别的所属组件的，静默确认）、refused、replayed（答第一次的结果）、retry（什么也不记，否认事件、重投）或 executed；reason 是拒绝或重试的原因；audit 是写不写安全审计；record 是把结果记在授权上（同一授权的后续到达按它答）；notify_holder 是给授权的主体发一条站内意图说明没执行。核对按 case 的字段顺序，第一个不满足的决定结果。",
+  "fields": {
+    "case": "到达时的情形",
+    "expect": "结果"
+  },
+  "cases": [
+    {
+      "id": "executed",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "executed",
+        "reason": null,
+        "audit": false,
+        "record": true,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "another-owner",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": false,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "ignored",
+        "reason": null,
+        "audit": false,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "another-owner-not-the-sender",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": false,
+        "stream_is_source": false,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "ignored",
+        "reason": null,
+        "audit": false,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "malformed",
+      "case": {
+        "shape_ok": false,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "malformed",
+        "audit": true,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "malformed-for-another-owner",
+      "case": {
+        "shape_ok": false,
+        "audience_is_self": false,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "malformed",
+        "audit": true,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "not-the-sender",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": false,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "not_the_sender",
+        "audit": true,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "not-the-sender-unknown-grant",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": false,
+        "grant_exists": false,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "not_the_sender",
+        "audit": true,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "unknown-grant",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": false,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "unknown_grant",
+        "audit": true,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "not-the-holder",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": false,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "not_the_holder",
+        "audit": true,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "not-the-holder-and-replay",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": false,
+        "action_allowed": true,
+        "prior": "same_action",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "not_the_holder",
+        "audit": true,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "action-not-allowed",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": false,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "action_not_allowed",
+        "audit": true,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "same-action-again",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "same_action",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "replayed",
+        "reason": null,
+        "audit": false,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "same-action-again-after-expiry",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "same_action",
+        "clicked_in_time": true,
+        "processed_in_time": false,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "replayed",
+        "reason": null,
+        "audit": false,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "other-action",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "other_action",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "GRANT_USED",
+        "audit": true,
+        "record": false,
+        "notify_holder": true
+      }
+    },
+    {
+      "id": "clicked-late",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": false,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "expired",
+        "audit": true,
+        "record": true,
+        "notify_holder": true
+      }
+    },
+    {
+      "id": "processed-late",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": false,
+        "security_version_newer": false,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "expired",
+        "audit": true,
+        "record": true,
+        "notify_holder": true
+      }
+    },
+    {
+      "id": "security-version-newer",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": true,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "GRANT_STALE",
+        "audit": true,
+        "record": true,
+        "notify_holder": true
+      }
+    },
+    {
+      "id": "security-version-newer-and-late",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": false,
+        "processed_in_time": true,
+        "security_version_newer": true,
+        "decision": "approved"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "expired",
+        "audit": true,
+        "record": true,
+        "notify_holder": true
+      }
+    },
+    {
+      "id": "retry-database-error",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "database_error"
+      },
+      "expect": {
+        "answer": "retry",
+        "reason": "database_error",
+        "audit": false,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "retry-qualification-unknown",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "qualification_unknown"
+      },
+      "expect": {
+        "answer": "retry",
+        "reason": "qualification_unknown",
+        "audit": false,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "retry-view-unprovable",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "view_unprovable"
+      },
+      "expect": {
+        "answer": "retry",
+        "reason": "view_unprovable",
+        "audit": false,
+        "record": false,
+        "notify_holder": false
+      }
+    },
+    {
+      "id": "refused-not-assignee",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "NOT_ASSIGNEE"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "NOT_ASSIGNEE",
+        "audit": true,
+        "record": true,
+        "notify_holder": true
+      }
+    },
+    {
+      "id": "refused-not-qualified",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "NOT_QUALIFIED"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "NOT_QUALIFIED",
+        "audit": true,
+        "record": true,
+        "notify_holder": true
+      }
+    },
+    {
+      "id": "refused-permission-denied",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "PERMISSION_DENIED"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "PERMISSION_DENIED",
+        "audit": true,
+        "record": true,
+        "notify_holder": true
+      }
+    },
+    {
+      "id": "refused-revision-changed",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "REVISION_CHANGED"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "REVISION_CHANGED",
+        "audit": true,
+        "record": true,
+        "notify_holder": true
+      }
+    },
+    {
+      "id": "refused-self-approval",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "SELF_APPROVAL"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "SELF_APPROVAL",
+        "audit": true,
+        "record": true,
+        "notify_holder": true
+      }
+    },
+    {
+      "id": "refused-task-not-pending",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "TASK_NOT_PENDING"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "TASK_NOT_PENDING",
+        "audit": true,
+        "record": true,
+        "notify_holder": true
+      }
+    },
+    {
+      "id": "refused-version-conflict",
+      "case": {
+        "shape_ok": true,
+        "audience_is_self": true,
+        "stream_is_source": true,
+        "grant_exists": true,
+        "principal_matches": true,
+        "action_allowed": true,
+        "prior": "none",
+        "clicked_in_time": true,
+        "processed_in_time": true,
+        "security_version_newer": false,
+        "decision": "VERSION_CONFLICT"
+      },
+      "expect": {
+        "answer": "refused",
+        "reason": "VERSION_CONFLICT",
+        "audit": true,
+        "record": true,
+        "notify_holder": true
+      }
+    }
+  ]
+}

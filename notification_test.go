@@ -53,16 +53,19 @@ func admitRecompute(c admitCase) admitOutcome {
 	return admitOutcome{Answer: "accepted", Supersedes: c.CollapseSeq != nil, Delivers: c.Kind == "deliver"}
 }
 
-// routeRecompute: a mandatory category is always written in-app, expired or not (P18.6); otherwise an expired
-// delivery is not, and a preference counts (P18.3).
-func routeRecompute(category, preference string, expired bool) string {
+// routeRecompute: a mandatory category is always written in-app, expired or not (P18.6); its external channels, like
+// every other category's, follow the expiry and the preference (P20.4); an external delivery is pending until handed
+// over (P20.3).
+func routeRecompute(category, channel, preference string, expired bool) string {
 	switch {
-	case category == "security_alert" || category == "legal_notice": // in-app is their fallback, expired or not
+	case channel == "in_app" && (category == "security_alert" || category == "legal_notice"):
 		return "written"
 	case expired:
 		return "expired"
 	case preference == "off", preference == "unset" && category == "marketing":
 		return "preference_off"
+	case channel != "in_app":
+		return "pending"
 	}
 	return "written"
 }
@@ -75,6 +78,7 @@ func TestNotificationIntentVectors(t *testing.T) {
 			Case struct {
 				Step string
 				admitCase
+				Channel    string
 				Preference string
 				Expired    bool
 			}
@@ -94,7 +98,7 @@ func TestNotificationIntentVectors(t *testing.T) {
 		case "route":
 			var want struct{ Result string }
 			_ = json.Unmarshal(v.Expect, &want)
-			if got := routeRecompute(v.Case.Category, v.Case.Preference, v.Case.Expired); got != want.Result {
+			if got := routeRecompute(v.Case.Category, v.Case.Channel, v.Case.Preference, v.Case.Expired); got != want.Result {
 				t.Errorf("%s: recomputed %s, vector %s", v.ID, got, want.Result)
 			}
 			seen[want.Result] = true
@@ -103,7 +107,7 @@ func TestNotificationIntentVectors(t *testing.T) {
 		}
 	}
 	for _, a := range []string{"accepted", "duplicate", "stale", "not_the_sender", "malformed", "unknown_category",
-		"written", "preference_off", "expired"} {
+		"written", "pending", "preference_off", "expired"} {
 		if !seen[a] {
 			t.Errorf("no vector answers %s", a)
 		}
@@ -164,7 +168,10 @@ func TestTheIntentSchema(t *testing.T) {
 		{"an unknown category", strings.Replace(base, "approval_task", "newsletter", 1) + "," + deliver, false},
 		{"a merge key without a sequence", base + "," + deliver + `,"collapse_key":"task:x"`, false},
 		{"params without a template", base + "," + deliver + `,"params":{"a":"b"}`, false},
-		{"an unknown field", base + "," + deliver + `,"priority":"high"`, false},
+		{"an unknown field: ignored (P6.33, P18.11)", base + "," + deliver + `,"priority":"high"`, true},
+		{"actions with their channels", base + "," + deliver + `,"actions":{"u1":{"grant_id":"0190f3a1-0000-7000-8000-000000000009","actions":[{"action":"approve","label":"同意"}]}},"action_channels":["integration/im-dingtalk"]`, true},
+		{"actions without channels", base + "," + deliver + `,"actions":{"u1":{"grant_id":"0190f3a1-0000-7000-8000-000000000009","actions":[{"action":"approve","label":"同意"}]}}`, false},
+		{"withdraw with actions", base + "," + withdraw + `,"actions":{"u1":{"grant_id":"0190f3a1-0000-7000-8000-000000000009","actions":[{"action":"approve","label":"同意"}]}},"action_channels":["integration/im-dingtalk"]`, false},
 		{"a title too long", base + "," + strings.Replace(deliver, `"PO-1"`, `"`+strings.Repeat("x", 201)+`"`, 1), false},
 	} {
 		doc, err := jsonschema.UnmarshalJSON(strings.NewReader("{" + c.body + "}"))

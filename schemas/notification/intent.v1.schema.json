@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://brickkit.dev/be-protocol/schemas/notification/intent.v1.schema.json",
   "title": "be.notification.intent.v1",
-  "description": "A notification intent (be-protocol chapter 18), published by its sender on its own stream as <domain>.<component>_notification.intent.v1. A deliver intent names recipients and a doorbell content; a withdraw intent only supersedes the sender's earlier intents of the same merge key (P18.7). The receiver also checks what a schema cannot: a deliver intent expires after it occurred (P18.8).",
+  "description": "A notification intent (be-protocol chapter 18), published by its sender on its own stream as <domain>.<component>_notification.intent.v1. A deliver intent names recipients and a doorbell content; a withdraw intent only supersedes the sender's earlier intents of the same merge key (P18.7). The receiver also checks what a schema cannot: a deliver intent expires after it occurred (P18.8). Fields this version does not know are ignored (P6.33, P18.11): a newer sender does not break an older receiver.",
   "type": "object",
   "required": ["intent_id", "sender", "category", "occurred_at", "kind"],
   "properties": {
@@ -49,9 +49,38 @@
     "params": {"type": "object", "additionalProperties": {"type": "string", "maxLength": 2000}, "maxProperties": 50},
     "expires_at": {"type": "string", "format": "date-time"},
     "collapse_key": {"type": "string", "minLength": 1, "maxLength": 200},
-    "collapse_seq": {"type": "integer", "minimum": 1}
+    "collapse_seq": {"type": "integer", "minimum": 1},
+    "actions": {
+      "description": "P18.11: one action grant per principal recipient (chapter 20, P20.5): not a secret",
+      "type": "object",
+      "maxProperties": 1000,
+      "propertyNames": {"minLength": 1, "maxLength": 200},
+      "additionalProperties": {
+        "type": "object",
+        "required": ["grant_id", "actions"],
+        "properties": {
+          "grant_id": {"type": "string", "format": "uuid"},
+          "actions": {
+            "type": "array", "minItems": 1, "maxItems": 5,
+            "items": {
+              "type": "object",
+              "required": ["action", "label"],
+              "properties": {
+                "action": {"type": "string", "pattern": "^[a-z][a-z_]{0,39}$"},
+                "label": {"type": "string", "minLength": 1, "maxLength": 40}
+              }
+            }
+          }
+        }
+      }
+    },
+    "action_channels": {
+      "description": "P18.11: the channel members whose actions the sender takes (its FLOW_ACTION_SOURCES)",
+      "type": "array", "minItems": 1, "maxItems": 20, "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$"}
+    }
   },
-  "dependentRequired": {"collapse_key": ["collapse_seq"], "collapse_seq": ["collapse_key"], "params": ["template"]},
+  "dependentRequired": {"collapse_key": ["collapse_seq"], "collapse_seq": ["collapse_key"], "params": ["template"], "actions": ["action_channels"], "action_channels": ["actions"]},
   "oneOf": [
     {
       "properties": {"kind": {"const": "deliver"}},
@@ -61,8 +90,7 @@
       "properties": {"kind": {"const": "withdraw"}},
       "required": ["collapse_key", "collapse_seq"],
       "not": {"anyOf": [{"required": ["recipients"]}, {"required": ["title"]}, {"required": ["link"]},
-        {"required": ["template"]}, {"required": ["params"]}, {"required": ["expires_at"]}]}
+        {"required": ["template"]}, {"required": ["params"]}, {"required": ["expires_at"]}, {"required": ["actions"]}]}
     }
-  ],
-  "unevaluatedProperties": false
+  ]
 }

@@ -1,0 +1,56 @@
+// The channel members' shared system surface (chapter 20, P20.1): the notification component hands a delivery to any
+// channel member (DingTalk, Feishu, WeCom...) the same way. Every SDK generates its own code from this file.
+syntax = "proto3";
+
+package be.channel.v1;
+
+service ChannelService {
+  // Hands one delivery over: idempotent by the caller and the delivery id (the same id with other content answers
+  // IDEMPOTENCY_KEY_REUSED). The operation is the channel member's own <resource>.deliver, granted to the
+  // notification component.
+  rpc Deliver(DeliverRequest) returns (DeliverResponse);
+}
+
+message DeliverRequest {
+  // The caller's delivery id (UUIDv7), the same on every retry.
+  string delivery_id = 1;
+  // The intent this delivery comes from: its sender component and intent id; its merge key and sequence when it has
+  // them (for withdrawing or updating the message later).
+  string sender = 2;
+  string intent_id = 3;
+  string collapse_key = 4;
+  int64 collapse_seq = 5;
+  // The recipient: a platform principal, not a channel account.
+  string principal = 6;
+  // The category (chapter 18, P18.3) and the doorbell content (P18.5): a plain-text title and a link into the system.
+  string category = 7;
+  string title = 8;
+  string link = 9;
+  // When the delivery stops mattering (RFC 3339, UTC): the channel member's external command abandons there (P13.14).
+  string expires_at = 10;
+  // The action grant for this principal, if the sender issued one (P20.5); not a secret.
+  Action action = 11;
+}
+
+message Action {
+  // The owner component's grant (UUIDv7) and the actions it allows, with their labels.
+  string grant_id = 1;
+  repeated ActionChoice choices = 2;
+}
+
+message ActionChoice {
+  string action = 1;
+  string label = 2;
+}
+
+message DeliverResponse {
+  // ACCEPTED: the channel member wrote its external command; UNMAPPED: the principal has no account on this channel
+  // (nothing written).
+  Outcome outcome = 1;
+}
+
+enum Outcome {
+  OUTCOME_UNSPECIFIED = 0;
+  OUTCOME_ACCEPTED = 1;
+  OUTCOME_UNMAPPED = 2;
+}

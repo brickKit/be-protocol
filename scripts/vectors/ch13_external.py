@@ -51,6 +51,9 @@ def step(cmd, event, caps, now):
     s, kind = cmd["state"], event["kind"]
     if s in TERMINAL:
         return s, "a terminal state absorbs every later result"
+    a = cmd.get("abandon_at")  # P13.14: past the local abandon time nothing more is sent, queried or awaited
+    if a and t(now) > t(a) and s in ("prepared", "retry_wait", "unknown"):
+        return "failed", "past the local abandon time: expired"
     d = cmd.get("resend_deadline")
     if kind == "claim" and s in ("prepared", "retry_wait"):
         if d and t(now) > t(d):
@@ -162,6 +165,17 @@ def external_vectors():
     case("ei31-query", acc, {"kind": "finality_passed"}, NO_DEDUPE, "2026-11-06T10:00:01.000000Z", "accepted")
     case("manual-registered", {"state": "manual"}, {"kind": "registered", "result": "succeeded"}, NO_DEDUPE, t0,
          "succeeded")
+    ab = "2026-11-05T11:00:00.000000Z"
+    case("abandon-claim", {"state": "prepared", "abandon_at": ab}, {"kind": "claim"}, NO_DEDUPE,
+         "2026-11-05T11:00:01.000000Z", "failed", "P13.14: claimed past the local abandon time: not sent")
+    case("abandon-claim-before", {"state": "retry_wait", "abandon_at": ab}, {"kind": "claim"}, NO_DEDUPE,
+         "2026-11-05T10:59:59.000000Z", "sending", "P13.14: before the abandon time: sent as usual")
+    case("abandon-unknown", dict(unk, abandon_at=ab), {"kind": "query", "result": "unavailable"}, NO_DEDUPE,
+         "2026-11-05T11:00:01.000000Z", "failed", "P13.14: unknown past the abandon time: no manual")
+    case("abandon-sending", {"state": "sending", "abandon_at": ab}, {"kind": "send_result", "result": "succeeded"},
+         NO_DEDUPE, "2026-11-05T11:00:01.000000Z", "succeeded", "P13.14: a send in flight takes its result")
+    case("abandon-sending-maybe", {"state": "sending", "abandon_at": ab}, {"kind": "send_result", "result": "maybe_reached"},
+         NO_DEDUPE, "2026-11-05T11:00:01.000000Z", "unknown", "P13.14: the next event on unknown fails it")
     case("off-table", {"state": "prepared"}, {"kind": "send_result", "result": "succeeded"}, NO_DEDUPE, t0, "prepared")
 
     # the deadline's formula (P13.7)
@@ -181,7 +195,7 @@ def external_vectors():
                   "input": {"stored": d1, "incoming": p2}, "expected": {"digest": d2, "answer": "IDEMPOTENCY_KEY_REUSED"}})
     cases.append({"id": "same-reference-same-params", "input": {"stored": d1, "incoming": p1},
                   "expected": {"digest": d1, "answer": "existing"}})
-    write("external-command", ["P13.2", "P13.3", "P13.4", "P13.5", "P13.6", "P13.7", "P13.8"],
+    write("external-command", ["P13.2", "P13.3", "P13.4", "P13.5", "P13.6", "P13.7", "P13.8", "P13.14"],
           "对外命令：状态转移（按行序第一条命中）、查询“不存在”之后是否重发、重发截止时刻的公式、请求按参考号与参数摘要的幂等",
           cases, {"input": "command, event, capabilities, now | command, capabilities | stored, incoming",
                   "expected": "state, reason | resend_deadline | digest, answer"})

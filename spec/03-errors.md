@@ -102,6 +102,8 @@
 | `QUALIFICATION_UNKNOWN` | `UNAVAILABLE` | 503 | 是 | 员工投影不完整，资格无法证明（P17.8、P17.10） |
 | `UPLOAD_INCOMPLETE` | `FAILED_PRECONDITION` | 409 | 是 | 确认上传时暂存对象还没有（客户端的直传没完成）；凭证不被用掉，上传完成后再确认（装配项目协议 12，`infra/attachment`） |
 | `REVISION_CHANGED` | `ABORTED` | 409 | 否 | 实例审的关键修订已不是单据现在的（P17.10） |
+| `GRANT_USED` | `FAILED_PRECONDITION` | 409 | 否 | 动作授权上已有另一个动作的结果（[20](20-channel-members.md) 的 P20.8） |
+| `GRANT_STALE` | `FAILED_PRECONDITION` | 409 | 否 | 主体的安全版本已高于动作授权签发时的（P20.8）：授权作废，在系统里处理 |
 | `INTERNAL` | `INTERNAL` | 500 | 否 | 任何内部错误；原始错误被隐藏 |
 
 `OUTBOUND_LIMIT` 的 HTTP 状态指定为 503 而不是 429：它表示调用方自己的出站预算用尽，不是被对方限流。

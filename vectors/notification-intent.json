@@ -1,14 +1,15 @@
 {
   "topic": "notification-intent",
-  "protocol": "3.0.0-alpha.128",
+  "protocol": "3.0.0-alpha.129",
   "rules": [
     "P18.3",
     "P18.6",
     "P18.7",
     "P18.8",
-    "P18.9"
+    "P18.9",
+    "P20.4"
   ],
-  "description": "通知组件怎样收下一个意图（step=admit），与一个主体在一个渠道上的投递结果（step=route）。admit 的 case：kind 是 deliver 或 withdraw；shape_ok 是载荷是否合 schema（类别另算）；sender_is_source 是载荷里的发送方与信封的来源是否都等于意图所在的流的属主组件；category 是类别（可能不在目录里）；expires_after_occurred 是到期是否晚于发生（撤回意图没有到期，不查）；seen 是同一“发送方 + 意图身份”是否已经收过；collapse_seq 是合并序号（null：没有合并键），max_seq 是这个合并键见过的最大序号（null：没见过）。expect：answer 是 accepted、duplicate、stale（不大于见过的最大序号，作废）或拒收的原因（按 P18.8 的顺序：malformed、not_the_sender、unknown_category，然后是到期不晚于发生的 malformed）；supersedes 是否取代这个合并键之前的意图与站内消息；delivers 是否投递。route 的 case：category、preference（unset、on、off：收件人对这个类别 × 渠道的偏好）、expired（到期已过）；expect 的 result 是 written、preference_off 或 expired。必须送达的类别（security_alert、legal_notice）不看偏好，到期也照写站内消息；没有偏好时 marketing 默认关，其余默认开。",
+  "description": "通知组件怎样收下一个意图（step=admit），与一个主体在一个渠道上的投递结果（step=route）。admit 的 case：kind 是 deliver 或 withdraw；shape_ok 是载荷是否合 schema（类别另算）；sender_is_source 是载荷里的发送方与信封的来源是否都等于意图所在的流的属主组件；category 是类别（可能不在目录里）；expires_after_occurred 是到期是否晚于发生（撤回意图没有到期，不查）；seen 是同一“发送方 + 意图身份”是否已经收过；collapse_seq 是合并序号（null：没有合并键），max_seq 是这个合并键见过的最大序号（null：没见过）。expect：answer 是 accepted、duplicate、stale（不大于见过的最大序号，作废）或拒收的原因（按 P18.8 的顺序：malformed、not_the_sender、unknown_category，然后是到期不晚于发生的 malformed）；supersedes 是否取代这个合并键之前的意图与站内消息；delivers 是否投递。route 的 case：category、channel（in_app 或 external：配置的外部渠道，第 20 章）、preference（unset、on、off：收件人对这个类别 × 渠道的偏好）、expired（到期已过）；expect 的 result 是 written（站内写入）、pending（外部投递待交出）、preference_off 或 expired。必须送达的类别（security_alert、legal_notice）的站内不看偏好、到期也照写；它们的外部渠道与别的类别一样看偏好与到期（P20.4）；没有偏好时 marketing 默认关，其余默认开。",
   "fields": {
     "case": "到达时的情形",
     "expect": "结果"
@@ -361,6 +362,7 @@
       "case": {
         "step": "route",
         "category": "approval_task",
+        "channel": "in_app",
         "preference": "unset",
         "expired": false
       },
@@ -369,10 +371,24 @@
       }
     },
     {
+      "id": "route-approval_task-unset-external",
+      "case": {
+        "step": "route",
+        "category": "approval_task",
+        "channel": "external",
+        "preference": "unset",
+        "expired": false
+      },
+      "expect": {
+        "result": "pending"
+      }
+    },
+    {
       "id": "route-approval_task-on",
       "case": {
         "step": "route",
         "category": "approval_task",
+        "channel": "in_app",
         "preference": "on",
         "expired": false
       },
@@ -381,10 +397,37 @@
       }
     },
     {
+      "id": "route-approval_task-on-external",
+      "case": {
+        "step": "route",
+        "category": "approval_task",
+        "channel": "external",
+        "preference": "on",
+        "expired": false
+      },
+      "expect": {
+        "result": "pending"
+      }
+    },
+    {
       "id": "route-approval_task-off",
       "case": {
         "step": "route",
         "category": "approval_task",
+        "channel": "in_app",
+        "preference": "off",
+        "expired": false
+      },
+      "expect": {
+        "result": "preference_off"
+      }
+    },
+    {
+      "id": "route-approval_task-off-external",
+      "case": {
+        "step": "route",
+        "category": "approval_task",
+        "channel": "external",
         "preference": "off",
         "expired": false
       },
@@ -397,6 +440,7 @@
       "case": {
         "step": "route",
         "category": "due_reminder",
+        "channel": "in_app",
         "preference": "unset",
         "expired": false
       },
@@ -405,10 +449,24 @@
       }
     },
     {
+      "id": "route-due_reminder-unset-external",
+      "case": {
+        "step": "route",
+        "category": "due_reminder",
+        "channel": "external",
+        "preference": "unset",
+        "expired": false
+      },
+      "expect": {
+        "result": "pending"
+      }
+    },
+    {
       "id": "route-due_reminder-on",
       "case": {
         "step": "route",
         "category": "due_reminder",
+        "channel": "in_app",
         "preference": "on",
         "expired": false
       },
@@ -417,10 +475,37 @@
       }
     },
     {
+      "id": "route-due_reminder-on-external",
+      "case": {
+        "step": "route",
+        "category": "due_reminder",
+        "channel": "external",
+        "preference": "on",
+        "expired": false
+      },
+      "expect": {
+        "result": "pending"
+      }
+    },
+    {
       "id": "route-due_reminder-off",
       "case": {
         "step": "route",
         "category": "due_reminder",
+        "channel": "in_app",
+        "preference": "off",
+        "expired": false
+      },
+      "expect": {
+        "result": "preference_off"
+      }
+    },
+    {
+      "id": "route-due_reminder-off-external",
+      "case": {
+        "step": "route",
+        "category": "due_reminder",
+        "channel": "external",
         "preference": "off",
         "expired": false
       },
@@ -433,11 +518,25 @@
       "case": {
         "step": "route",
         "category": "security_alert",
+        "channel": "in_app",
         "preference": "unset",
         "expired": false
       },
       "expect": {
         "result": "written"
+      }
+    },
+    {
+      "id": "route-security_alert-unset-external",
+      "case": {
+        "step": "route",
+        "category": "security_alert",
+        "channel": "external",
+        "preference": "unset",
+        "expired": false
+      },
+      "expect": {
+        "result": "pending"
       }
     },
     {
@@ -445,11 +544,25 @@
       "case": {
         "step": "route",
         "category": "security_alert",
+        "channel": "in_app",
         "preference": "on",
         "expired": false
       },
       "expect": {
         "result": "written"
+      }
+    },
+    {
+      "id": "route-security_alert-on-external",
+      "case": {
+        "step": "route",
+        "category": "security_alert",
+        "channel": "external",
+        "preference": "on",
+        "expired": false
+      },
+      "expect": {
+        "result": "pending"
       }
     },
     {
@@ -457,11 +570,25 @@
       "case": {
         "step": "route",
         "category": "security_alert",
+        "channel": "in_app",
         "preference": "off",
         "expired": false
       },
       "expect": {
         "result": "written"
+      }
+    },
+    {
+      "id": "route-security_alert-off-external",
+      "case": {
+        "step": "route",
+        "category": "security_alert",
+        "channel": "external",
+        "preference": "off",
+        "expired": false
+      },
+      "expect": {
+        "result": "preference_off"
       }
     },
     {
@@ -469,6 +596,7 @@
       "case": {
         "step": "route",
         "category": "legal_notice",
+        "channel": "in_app",
         "preference": "unset",
         "expired": false
       },
@@ -477,10 +605,24 @@
       }
     },
     {
+      "id": "route-legal_notice-unset-external",
+      "case": {
+        "step": "route",
+        "category": "legal_notice",
+        "channel": "external",
+        "preference": "unset",
+        "expired": false
+      },
+      "expect": {
+        "result": "pending"
+      }
+    },
+    {
       "id": "route-legal_notice-on",
       "case": {
         "step": "route",
         "category": "legal_notice",
+        "channel": "in_app",
         "preference": "on",
         "expired": false
       },
@@ -489,10 +631,24 @@
       }
     },
     {
+      "id": "route-legal_notice-on-external",
+      "case": {
+        "step": "route",
+        "category": "legal_notice",
+        "channel": "external",
+        "preference": "on",
+        "expired": false
+      },
+      "expect": {
+        "result": "pending"
+      }
+    },
+    {
       "id": "route-legal_notice-off",
       "case": {
         "step": "route",
         "category": "legal_notice",
+        "channel": "in_app",
         "preference": "off",
         "expired": false
       },
@@ -501,10 +657,24 @@
       }
     },
     {
+      "id": "route-legal_notice-off-external",
+      "case": {
+        "step": "route",
+        "category": "legal_notice",
+        "channel": "external",
+        "preference": "off",
+        "expired": false
+      },
+      "expect": {
+        "result": "preference_off"
+      }
+    },
+    {
       "id": "route-external_comm-unset",
       "case": {
         "step": "route",
         "category": "external_comm",
+        "channel": "in_app",
         "preference": "unset",
         "expired": false
       },
@@ -513,10 +683,24 @@
       }
     },
     {
+      "id": "route-external_comm-unset-external",
+      "case": {
+        "step": "route",
+        "category": "external_comm",
+        "channel": "external",
+        "preference": "unset",
+        "expired": false
+      },
+      "expect": {
+        "result": "pending"
+      }
+    },
+    {
       "id": "route-external_comm-on",
       "case": {
         "step": "route",
         "category": "external_comm",
+        "channel": "in_app",
         "preference": "on",
         "expired": false
       },
@@ -525,10 +709,37 @@
       }
     },
     {
+      "id": "route-external_comm-on-external",
+      "case": {
+        "step": "route",
+        "category": "external_comm",
+        "channel": "external",
+        "preference": "on",
+        "expired": false
+      },
+      "expect": {
+        "result": "pending"
+      }
+    },
+    {
       "id": "route-external_comm-off",
       "case": {
         "step": "route",
         "category": "external_comm",
+        "channel": "in_app",
+        "preference": "off",
+        "expired": false
+      },
+      "expect": {
+        "result": "preference_off"
+      }
+    },
+    {
+      "id": "route-external_comm-off-external",
+      "case": {
+        "step": "route",
+        "category": "external_comm",
+        "channel": "external",
         "preference": "off",
         "expired": false
       },
@@ -541,6 +752,20 @@
       "case": {
         "step": "route",
         "category": "marketing",
+        "channel": "in_app",
+        "preference": "unset",
+        "expired": false
+      },
+      "expect": {
+        "result": "preference_off"
+      }
+    },
+    {
+      "id": "route-marketing-unset-external",
+      "case": {
+        "step": "route",
+        "category": "marketing",
+        "channel": "external",
         "preference": "unset",
         "expired": false
       },
@@ -553,6 +778,7 @@
       "case": {
         "step": "route",
         "category": "marketing",
+        "channel": "in_app",
         "preference": "on",
         "expired": false
       },
@@ -561,10 +787,37 @@
       }
     },
     {
+      "id": "route-marketing-on-external",
+      "case": {
+        "step": "route",
+        "category": "marketing",
+        "channel": "external",
+        "preference": "on",
+        "expired": false
+      },
+      "expect": {
+        "result": "pending"
+      }
+    },
+    {
       "id": "route-marketing-off",
       "case": {
         "step": "route",
         "category": "marketing",
+        "channel": "in_app",
+        "preference": "off",
+        "expired": false
+      },
+      "expect": {
+        "result": "preference_off"
+      }
+    },
+    {
+      "id": "route-marketing-off-external",
+      "case": {
+        "step": "route",
+        "category": "marketing",
+        "channel": "external",
         "preference": "off",
         "expired": false
       },
@@ -577,6 +830,7 @@
       "case": {
         "step": "route",
         "category": "approval_task",
+        "channel": "in_app",
         "preference": "unset",
         "expired": true
       },
@@ -589,6 +843,7 @@
       "case": {
         "step": "route",
         "category": "security_alert",
+        "channel": "in_app",
         "preference": "unset",
         "expired": true
       },
@@ -597,10 +852,24 @@
       }
     },
     {
+      "id": "route-expired-mandatory-external",
+      "case": {
+        "step": "route",
+        "category": "security_alert",
+        "channel": "external",
+        "preference": "unset",
+        "expired": true
+      },
+      "expect": {
+        "result": "expired"
+      }
+    },
+    {
       "id": "route-expired-off",
       "case": {
         "step": "route",
         "category": "approval_task",
+        "channel": "in_app",
         "preference": "off",
         "expired": true
       },

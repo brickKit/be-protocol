@@ -1,6 +1,6 @@
 {
   "topic": "external-command",
-  "protocol": "3.0.0-alpha.128",
+  "protocol": "3.0.0-alpha.129",
   "rules": [
     "P13.2",
     "P13.3",
@@ -8,7 +8,8 @@
     "P13.5",
     "P13.6",
     "P13.7",
-    "P13.8"
+    "P13.8",
+    "P13.14"
   ],
   "description": "对外命令：状态转移（按行序第一条命中）、查询“不存在”之后是否重发、重发截止时刻的公式、请求按参考号与参数摘要的幂等",
   "fields": {
@@ -527,6 +528,117 @@
         "state": "succeeded",
         "reason": "registered by a person, with its grounds"
       }
+    },
+    {
+      "id": "abandon-claim",
+      "input": {
+        "command": {
+          "state": "prepared",
+          "abandon_at": "2026-11-05T11:00:00.000000Z"
+        },
+        "event": {
+          "kind": "claim"
+        },
+        "capabilities": {
+          "query": true
+        },
+        "now": "2026-11-05T11:00:01.000000Z"
+      },
+      "expected": {
+        "state": "failed",
+        "reason": "past the local abandon time: expired"
+      },
+      "description": "P13.14: claimed past the local abandon time: not sent"
+    },
+    {
+      "id": "abandon-claim-before",
+      "input": {
+        "command": {
+          "state": "retry_wait",
+          "abandon_at": "2026-11-05T11:00:00.000000Z"
+        },
+        "event": {
+          "kind": "claim"
+        },
+        "capabilities": {
+          "query": true
+        },
+        "now": "2026-11-05T10:59:59.000000Z"
+      },
+      "expected": {
+        "state": "sending",
+        "reason": "claimed: the transition commits before the send"
+      },
+      "description": "P13.14: before the abandon time: sent as usual"
+    },
+    {
+      "id": "abandon-unknown",
+      "input": {
+        "command": {
+          "state": "unknown",
+          "first_reached_at": "2026-11-05T10:00:00.000000Z",
+          "last_reached_at": "2026-11-05T10:00:00.000000Z",
+          "unknown_since": "2026-11-05T10:00:00.000000Z",
+          "abandon_at": "2026-11-05T11:00:00.000000Z"
+        },
+        "event": {
+          "kind": "query",
+          "result": "unavailable"
+        },
+        "capabilities": {
+          "query": true
+        },
+        "now": "2026-11-05T11:00:01.000000Z"
+      },
+      "expected": {
+        "state": "failed",
+        "reason": "past the local abandon time: expired"
+      },
+      "description": "P13.14: unknown past the abandon time: no manual"
+    },
+    {
+      "id": "abandon-sending",
+      "input": {
+        "command": {
+          "state": "sending",
+          "abandon_at": "2026-11-05T11:00:00.000000Z"
+        },
+        "event": {
+          "kind": "send_result",
+          "result": "succeeded"
+        },
+        "capabilities": {
+          "query": true
+        },
+        "now": "2026-11-05T11:00:01.000000Z"
+      },
+      "expected": {
+        "state": "succeeded",
+        "reason": "final"
+      },
+      "description": "P13.14: a send in flight takes its result"
+    },
+    {
+      "id": "abandon-sending-maybe",
+      "input": {
+        "command": {
+          "state": "sending",
+          "abandon_at": "2026-11-05T11:00:00.000000Z"
+        },
+        "event": {
+          "kind": "send_result",
+          "result": "maybe_reached"
+        },
+        "capabilities": {
+          "query": true
+        },
+        "now": "2026-11-05T11:00:01.000000Z"
+      },
+      "expected": {
+        "state": "unknown",
+        "reason": "may have been processed: query first"
+      },
+      "description": "P13.14: the next event on unknown fails it"
     },
     {
       "id": "off-table",

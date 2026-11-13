@@ -1,6 +1,6 @@
 {
   "topic": "errors",
-  "protocol": "3.0.0-alpha.128",
+  "protocol": "3.0.0-alpha.129",
   "rules": [
     "P3.1",
     "P3.2",
@@ -557,6 +557,28 @@
       "retryable": "yes",
       "log_level": "info",
       "type": "urn:be:be:UPLOAD_INCOMPLETE"
+    },
+    {
+      "id": "reason-grant_used",
+      "kind": "reason",
+      "reason": "GRANT_USED",
+      "domain": "be",
+      "grpc_code": "FAILED_PRECONDITION",
+      "http": 409,
+      "retryable": "no",
+      "log_level": "info",
+      "type": "urn:be:be:GRANT_USED"
+    },
+    {
+      "id": "reason-grant_stale",
+      "kind": "reason",
+      "reason": "GRANT_STALE",
+      "domain": "be",
+      "grpc_code": "FAILED_PRECONDITION",
+      "http": 409,
+      "retryable": "no",
+      "log_level": "info",
+      "type": "urn:be:be:GRANT_STALE"
     },
     {
       "id": "reason-internal",
