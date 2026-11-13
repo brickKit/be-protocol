@@ -1,6 +1,6 @@
 {
   "topic": "errors",
-  "protocol": "3.0.0-alpha.126",
+  "protocol": "3.0.0-alpha.127",
   "rules": [
     "P3.1",
     "P3.2",
@@ -546,6 +546,17 @@
       "retryable": "no",
       "log_level": "info",
       "type": "urn:be:be:REVISION_CHANGED"
+    },
+    {
+      "id": "reason-upload_incomplete",
+      "kind": "reason",
+      "reason": "UPLOAD_INCOMPLETE",
+      "domain": "be",
+      "grpc_code": "FAILED_PRECONDITION",
+      "http": 409,
+      "retryable": "yes",
+      "log_level": "info",
+      "type": "urn:be:be:UPLOAD_INCOMPLETE"
     },
     {
       "id": "reason-internal",

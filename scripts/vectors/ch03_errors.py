@@ -41,6 +41,8 @@ REASONS = [
     ("NOT_ASSIGNEE", "PERMISSION_DENIED", None, "no"), ("SELF_APPROVAL", "PERMISSION_DENIED", None, "no"),
     ("NOT_QUALIFIED", "PERMISSION_DENIED", None, "no"), ("QUALIFICATION_UNKNOWN", "UNAVAILABLE", None, "yes"),
     ("REVISION_CHANGED", "ABORTED", None, "no"),
+    # chapter 19's owners: an upload confirmed before the object is there (infra/attachment)
+    ("UPLOAD_INCOMPLETE", "FAILED_PRECONDITION", 409, "yes"),
     ("INTERNAL", "INTERNAL", None, "no"),
 ]
 

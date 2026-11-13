@@ -1,6 +1,6 @@
 {
   "topic": "notification-intent",
-  "protocol": "3.0.0-alpha.126",
+  "protocol": "3.0.0-alpha.127",
   "rules": [
     "P18.3",
     "P18.6",

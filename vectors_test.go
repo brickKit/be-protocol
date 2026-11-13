@@ -129,7 +129,7 @@ func logLevel(code string) string {
 func TestErrorsVectors(t *testing.T) {
 	overrides := map[string]int{"BODY_TOO_LARGE": 413, "QUERY_NOT_COMPLETABLE": 422, "FIELD_NOT_QUERYABLE": 422,
 		"LAST_ADMIN_PROTECTED": 409, "RECORD_SEALED": 409, "IDEMPOTENCY_KEY_REUSED": 422, "OUTBOUND_LIMIT": 503,
-		"TASK_NOT_PENDING": 409}
+		"TASK_NOT_PENDING": 409, "UPLOAD_INCOMPLETE": 409}
 	for _, raw := range load(t, "errors").Cases {
 		var c struct {
 			ID, Kind, Reason, Domain, Type string

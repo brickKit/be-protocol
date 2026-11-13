@@ -100,6 +100,7 @@
 | `SELF_APPROVAL` | `PERMISSION_DENIED` | 403 | 否 | 决定者这个人是实例的发起人这个人（职责分离，D10，P17.10） |
 | `NOT_QUALIFIED` | `PERMISSION_DENIED` | 403 | 否 | 按分配规则调用者此刻不再合格（例如已不持有岗位，P17.10） |
 | `QUALIFICATION_UNKNOWN` | `UNAVAILABLE` | 503 | 是 | 员工投影不完整，资格无法证明（P17.8、P17.10） |
+| `UPLOAD_INCOMPLETE` | `FAILED_PRECONDITION` | 409 | 是 | 确认上传时暂存对象还没有（客户端的直传没完成）；凭证不被用掉，上传完成后再确认（装配项目协议 12，`infra/attachment`） |
 | `REVISION_CHANGED` | `ABORTED` | 409 | 否 | 实例审的关键修订已不是单据现在的（P17.10） |
 | `INTERNAL` | `INTERNAL` | 500 | 否 | 任何内部错误；原始错误被隐藏 |
 
