@@ -119,6 +119,7 @@
 | alpha.127 | 第 19 章（P19.1–P19.10）：SDK 的存储端口；第 02 章的 `OBJECT_STORE_PUBLIC_URL`；原因 `UPLOAD_INCOMPLETE`；能力 `storage-port` | 否（新加的端口与原因） | 兼容：新的原因只由附件组件答 | 协议 12 |
 | alpha.128 | 第 19 章的一致性考试：P19.3、P19.4 的探测只记明确的答复（不可达、5xx、取消下次再探测），退回的复制不把对象放进内存；P19.9 读元数据的拒绝是 `denied` | 否 | 兼容：只改了端口内部的探测与分类 | 协议 12 |
 | alpha.129 | 第 20 章（P20.1–P20.9）：渠道成员的共享系统面 `be.channel.v1.ChannelService`、投递结果与动作事件（`schemas/channel/`）、不是秘密的动作授权与渠道成员生成的按钮随机值、所属组件收下动作、本人绑定渠道账号；第 17 章 P17.19、P17.20（内核签发授权、收下动作）；第 18 章 P18.11（意图带动作；认收方忽略不认识的字段：意图 schema 不再拒收多出的字段）；第 13 章 P13.14（本地放弃时刻）；原因 `GRANT_USED`、`GRANT_STALE`；能力 `flow-actions`、`channel-member`；向量 `channel-action`，`notification-intent` 的路由加渠道这一维，`external-command` 加放弃时刻 | 是：新的共享系统面与事件类型 | 兼容：新的字段与条款是加法；按旧版严格 schema 校验意图的认收方会拒收带动作的意图（全系统同一个 SDK 版本，一起换） | 协议 10 的通知与交互按钮 |
+| alpha.130 | C10 的一致性考试：P13.6、P13.14 带本地放弃时刻的 `unknown` 命令不转 `manual`，等到放弃时刻（向量 `external-command` 加两例）；P17.17、P20.8 的锁顺序改成实际的“先授权，再单据、实例、任务”并写明为什么不会死锁；P17.19 判断不了的候选人不签发、记告警；P18.11 意图可带 `in_app_only`（schema 加字段，与 `actions` 互斥）；P20.8 告诉主体的说明只写站内、原因用看得懂的话；P20.5 安全版本的出处写清 | 否 | 兼容：新字段是加法；按 alpha.129 的通知组件忽略 `in_app_only`，说明会多投一份到外部渠道 | 协议 10 的通知与交互按钮 |
 
 到 alpha.39 为止，信封（P6.13 的消息头）、错误体与 `google.rpc.Status` 的形状（P3.1、P3.2）、截止时间与追踪的传递（第 4 章）、发件表与收件表的结构都没有变：alpha.19 到 alpha.39 之间任意两个版本线上兼容（alpha.30 起没有的路由答 501，旧调用方按码归类，结果同样是不重试的失败）。
 
@@ -199,6 +200,7 @@
 | `be-sdk-go` | alpha.130 | alpha.127 |
 | `be-sdk-go` | alpha.131 | alpha.128 |
 | `be-sdk-go` | alpha.132 | alpha.129 |
+| `be-sdk-go` | alpha.133 | alpha.130 |
 | `be-sdk-python` | a20–a25 | alpha.19 |
 | `be-sdk-python` | a26–a28 | alpha.21 |
 | `be-sdk-python` | a29 | alpha.23 |

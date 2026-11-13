@@ -1,6 +1,6 @@
 {
   "topic": "money",
-  "protocol": "3.0.0-alpha.129",
+  "protocol": "3.0.0-alpha.130",
   "rules": [
     "P5.25",
     "P5.26",

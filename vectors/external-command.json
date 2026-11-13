@@ -1,6 +1,6 @@
 {
   "topic": "external-command",
-  "protocol": "3.0.0-alpha.129",
+  "protocol": "3.0.0-alpha.130",
   "rules": [
     "P13.2",
     "P13.3",
@@ -528,6 +528,56 @@
         "state": "succeeded",
         "reason": "registered by a person, with its grounds"
       }
+    },
+    {
+      "id": "abandon-unknown-past-the-manual-limit",
+      "input": {
+        "command": {
+          "state": "unknown",
+          "first_reached_at": "2026-11-05T10:00:00.000000Z",
+          "last_reached_at": "2026-11-05T10:00:00.000000Z",
+          "unknown_since": "2026-11-05T10:00:00.000000Z",
+          "abandon_at": "2026-11-12T10:00:00.000000Z"
+        },
+        "event": {
+          "kind": "query",
+          "result": "unavailable"
+        },
+        "capabilities": {
+          "query": true
+        },
+        "now": "2026-11-06T10:00:01.000000Z"
+      },
+      "expected": {
+        "state": "unknown",
+        "reason": "past the manual limit with a local abandon time: waits for it"
+      },
+      "description": "P13.14: an abandon time later than the manual limit: never manual, it waits for the abandon time"
+    },
+    {
+      "id": "abandon-unknown-not-found",
+      "input": {
+        "command": {
+          "state": "unknown",
+          "first_reached_at": "2026-11-05T10:00:00.000000Z",
+          "last_reached_at": "2026-11-05T10:00:00.000000Z",
+          "unknown_since": "2026-11-05T10:00:00.000000Z",
+          "abandon_at": "2026-11-12T10:00:00.000000Z"
+        },
+        "event": {
+          "kind": "query",
+          "result": "not_found"
+        },
+        "capabilities": {
+          "query": true
+        },
+        "now": "2026-11-05T10:05:00.000000Z"
+      },
+      "expected": {
+        "state": "unknown",
+        "reason": "not found and not to be sent again: waits for the local abandon time"
+      },
+      "description": "P13.14: not found and not to be sent again: waits for the abandon time instead of a person"
     },
     {
       "id": "abandon-claim",

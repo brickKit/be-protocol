@@ -172,6 +172,10 @@ func TestTheIntentSchema(t *testing.T) {
 		{"actions with their channels", base + "," + deliver + `,"actions":{"u1":{"grant_id":"0190f3a1-0000-7000-8000-000000000009","actions":[{"action":"approve","label":"同意"}]}},"action_channels":["integration/im-dingtalk"]`, true},
 		{"actions without channels", base + "," + deliver + `,"actions":{"u1":{"grant_id":"0190f3a1-0000-7000-8000-000000000009","actions":[{"action":"approve","label":"同意"}]}}`, false},
 		{"withdraw with actions", base + "," + withdraw + `,"actions":{"u1":{"grant_id":"0190f3a1-0000-7000-8000-000000000009","actions":[{"action":"approve","label":"同意"}]}},"action_channels":["integration/im-dingtalk"]`, false},
+		{"in-app only (P18.11)", base + "," + deliver + `,"in_app_only":true`, true},
+		{"in-app only false", base + "," + deliver + `,"in_app_only":false`, false},
+		{"in-app only with actions", base + "," + deliver + `,"in_app_only":true,"actions":{"u1":{"grant_id":"0190f3a1-0000-7000-8000-000000000009","actions":[{"action":"approve","label":"同意"}]}},"action_channels":["integration/im-dingtalk"]`, false},
+		{"withdraw in-app only", base + "," + withdraw + `,"in_app_only":true`, false},
 		{"a title too long", base + "," + strings.Replace(deliver, `"PO-1"`, `"`+strings.Repeat("x", 201)+`"`, 1), false},
 	} {
 		doc, err := jsonschema.UnmarshalJSON(strings.NewReader("{" + c.body + "}"))

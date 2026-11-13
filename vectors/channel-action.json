@@ -1,6 +1,6 @@
 {
   "topic": "channel-action",
-  "protocol": "3.0.0-alpha.129",
+  "protocol": "3.0.0-alpha.130",
   "rules": [
     "P20.7",
     "P20.8"

@@ -79,10 +79,14 @@ def step(cmd, event, caps, now):
         if r == "unavailable":
             since = cmd.get("unknown_since") if s == "unknown" else cmd.get("accepted_at")
             if since and t(now) - t(since) > MANUAL_AFTER:
+                if s == "unknown" and cmd.get("abandon_at"):  # P13.14: never left for a person
+                    return s, "past the manual limit with a local abandon time: waits for it"
                 return "manual", "no answer within the manual limit"
             return s, "the query is unavailable: backoff"
         if r == "not_found" and s == "unknown":
             action, why = not_found(cmd, caps, now)
+            if action != "resend" and cmd.get("abandon_at"):  # P13.14: never left for a person
+                return s, "not found and not to be sent again: waits for the local abandon time"
             return ("sending", why) if action == "resend" else ("manual", why)
     if kind == "finality_passed" and s == "accepted":
         if caps.get("query"):
@@ -166,6 +170,12 @@ def external_vectors():
     case("manual-registered", {"state": "manual"}, {"kind": "registered", "result": "succeeded"}, NO_DEDUPE, t0,
          "succeeded")
     ab = "2026-11-05T11:00:00.000000Z"
+    case("abandon-unknown-past-the-manual-limit", {**unk, "abandon_at": "2026-11-12T10:00:00.000000Z"},
+         {"kind": "query", "result": "unavailable"}, NO_DEDUPE, "2026-11-06T10:00:01.000000Z", "unknown",
+         "P13.14: an abandon time later than the manual limit: never manual, it waits for the abandon time")
+    case("abandon-unknown-not-found", {**unk, "abandon_at": "2026-11-12T10:00:00.000000Z"},
+         {"kind": "query", "result": "not_found"}, NO_DEDUPE, "2026-11-05T10:05:00.000000Z", "unknown",
+         "P13.14: not found and not to be sent again: waits for the abandon time instead of a person")
     case("abandon-claim", {"state": "prepared", "abandon_at": ab}, {"kind": "claim"}, NO_DEDUPE,
          "2026-11-05T11:00:01.000000Z", "failed", "P13.14: claimed past the local abandon time: not sent")
     case("abandon-claim-before", {"state": "retry_wait", "abandon_at": ab}, {"kind": "claim"}, NO_DEDUPE,

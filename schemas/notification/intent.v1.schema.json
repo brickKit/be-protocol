@@ -78,8 +78,13 @@
       "description": "P18.11: the channel members whose actions the sender takes (its FLOW_ACTION_SOURCES)",
       "type": "array", "minItems": 1, "maxItems": 20, "uniqueItems": true,
       "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]*/[a-z][a-z0-9-]*$"}
+    },
+    "in_app_only": {
+      "description": "P18.11: written as an in-app message only, handed to no external channel (P20.8's note that a button did not take effect)",
+      "const": true
     }
   },
+  "not": {"required": ["in_app_only", "actions"]},
   "dependentRequired": {"collapse_key": ["collapse_seq"], "collapse_seq": ["collapse_key"], "params": ["template"], "actions": ["action_channels"], "action_channels": ["actions"]},
   "oneOf": [
     {
@@ -90,7 +95,7 @@
       "properties": {"kind": {"const": "withdraw"}},
       "required": ["collapse_key", "collapse_seq"],
       "not": {"anyOf": [{"required": ["recipients"]}, {"required": ["title"]}, {"required": ["link"]},
-        {"required": ["template"]}, {"required": ["params"]}, {"required": ["expires_at"]}, {"required": ["actions"]}]}
+        {"required": ["template"]}, {"required": ["params"]}, {"required": ["expires_at"]}, {"required": ["actions"]}, {"required": ["in_app_only"]}]}
     }
   ]
 }
