@@ -1,4 +1,4 @@
-"""Chapter 11: what the edge does with one browser request (P11.1-P11.4, P11.7)."""
+"""Chapter 11: what the edge does with one browser request (P11.1-P11.4, P11.7, P11.12, P11.13)."""
 from common import write
 
 B_REPLAY = 1 << 20
@@ -8,7 +8,7 @@ CHANGING = {"POST", "PUT", "PATCH", "DELETE"}
 def edge(c):
     """The reference model: the browser's result, how often the component was called, how often the edge exchanged
     and with which renew_idle."""
-    out = {"forwarded": 0, "exchanges": 0, "renew_idle": None}
+    out = {"forwarded": 0, "exchanges": 0, "renew_idle": None, "clear_cookie": False}
     answers, exchanges = list(c["answers"]), list(c["exchange"])
 
     def forward():
@@ -22,9 +22,10 @@ def edge(c):
 
     def result(r):
         out["browser"] = r
+        out["clear_cookie"] = r == "SESSION_ENDED" and c["cookie"]  # P11.12
         return out
 
-    if not c["cookie"]:
+    if not c["cookie"] or c["public"]:  # P11.13: the identity member's login and callback are as without a cookie
         return result(forward())
     if c["method"] in CHANGING and c["headers"].get("BE-Request") != "1":
         return result("CSRF_HEADER_REQUIRED")
@@ -44,9 +45,9 @@ def edge(c):
     return result("SESSION_ENDED" if b == "TOKEN_STALE" else b)
 
 
-def case(cid, method="GET", cookie=True, headers=None, body=0, cache="hit", exchange=(), answers=("200",)):
-    c = {"id": cid, "method": method, "cookie": cookie, "headers": headers or {}, "body_bytes": body, "cache": cache,
-         "exchange": list(exchange), "answers": list(answers)}
+def case(cid, method="GET", cookie=True, headers=None, body=0, cache="hit", exchange=(), answers=("200",), public=False):
+    c = {"id": cid, "method": method, "cookie": cookie, "public": public, "headers": headers or {}, "body_bytes": body,
+         "cache": cache, "exchange": list(exchange), "answers": list(answers)}
     c["expect"] = edge(c)
     return c
 
@@ -79,13 +80,17 @@ def edge_flow_vectors():
         case("miss-then-stale", cache="miss", exchange=["ok", "ok"], answers=["TOKEN_STALE", "200"]),
         case("500-is-not-retried", answers=["500"]),
         case("timeout-is-not-retried", method="POST", headers=h, body=10, answers=["timeout"]),
+        case("login-with-an-ended-cookie", public=True, cache="miss", answers=["302"]),
+        case("callback-with-an-ended-cookie", public=True, cache="miss", answers=["303"]),
+        case("login-post-without-header-is-forwarded", method="POST", public=True, body=10, answers=["302"]),
+        case("no-cookie-login", cookie=False, public=True, answers=["302"]),
     ]
-    write("edge-flow", ["P11.1", "P11.2", "P11.3", "P11.4", "P11.7"],
-          "边缘对一个浏览器请求的处理。method、cookie（是否带会话 Cookie）、headers（只列 BE-Request 与 BE-Polling）、body_bytes、"
+    write("edge-flow", ["P11.1", "P11.2", "P11.3", "P11.4", "P11.7", "P11.12", "P11.13"],
+          "边缘对一个浏览器请求的处理。method、cookie（是否带会话 Cookie）、public（路径是身份成员的登录或回调）、headers（只列 BE-Request 与 BE-Polling）、body_bytes、"
           "cache（这个会话的令牌在缓存里：hit，或 miss）；exchange 是边缘依次调 Exchange 得到的回答（ok、ended 即 SESSION_ENDED、"
           "unavailable 即不可达或可重试的错误），answers 是组件依次的回答（状态码、TOKEN_STALE 或 timeout）。expect：browser 是浏览器"
           "得到的（组件的回答原样，或边缘自己答的原因），forwarded 是组件收到几次，exchanges 是换取几次，renew_idle 是换取时的取值"
-          "（没有换取为 null）。B_replay = 1 MiB。",
+          "（没有换取为 null），clear_cookie 是回答是否清掉会话 Cookie。B_replay = 1 MiB。",
           cases,
-          {"method、cookie、headers、body_bytes、cache": "请求与缓存", "exchange": "Exchange 的回答序列",
-           "answers": "组件的回答序列", "expect": "browser、forwarded、exchanges、renew_idle"})
+          {"method、cookie、public、headers、body_bytes、cache": "请求与缓存", "exchange": "Exchange 的回答序列",
+           "answers": "组件的回答序列", "expect": "browser、forwarded、exchanges、renew_idle、clear_cookie"})

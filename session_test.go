@@ -33,6 +33,7 @@ type edgeCase struct {
 	ID        string
 	Method    string
 	Cookie    bool
+	Public    bool
 	Headers   map[string]string
 	BodyBytes int64 `json:"body_bytes"`
 	Cache     string
@@ -42,14 +43,21 @@ type edgeCase struct {
 }
 
 type edgeOutcome struct {
-	Browser   string
-	Forwarded int
-	Exchanges int
-	RenewIdle *bool `json:"renew_idle"`
+	Browser     string
+	Forwarded   int
+	Exchanges   int
+	RenewIdle   *bool `json:"renew_idle"`
+	ClearCookie bool  `json:"clear_cookie"`
 }
 
-// edgeRun is this repository's own reading of P11.1-P11.4 and P11.7, written apart from the generator.
+// edgeRun is this repository's own reading of P11.1-P11.4, P11.7, P11.12 and P11.13, written apart from the generator.
 func edgeRun(c edgeCase) edgeOutcome {
+	o := edgeRun0(c)
+	o.ClearCookie = c.Cookie && o.Browser == "SESSION_ENDED"
+	return o
+}
+
+func edgeRun0(c edgeCase) edgeOutcome {
 	var o edgeOutcome
 	answers, exchanges := c.Answers, c.Exchange
 	forward := func() string { o.Forwarded++; a := answers[0]; answers = answers[1:]; return a }
@@ -62,7 +70,7 @@ func edgeRun(c edgeCase) edgeOutcome {
 		return e
 	}
 	refused := map[string]string{"ended": "SESSION_ENDED", "unavailable": "DEPENDENCY_UNAVAILABLE"}
-	if !c.Cookie {
+	if !c.Cookie || c.Public {
 		o.Browser = forward()
 		return o
 	}
@@ -104,6 +112,7 @@ func TestEdgeFlowVectors(t *testing.T) {
 		}
 		got, want := edgeRun(c), c.Expect
 		if got.Browser != want.Browser || got.Forwarded != want.Forwarded || got.Exchanges != want.Exchanges ||
+			got.ClearCookie != want.ClearCookie ||
 			(got.RenewIdle == nil) != (want.RenewIdle == nil) || got.RenewIdle != nil && *got.RenewIdle != *want.RenewIdle {
 			t.Errorf("%s: got %+v, the vector says %+v", c.ID, got, want)
 		}

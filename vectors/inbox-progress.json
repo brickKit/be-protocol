@@ -1,6 +1,6 @@
 {
   "topic": "inbox-progress",
-  "protocol": "3.0.0-alpha.131",
+  "protocol": "3.0.0-alpha.132",
   "rules": [
     "P6.37"
   ],
